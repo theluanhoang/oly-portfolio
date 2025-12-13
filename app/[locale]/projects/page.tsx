@@ -8,6 +8,7 @@ import { useHorizontalScroll } from '@/hooks/useHorizontalScroll';
 import { useHeaderHeight } from '@/hooks/useHeaderHeight';
 import { useResponsive } from '@/hooks/useResponsive';
 import { groupArrayIntoChunks } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 interface ProjectImage {
   src: string | null;
@@ -24,6 +25,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const headerHeight = useHeaderHeight();
   const { isMobile } = useResponsive();
+  const t = useTranslations('Common');
 
   useEffect(() => {
     async function loadProjects() {
@@ -56,7 +58,7 @@ export default function ProjectsPage() {
             for (let i = 0; i < remainingSlots; i++) {
               lastSection.push({
                 src: null,
-                alt: 'Coming soon',
+                alt: t('comingSoon'),
                 slug: null,
                 isPlaceholder: true,
               });
@@ -74,12 +76,12 @@ export default function ProjectsPage() {
     }
     
     loadProjects();
-  }, []);
+  }, [t]);
 
 
 
   if (loading) {
-    return <LoadingSpinner text="Đang tải..." />;
+    return <LoadingSpinner text={t('loading')} />;
   }
 
   if (isMobile) {
@@ -135,3 +137,4 @@ export default function ProjectsPage() {
     </div>
   );
 }
+

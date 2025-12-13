@@ -1,5 +1,8 @@
-import Link from '@/components/ui/Link';
+'use client';
+
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/routing';
 
 const placeholderImage = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="600"%3E%3Crect fill="%23e0e0e0" width="800" height="600"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-size="18"%3EImage not found%3C/text%3E%3C/svg%3E';
 
@@ -16,6 +19,7 @@ interface ProjectImageProps {
 export default function ProjectImage({ src, alt, gridPosition, slug, title, category, isPlaceholder = false }: ProjectImageProps) {
   const [imageSrc, setImageSrc] = useState(src || placeholderImage);
   const [hasError, setHasError] = useState(false);
+  const t = useTranslations('Common');
   const href = slug ? `/projects/${slug}` : '#';
 
   const handleError = () => {
@@ -29,7 +33,7 @@ export default function ProjectImage({ src, alt, gridPosition, slug, title, cate
     return (
       <div className={`project relative overflow-hidden bg-gray-100 flex items-center justify-center ${gridPosition}`}>
         <div className="text-center px-4">
-          <p className="text-gray-400 text-sm font-normal uppercase tracking-wider">Coming soon</p>
+          <p className="text-gray-400 text-sm font-normal uppercase tracking-wider">{t('comingSoon')}</p>
         </div>
       </div>
     );
@@ -38,7 +42,6 @@ export default function ProjectImage({ src, alt, gridPosition, slug, title, cate
   return (
     <Link 
       href={href} 
-      noBaseStyles
       className={`project relative overflow-hidden cursor-pointer hover:z-10 block group ${gridPosition}`}
     >
       <img

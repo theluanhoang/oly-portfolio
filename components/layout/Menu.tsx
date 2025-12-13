@@ -1,36 +1,40 @@
-import Link from "next/link";
-import React from "react";
+'use client';
+
+import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/routing';
 
 interface MenuProps {
   className?: string;
 }
 
 function Menu({ className }: MenuProps) {
+  const t = useTranslations('Navigation');
+
   return (
     <nav className={`${className}`}>
       <Link
         href="/projects"
         className="inline-flex h-full items-center text-[12px] font-normal text-black"
       >
-        Project
+        {t('projects')}
       </Link>
       <Link
         href="#product"
         className="inline-flex h-full items-center text-[12px] font-normal text-black"
       >
-        Product
+        {t('product')}
       </Link>
       <Link
         href="#about"
         className="inline-flex h-full items-center text-[12px] font-normal text-black"
       >
-        About
+        {t('about')}
       </Link>
       <Link
         href="#contact"
         className="inline-flex h-full items-center text-[12px] font-normal text-black"
       >
-        Contact
+        {t('contact')}
       </Link>
     </nav>
   );

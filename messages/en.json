@@ -1,0 +1,98 @@
+{
+    "HomePage": {
+        "architecture": "ARCHITECTURE",
+        "construction": "CONSTRUCTION",
+        "interior": "INTERIOR",
+        "furniture": "FURNITURE"
+    },
+    "Navigation": {
+        "projects": "Projects",
+        "product": "Product",
+        "products": "Products",
+        "users": "Users",
+        "about": "About",
+        "contact": "Contact",
+        "search": "Search"
+    },
+    "Common": {
+        "comingSoon": "Coming soon",
+        "loading": "Loading...",
+        "signOut": "Sign Out",
+        "admin": "Admin"
+    },
+    "Projects": {
+        "title": "Projects",
+        "loading": "Loading..."
+    },
+    "ProjectInfo": {
+        "location": "Location",
+        "area": "Area",
+        "year": "Year",
+        "category": "Category",
+        "categoryLabel": "Category",
+        "locationLabel": "Location",
+        "areaLabel": "Area",
+        "yearLabel": "Year"
+    },
+    "Language": {
+        "english": "ENG",
+        "vietnamese": "VIE"
+    },
+    "Admin": {
+        "login": {
+            "title": "Admin Login",
+            "subtitle": "Please login to continue",
+            "username": "Username",
+            "password": "Password",
+            "submit": "Login",
+            "submitting": "Logging in...",
+            "error": {
+                "invalid": "Invalid username or password",
+                "tooManyAttempts": "Too many login attempts",
+                "general": "An error occurred. Please try again."
+            }
+        },
+        "projects": {
+            "new": {
+                "title": "Create New Project",
+                "step": "Step",
+                "of": "of",
+                "projectInfo": "Project Information",
+                "content": "Article Content",
+                "next": "Next →",
+                "back": "← Back",
+                "save": "Save Project",
+                "saving": "Saving...",
+                "success": "Project saved successfully!",
+                "error": "Failed to save project"
+            },
+            "fields": {
+                "title": "Project name",
+                "slug": "Slug",
+                "category": "Category",
+                "subCategory": "Sub category",
+                "location": "Location",
+                "area": "Area",
+                "year": "Year",
+                "selectCategory": "Select category",
+                "selectSubCategory": "Select sub category",
+                "selectCategoryFirst": "Please select category first"
+            },
+            "categories": {
+                "architecture": "Architecture",
+                "interiorConstruction": "Interior & Construction"
+            }
+        }
+    },
+    "Footer": {
+        "tagline": "With Oly Studio you'll get the touch you are looking for, drop us a line.",
+        "contactForConsultation": "Contact for consultation",
+        "address": "Address",
+        "office": "Office",
+        "hotline": "Hotline",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "officeAddress": "Office: 193/9P Dien Bien Phu, W 15, Binh Thanh, TP HCM",
+        "hotlineNumber": "Hotline: 0900 000 000"
+    }
+}

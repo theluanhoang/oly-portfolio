@@ -3,13 +3,18 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useRouter as useIntlRouter, usePathname } from '@/i18n/routing';
 import Input from '@/components/forms/Input';
 import Button from '@/components/ui/Button';
 import Link from '@/components/ui/Link';
 
 export default function LoginPage() {
   const router = useRouter();
+  const intlRouter = useIntlRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const t = useTranslations('Admin.login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,7 +26,8 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const callbackUrl = searchParams.get('callbackUrl') || '/admin/projects/new';
+      const defaultCallbackUrl = pathname.replace('/admin/login', '/admin/projects/new');
+      const callbackUrl = searchParams.get('callbackUrl') || defaultCallbackUrl;
       
       const result = await signIn('credentials', {
         username,
@@ -31,17 +37,17 @@ export default function LoginPage() {
 
       if (result?.error) {
         const errorMessage = result.error;
-        if (errorMessage.includes('Quá nhiều lần thử')) {
-          setError(errorMessage);
+        if (errorMessage.includes('Quá nhiều lần thử') || errorMessage.includes('Too many')) {
+          setError(t('error.tooManyAttempts'));
         } else {
-          setError('Tên đăng nhập hoặc mật khẩu không đúng');
+          setError(t('error.invalid'));
         }
       } else {
-        router.push(callbackUrl);
+        intlRouter.push(callbackUrl);
         router.refresh();
       }
-    } catch (err) {
-      setError('Đã xảy ra lỗi. Vui lòng thử lại.');
+    } catch {
+      setError(t('error.general'));
     } finally {
       setIsLoading(false);
     }
@@ -59,16 +65,16 @@ export default function LoginPage() {
               OLY
             </Link>
             <h1 className="text-2xl font-normal tracking-[2px] uppercase text-[#333] mb-2">
-              Đăng Nhập Admin
+              {t('title')}
             </h1>
             <p className="text-sm text-[#666]">
-              Vui lòng đăng nhập để tiếp tục
+              {t('subtitle')}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <Input
-              label="Tên đăng nhập"
+              label={t('username')}
               name="username"
               type="text"
               placeholder="admin"
@@ -79,7 +85,7 @@ export default function LoginPage() {
             />
 
             <Input
-              label="Mật khẩu"
+              label={t('password')}
               name="password"
               type="password"
               placeholder="••••••••"
@@ -100,7 +106,7 @@ export default function LoginPage() {
               disabled={isLoading}
               className="w-full"
             >
-              {isLoading ? 'Đang đăng nhập...' : 'Đăng Nhập'}
+              {isLoading ? t('submitting') : t('submit')}
             </Button>
           </form>
         </div>

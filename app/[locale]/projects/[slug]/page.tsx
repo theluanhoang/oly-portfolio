@@ -3,17 +3,23 @@ import ProjectGallery from '@/components/projects/ProjectGallery';
 import ProjectInfo from '@/components/projects/ProjectInfo';
 import ProjectContent from '@/components/projects/ProjectContent';
 import { getProjectBySlug, getAllProjectSlugs } from '@/data/projects';
+import { routing } from '@/i18n/routing';
 
 interface ProjectDetailPageProps {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string; locale: string }>;
 }
 
-export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
+export async function generateStaticParams() {
   const allSlugs = await getAllProjectSlugs();
+  const params: Array<{ slug: string; locale: string }> = [];
   
-  return allSlugs.map((slug) => ({
-    slug,
-  }));
+  for (const slug of allSlugs) {
+    for (const locale of routing.locales) {
+      params.push({ slug, locale });
+    }
+  }
+  
+  return params;
 }
 
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {

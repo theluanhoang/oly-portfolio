@@ -1,0 +1,98 @@
+{
+    "HomePage": {
+        "architecture": "KIẾN TRÚC",
+        "construction": "XÂY DỰNG",
+        "interior": "NỘI THẤT",
+        "furniture": "ĐỒ GỖ"
+    },
+    "Navigation": {
+        "projects": "Dự án",
+        "product": "Sản phẩm",
+        "products": "Sản phẩm",
+        "users": "Người dùng",
+        "about": "Giới thiệu",
+        "contact": "Liên hệ",
+        "search": "Tìm kiếm"
+    },
+    "Common": {
+        "comingSoon": "Sắp ra mắt",
+        "loading": "Đang tải...",
+        "signOut": "Đăng Xuất",
+        "admin": "Quản trị"
+    },
+    "Projects": {
+        "title": "Dự án",
+        "loading": "Đang tải..."
+    },
+    "ProjectInfo": {
+        "location": "Vị trí",
+        "area": "Diện tích",
+        "year": "Năm",
+        "category": "Danh mục",
+        "categoryLabel": "Thể loại",
+        "locationLabel": "Địa điểm",
+        "areaLabel": "Diện tích",
+        "yearLabel": "Năm thực hiện"
+    },
+    "Language": {
+        "english": "ENG",
+        "vietnamese": "VIE"
+    },
+    "Admin": {
+        "login": {
+            "title": "Đăng Nhập Admin",
+            "subtitle": "Vui lòng đăng nhập để tiếp tục",
+            "username": "Tên đăng nhập",
+            "password": "Mật khẩu",
+            "submit": "Đăng Nhập",
+            "submitting": "Đang đăng nhập...",
+            "error": {
+                "invalid": "Tên đăng nhập hoặc mật khẩu không đúng",
+                "tooManyAttempts": "Quá nhiều lần thử",
+                "general": "Đã xảy ra lỗi. Vui lòng thử lại."
+            }
+        },
+        "projects": {
+            "new": {
+                "title": "Tạo Dự Án Mới",
+                "step": "Bước",
+                "of": "/",
+                "projectInfo": "Thông Tin Dự Án",
+                "content": "Nội Dung Bài Viết",
+                "next": "Tiếp Theo →",
+                "back": "← Quay Lại",
+                "save": "Lưu Dự Án",
+                "saving": "Đang lưu...",
+                "success": "Dự án đã được lưu thành công!",
+                "error": "Không thể lưu dự án"
+            },
+            "fields": {
+                "title": "Tên dự án",
+                "slug": "Slug",
+                "category": "Thể loại",
+                "subCategory": "Thể loại phụ",
+                "location": "Địa điểm",
+                "area": "Diện tích",
+                "year": "Năm thực hiện",
+                "selectCategory": "Chọn thể loại",
+                "selectSubCategory": "Chọn thể loại phụ",
+                "selectCategoryFirst": "Vui lòng chọn thể loại trước"
+            },
+            "categories": {
+                "architecture": "Architecture",
+                "interiorConstruction": "Interior & Construction"
+            }
+        }
+    },
+    "Footer": {
+        "tagline": "Với Oly Studio, bạn sẽ có được sự chạm khắc mà bạn đang tìm kiếm, hãy liên hệ với chúng tôi.",
+        "contactForConsultation": "Liên hệ tư vấn",
+        "address": "Địa chỉ",
+        "office": "Văn phòng",
+        "hotline": "Hotline",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "officeAddress": "Văn phòng: 193/9P Điện Biên Phủ, P.15, Bình Thạnh, TP HCM",
+        "hotlineNumber": "Hotline: 0900 000 000"
+    }
+}

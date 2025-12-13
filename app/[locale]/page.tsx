@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useRouter } from '@/i18n/routing';
 
 interface AnimatedTextProps {
   text: string;
@@ -52,6 +53,7 @@ function AnimatedText({ text, isExpanded, direction = 'left', baseDelay = 0 }: A
 
 export default function Home() {
   const router = useRouter();
+  const t = useTranslations('HomePage');
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
@@ -74,13 +76,13 @@ export default function Home() {
       <div className="relative w-full max-w-6xl mx-auto px-8 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <AnimatedText 
-            text="ARCHITECTURE" 
+            text={t('architecture')} 
             isExpanded={isExpanded} 
             direction="left" 
             baseDelay={0}
           />
           <AnimatedText 
-            text="CONSTRUCTION" 
+            text={t('construction')} 
             isExpanded={isExpanded} 
             direction="left" 
             baseDelay={100}
@@ -99,13 +101,13 @@ export default function Home() {
 
         <div className="flex items-center gap-8">
           <AnimatedText 
-            text="INTERIOR" 
+            text={t('interior')} 
             isExpanded={isExpanded} 
             direction="right" 
             baseDelay={0}
           />
           <AnimatedText 
-            text="FURNITURE" 
+            text={t('furniture')} 
             isExpanded={isExpanded} 
             direction="right" 
             baseDelay={100}
@@ -115,3 +117,4 @@ export default function Home() {
     </div>
   );
 }
+

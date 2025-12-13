@@ -12,8 +12,9 @@ interface LayoutWrapperProps {
 
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const pathname = usePathname();
-  const isHomePage = pathname === "/";
-  const isProjectsPage = pathname === "/projects";
+  // Handle locale-based paths (e.g., /en, /vi, /en/projects, /vi/projects)
+  const isHomePage = pathname === "/" || /^\/[a-z]{2}\/?$/.test(pathname);
+  const isProjectsPage = pathname === "/projects" || /^\/[a-z]{2}\/projects\/?$/.test(pathname);
   const isAdminLoginPage = pathname === "/admin/login";
   const headerHeight = useHeaderHeight();
   const { isMobile } = useResponsive();

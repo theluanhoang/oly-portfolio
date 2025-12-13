@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslations } from 'next-intl';
 import TiptapEditor from '@/components/admin/TiptapEditor';
 import GalleryUpload from '@/components/admin/GalleryUpload';
 import FormField from '@/components/forms/FormField';
@@ -13,6 +14,7 @@ import { projectSchema, ProjectSchema, ProjectCategory } from '@/lib/validations
 import { generateSlug } from '@/lib/utils';
 
 export default function NewProjectPage() {
+  const t = useTranslations('Admin.projects');
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -160,12 +162,12 @@ export default function NewProjectPage() {
       }
       
       if (!response.ok) {
-        const errorMessage = result.error || 'Failed to save project';
+        const errorMessage = result.error || t('new.error');
         const errorDetails = result.details ? `\nDetails: ${JSON.stringify(result.details, null, 2)}` : '';
         throw new Error(`${errorMessage}${errorDetails}`);
       }
       
-      setSaveMessage({ type: 'success', text: 'Dự án đã được lưu thành công!' });
+      setSaveMessage({ type: 'success', text: t('new.success') });
       
       methods.reset({
         title: '',
@@ -187,7 +189,7 @@ export default function NewProjectPage() {
       
     } catch (error) {
       console.error('Error saving project:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Không thể lưu dự án';
+      const errorMessage = error instanceof Error ? error.message : t('new.error');
       setSaveMessage({ type: 'error', text: errorMessage });
     } finally {
       setIsSaving(false);
@@ -200,8 +202,8 @@ export default function NewProjectPage() {
 
       <div className="max-w-5xl mx-auto py-12 px-8 md:px-4">
         <PageHeader
-          title="Tạo Dự Án Mới"
-          subtitle={`Bước ${currentStep} / 2`}
+          title={t('new.title')}
+          subtitle={`${t('new.step')} ${currentStep} ${t('new.of')} 2`}
         />
 
         <StepIndicator currentStep={currentStep} totalSteps={2} />
@@ -212,13 +214,13 @@ export default function NewProjectPage() {
               <div className="space-y-8">
                 <div>
                   <h2 className="text-lg font-normal tracking-[2px] uppercase text-[#333] mb-6 border-b border-[#e0e0e0] pb-2">
-                    Thông Tin Dự Án
+                    {t('new.projectInfo')}
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
                       <FormField
                         name="title"
-                        label="Tên dự án"
+                        label={t('fields.title')}
                         placeholder="NARROW HOUSE"
                         required
                       />
@@ -227,7 +229,7 @@ export default function NewProjectPage() {
                     <div className="md:col-span-2">
                       <FormField
                         name="slug"
-                        label="Slug"
+                        label={t('fields.slug')}
                         placeholder="narrow-house"
                         required
                       />
@@ -236,13 +238,13 @@ export default function NewProjectPage() {
                     <div>
                       <FormField
                         name="category"
-                        label="Thể loại"
+                        label={t('fields.category')}
                         type="select"
-                        placeholder="Chọn thể loại"
+                        placeholder={t('fields.selectCategory')}
                         required
                         options={[
-                          { value: ProjectCategory.Architecture, label: 'Architecture' },
-                          { value: ProjectCategory.InteriorConstruction, label: 'Interior & Construction' },
+                          { value: ProjectCategory.Architecture, label: t('categories.architecture') },
+                          { value: ProjectCategory.InteriorConstruction, label: t('categories.interiorConstruction') },
                         ]}
                       />
                     </div>
@@ -250,9 +252,9 @@ export default function NewProjectPage() {
                     <div>
                       <FormField
                         name="type"
-                        label="Thể loại phụ"
+                        label={t('fields.subCategory')}
                         type="select"
-                        placeholder={category ? "Chọn thể loại phụ" : "Vui lòng chọn thể loại trước"}
+                        placeholder={category ? t('fields.selectSubCategory') : t('fields.selectCategoryFirst')}
                         options={typeOptions}
                         disabled={!category}
                       />
@@ -261,7 +263,7 @@ export default function NewProjectPage() {
                     <div>
                       <FormField
                         name="location"
-                        label="Địa điểm"
+                        label={t('fields.location')}
                         placeholder="TP. Hồ Chí Minh"
                         required
                       />
@@ -270,7 +272,7 @@ export default function NewProjectPage() {
                     <div>
                       <FormField
                         name="area"
-                        label="Diện tích"
+                        label={t('fields.area')}
                         placeholder="58 m²"
                         required
                       />
@@ -279,7 +281,7 @@ export default function NewProjectPage() {
                     <div>
                       <FormField
                         name="year"
-                        label="Năm thực hiện"
+                        label={t('fields.year')}
                         placeholder="2018"
                         required
                       />
@@ -315,7 +317,7 @@ export default function NewProjectPage() {
 
                 <div className="flex justify-end pt-4 border-t border-[#e0e0e0]">
                   <Button type="button" onClick={handleNext}>
-                    Tiếp Theo →
+                    {t('new.next')}
                   </Button>
                 </div>
               </div>
@@ -325,7 +327,7 @@ export default function NewProjectPage() {
               <div className="space-y-8">
                 <div>
                   <h2 className="text-lg font-normal tracking-[2px] uppercase text-[#333] mb-6 border-b border-[#e0e0e0] pb-2">
-                    Nội Dung Bài Viết
+                    {t('new.content')}
                   </h2>
                   <TiptapEditor
                     content={content || ''}
@@ -335,10 +337,10 @@ export default function NewProjectPage() {
 
                 <div className="flex gap-4 pt-4 border-t border-[#e0e0e0]">
                   <Button type="button" variant="secondary" onClick={handleBack}>
-                    ← Quay Lại
+                    {t('new.back')}
                   </Button>
                   <Button type="submit" disabled={isSaving}>
-                    {isSaving ? 'Đang lưu...' : 'Lưu Dự Án'}
+                    {isSaving ? t('new.saving') : t('new.save')}
                   </Button>
                 </div>
               </div>
@@ -361,3 +363,4 @@ export default function NewProjectPage() {
     </div>
   );
 }
+

@@ -43,9 +43,6 @@ const baseAuthHandler = NextAuth({
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
-  pages: {
-    signIn: '/admin/login',
-  },
   callbacks: {
     async jwt({ token, user }: { token: JWT; user?: User }): Promise<JWT> {
       if (user) {
@@ -89,7 +86,8 @@ async function POST(req: NextRequest, context: { params: Promise<{ nextauth: str
     const rateLimitCheck = checkRateLimit(req);
     
     if (!rateLimitCheck.allowed) {
-      const errorUrl = new URL('/admin/login', req.url);
+      const locale = req.headers.get('x-locale') || 'en';
+      const errorUrl = new URL(`/${locale}/admin/login`, req.url);
       errorUrl.searchParams.set('error', 'CredentialsSignin');
       errorUrl.searchParams.set('error_description', encodeURIComponent(rateLimitCheck.message || 'Rate limit exceeded'));
       return NextResponse.redirect(errorUrl);

@@ -1,4 +1,7 @@
-import React from 'react';
+'use client';
+
+import { useTranslations } from 'next-intl';
+import LanguageSwitcher from '@/components/layout/LanguageSwitcher';
 
 interface Project {
   title: string;
@@ -14,6 +17,7 @@ interface ProjectInfoProps {
 
 export default function ProjectInfo({ project }: ProjectInfoProps) {
   const { title, category, location, area, year } = project;
+  const t = useTranslations('ProjectInfo');
 
   return (
     <section className="relative bg-background py-20 px-8 md:px-12 lg:px-24">
@@ -25,9 +29,7 @@ export default function ProjectInfo({ project }: ProjectInfoProps) {
       <div className="relative max-w-6xl mx-auto">
         {/* Language Switcher */}
         <div className="flex justify-end mb-12">
-          <button className="text-foreground text-sm tracking-[1px] uppercase hover:text-gray-600 transition-colors font-normal">
-            ENG
-          </button>
+          <LanguageSwitcher />
         </div>
 
         {/* Project Title */}
@@ -41,7 +43,7 @@ export default function ProjectInfo({ project }: ProjectInfoProps) {
             <li className="flex items-start">
               <span className="mr-4 text-foreground text-lg">•</span>
               <div className="flex-1">
-                <span className="font-normal">Thể loại</span>
+                <span className="font-normal">{t('categoryLabel')}</span>
                 <span className="mx-2">:</span>
                 <span className="font-medium">{category}</span>
               </div>
@@ -49,7 +51,7 @@ export default function ProjectInfo({ project }: ProjectInfoProps) {
             <li className="flex items-start">
               <span className="mr-4 text-foreground text-lg">•</span>
               <div className="flex-1">
-                <span className="font-normal">Địa điểm</span>
+                <span className="font-normal">{t('locationLabel')}</span>
                 <span className="mx-2">:</span>
                 <span className="font-medium">{location}</span>
               </div>
@@ -57,7 +59,7 @@ export default function ProjectInfo({ project }: ProjectInfoProps) {
             <li className="flex items-start">
               <span className="mr-4 text-foreground text-lg">•</span>
               <div className="flex-1">
-                <span className="font-normal">Diện tích</span>
+                <span className="font-normal">{t('areaLabel')}</span>
                 <span className="mx-2">:</span>
                 <span className="font-medium">{area}</span>
               </div>
@@ -65,7 +67,7 @@ export default function ProjectInfo({ project }: ProjectInfoProps) {
             <li className="flex items-start">
               <span className="mr-4 text-foreground text-lg">•</span>
               <div className="flex-1">
-                <span className="font-normal">Năm thực hiện</span>
+                <span className="font-normal">{t('yearLabel')}</span>
                 <span className="mx-2">:</span>
                 <span className="font-medium">{year}</span>
               </div>
