@@ -39,11 +39,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       : [];
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden sm:pt-[61px] pt-[25px]">
+    <div className="min-h-screen bg-background text-foreground lg:pt-[61px] pt-[25px]">
       {/* Hero Image - Cover */}
       {project.heroImage && (
-        <section className="w-full bg-background">
-          <div className="w-full aspect-1399/695 overflow-hidden">
+        <section className="breakout-full-width bg-background">
+          <div className="relative w-full aspect-1399/695 overflow-hidden">
             <img
               src={project.heroImage}
               alt={project.title}
@@ -55,7 +55,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       )}
 
       {/* Project Info Section - Left aligned */}
-      <div className="sm:mt-[82px] mt-[25px]">
+      <div className="lg:mt-[82px] mt-[25px]">
         <ProjectInfo project={project} />
       </div>
       
@@ -66,7 +66,9 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
             <div className="lg:col-span-2">
               <ProjectContent content={project.content} />
               
-              <ProjectGalleryGrid images={galleryImages} maxImages={8} />
+              <div className="mt-12 lg:mb-[88px] mb-[100px]">
+                <ProjectGalleryGrid images={galleryImages} maxImages={8} />
+              </div>
             </div>
 
             <div className="lg:col-span-1">

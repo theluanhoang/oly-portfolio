@@ -4,24 +4,24 @@
   --background: #ffffff;
   --foreground: #000000;
   --color-dark: #221F1F;
-    --color-text-dark: #231F20;
+  --color-text-dark: #231F20;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-dark: var(--color-dark);
-    --color-text-dark: var(--color-text-dark);
+  --color-text-dark: var(--color-text-dark);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-    --font-montserrat: var(--font-montserrat);
-    --font-gayathri: var(--font-gayathri);
+  --font-montserrat: var(--font-montserrat);
+  --font-gayathri: var(--font-gayathri);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-    font-family: var(--font-gayathri), sans-serif;
+  font-family: var(--font-gayathri), sans-serif;
   overflow-x: hidden;
   margin: 0;
   padding: 0;
@@ -54,6 +54,25 @@ body {
 
 html {
   overflow-x: hidden;
+}
+
+.breakout-full-width {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  margin-left: 0;
+  margin-right: 0;
+}
+
+@media (min-width: 1024px) {
+  .breakout-full-width {
+    width: 100%;
+    left: auto;
+    right: auto;
+    transform: none;
+  }
 }
 
 /* Tiptap Editor Styles */
@@ -140,7 +159,7 @@ html {
 
 /* Project Content Styles */
 .project-content {
-    font-family: var(--font-gayathri), sans-serif;
+  font-family: var(--font-gayathri), sans-serif;
   color: var(--foreground);
   line-height: 1.8;
 }
@@ -175,7 +194,7 @@ html {
     height: 250px !important;
     min-height: 250px;
   }
-  
+
   .project-content iframe[src*="youtube.com"],
   .project-content iframe[src*="youtu.be"] {
     min-height: 250px;
@@ -270,15 +289,15 @@ html {
   .project-content h1 {
     font-size: 2rem;
   }
-  
+
   .project-content h2 {
     font-size: 1.75rem;
   }
-  
+
   .project-content h3 {
     font-size: 1.5rem;
   }
-  
+
   .project-content p {
     font-size: 0.95rem;
   }

@@ -1,4 +1,5 @@
-import { Geist, Geist_Mono, Montserrat, Gayathri } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
@@ -18,15 +19,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const montserrat = Montserrat({
+const montserrat = localFont({
+  src: "../../fonts/Montserrat/Montserrat-Regular.ttf",
   variable: "--font-montserrat",
-  subsets: ["latin"],
+  display: "swap",
 });
 
-const gayathri = Gayathri({
+const gayathri = localFont({
+  src: "../../fonts/Gayathri/Gayathri-Regular.ttf",
   variable: "--font-gayathri",
-  subsets: ["latin"],
-  weight: ["100", "400", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {

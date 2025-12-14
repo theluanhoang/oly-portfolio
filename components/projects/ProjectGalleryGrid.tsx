@@ -17,7 +17,7 @@ export default function ProjectGalleryGrid({ images, maxImages = 8 }: ProjectGal
   const displayImages = images.slice(0, maxImages);
 
   return (
-    <div className="mt-12 sm:mb-[88px] mb-[100px]">
+    <>
       <h2 className="text-black text-[32px] font-bold leading-normal tracking-[4.48px] uppercase">
         {t('gallery')}
       </h2>
@@ -36,7 +36,7 @@ export default function ProjectGalleryGrid({ images, maxImages = 8 }: ProjectGal
           </div>
         ))}
       </div>
-    </div>
+    </>
   );
 }
 
