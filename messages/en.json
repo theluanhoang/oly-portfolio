@@ -96,5 +96,28 @@
         "instagram": "Instagram",
         "officeAddress": "Office: 193/9P Dien Bien Phu, W 15, Binh Thanh, TP HCM",
         "hotlineNumber": "Hotline: 0900 000 000"
+    },
+    "AboutPage": {
+        "heroAlt": "About Hero",
+        "aboutOly": "ABOUT OLY",
+        "profile": "Profile",
+        "seeMore": "See more",
+        "aboutDescriptionFull": "Operating in the field of architectural and interior design construction, Oly Studio was founded by Architect Nguyen Nhat Minh, with the purpose of adding more brushstrokes to the colorful urban architectural picture. We believe that architecture, whether large or small in scale, still maintains proportions and rules expressed through basic modules. From the habit of using graph paper as a module to sketch architectural drawings, helping the simulated structures have proportions during formation, we aim for products that are diverse, unlimited in creativity while still harmonious with natural laws. With our passion, each member and each product of Oly will be a contribution with rules, harmonious with the overall architectural picture while still having distinctive marks and unique colors.",
+        "founderName": "KTS. NGUYỄN NHẬT MINH",
+        "fieldOperation": "FIELD OPERATION",
+        "viewProjects": "View projects",
+        "design": "DESIGN",
+        "construction": "CONSTRUCTION",
+        "furnitureProduction": "FURNITURE PRODUCTION",
+        "designDescription": "Through years of activity in design consulting services, Oly Studio continues to learn and create, renewing itself with diverse product types. From civil works such as villas, townhouses, resorts, offices, showrooms, restaurants, cafes to new experiences with creative, sophisticated and unique spaces, designed by a passionate team of architects and professional working processes.",
+        "constructionDescription": "Through years of activity in design consulting services, Oly Studio continues to learn and create, renewing itself with diverse product types. From civil works such as villas, townhouses, resorts, offices, showrooms, restaurants, cafes to new experiences with creative, sophisticated and unique spaces, designed by a passionate team of architects and professional working processes.",
+        "furnitureDescription": "Through years of activity in design consulting services, Oly Studio continues to learn and create, renewing itself with diverse product types. From civil works such as villas, townhouses, resorts, offices, showrooms, restaurants, cafes to new experiences with creative, sophisticated and unique spaces, designed by a passionate team of architects and professional working processes.",
+        "olyCreator": "OLY CREATOR",
+        "shane": "SHANE",
+        "shaneRole": "Founder",
+        "eduardo": "EDUARDO",
+        "eduardoRole": "Designer",
+        "founderRole": "Founder",
+        "designerRole": "Designer"
     }
 }

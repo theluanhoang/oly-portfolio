@@ -1,4 +1,3 @@
-import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from 'next-intl';
@@ -8,16 +7,6 @@ import { routing } from '@/i18n/routing';
 import "../globals.css";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import SessionProvider from "@/components/providers/SessionProvider";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 const montserrat = localFont({
   src: "../../fonts/Montserrat/Montserrat-Regular.ttf",
@@ -30,6 +19,13 @@ const gayathri = localFont({
   variable: "--font-gayathri",
   display: "swap",
 });
+
+const mulish = localFont({
+  src: "../../fonts/Mulish/Mulish-Regular.ttf",
+  variable: "--font-mulish",
+  display: "swap",
+});
+
 
 export const metadata: Metadata = {
   title: "OLY Studio - Portfolio",
@@ -53,7 +49,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   return (
     <html lang={locale}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${montserrat.variable} ${gayathri.variable} antialiased`}
+        className={`${montserrat.variable} ${gayathri.variable} ${mulish.variable} antialiased`}
       >
         <SessionProvider>
           <NextIntlClientProvider messages={messages}>

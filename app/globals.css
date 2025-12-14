@@ -12,10 +12,9 @@
   --color-foreground: var(--foreground);
   --color-dark: var(--color-dark);
   --color-text-dark: var(--color-text-dark);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
   --font-montserrat: var(--font-montserrat);
   --font-gayathri: var(--font-gayathri);
+  --font-mulish: var(--font-mulish);
 }
 
 body {

@@ -96,5 +96,28 @@
         "instagram": "Instagram",
         "officeAddress": "Văn phòng: 193/9P Điện Biên Phủ, P.15, Bình Thạnh, TP HCM",
         "hotlineNumber": "Hotline: 0900 000 000"
+    },
+    "AboutPage": {
+        "heroAlt": "Hero Giới thiệu",
+        "aboutOly": "VỀ OLY",
+        "profile": "Profile",
+        "seeMore": "Xem thêm",
+        "aboutDescriptionFull": "Hoạt động trong lĩnh vực thiết kế thi công kiến trúc nội thất, ÔLy Studio được thành lập bởi KTS. Nguyễn Nhật Minh, không ngoài mục đích góp thêm nét cọ trong bức tranh kiến trúc đô thị muôn màu. Chúng tôi quan niệm kiến trúc dù với quy mô lớn hay nhỏ vẫn tồn tại tỉ lệ, quy luật được diễn đạt bởi những module cơ sở. Từ thói quen sử dụng ôly giấy như một module để phác thảo bản vẽ kiến trúc, giúp cho các cấu trúc được mô phỏng có tỉ lệ trong quá trình hình thành, chúng tôi hướng đến sản phẩm mang tính đa dạng, không giới hạn sự sáng tạo mà vẫn hài hòa với quy luật tự nhiên. Với sự nhiệt huyết của mình, mỗi thành viên cùng mỗi sản phẩm của ÔLy sẽ là một sự đóng góp có quy luật, hài hòa với bức tranh kiến trúc tổng thể mà vẫn có dấu ấn đặc trưng và sắc màu riêng.",
+        "founderName": "KTS. NGUYỄN NHẬT MINH",
+        "fieldOperation": "LĨNH VỰC HOẠT ĐỘNG",
+        "viewProjects": "Xem dự án",
+        "design": "THIẾT KẾ",
+        "construction": "THI CÔNG",
+        "furnitureProduction": "SẢN XUẤT NỘI THẤT",
+        "designDescription": "Trải qua quá trình hoạt động nhiều năm trong dịch vụ tư vấn thiết kế, ÔLy Studio vẫn không ngừng học hỏi và sáng tạo, làm mới mình với đa dạng thể loại sản phẩm. Từ công trình dân dụng như biệt thự, nhà phố, resort, văn phòng, showroom, nhà hàng, cafe cho đến những trải nghiệm mới mẻ với các không gian sáng tạo, tinh tế và độc đáo, được thiết kế bởi đội ngũ kiến trúc sư đầy nhiệt huyết và quy trình làm việc chuyên nghiệp.",
+        "constructionDescription": "Trải qua quá trình hoạt động nhiều năm trong dịch vụ tư vấn thiết kế, ÔLy Studio vẫn không ngừng học hỏi và sáng tạo, làm mới mình với đa dạng thể loại sản phẩm. Từ công trình dân dụng như biệt thự, nhà phố, resort, văn phòng, showroom, nhà hàng, cafe cho đến những trải nghiệm mới mẻ với các không gian sáng tạo, tinh tế và độc đáo, được thiết kế bởi đội ngũ kiến trúc sư đầy nhiệt huyết và quy trình làm việc chuyên nghiệp.",
+        "furnitureDescription": "Trải qua quá trình hoạt động nhiều năm trong dịch vụ tư vấn thiết kế, ÔLy Studio vẫn không ngừng học hỏi và sáng tạo, làm mới mình với đa dạng thể loại sản phẩm. Từ công trình dân dụng như biệt thự, nhà phố, resort, văn phòng, showroom, nhà hàng, cafe cho đến những trải nghiệm mới mẻ với các không gian sáng tạo, tinh tế và độc đáo, được thiết kế bởi đội ngũ kiến trúc sư đầy nhiệt huyết và quy trình làm việc chuyên nghiệp.",
+        "olyCreator": "ĐỘI NGŨ OLY",
+        "shane": "SHANE",
+        "shaneRole": "Người sáng lập",
+        "eduardo": "EDUARDO",
+        "eduardoRole": "Nhà thiết kế",
+        "founderRole": "Người sáng lập",
+        "designerRole": "Nhà thiết kế"
     }
 }
