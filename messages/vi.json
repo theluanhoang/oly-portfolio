@@ -22,7 +22,9 @@
     },
     "Projects": {
         "title": "Dự án",
-        "loading": "Đang tải..."
+        "loading": "Đang tải...",
+        "moreProject": "DỰ ÁN KHÁC",
+        "gallery": "THƯ VIỆN ẢNH"
     },
     "ProjectInfo": {
         "location": "Vị trí",

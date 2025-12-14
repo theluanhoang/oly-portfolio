@@ -20,7 +20,7 @@ export default function Footer({ isFixed = false }: FooterProps) {
         {isSm ? (
           <div className="flex items-start justify-between gap-[10px] w-full">
             <div className="flex flex-col gap-[9px]">
-              <p className="text-black min-[843px]:text-[18px] text-[12px] font-bold leading-normal tracking-[2.52px]">
+              <p className="text-black max-w-[743px] min-[843px]:text-[18px] text-[12px] font-bold leading-normal tracking-[2.52px]">
                 {t('tagline')}
               </p>
               <div className="flex min-[747px]:flex-row flex-col min-[747px]:items-center items-start min-[747px]:gap-[77px] gap-[9px]">

@@ -1,7 +1,6 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import LanguageSwitcher from '@/components/layout/LanguageSwitcher';
 
 interface Project {
   title: string;
@@ -20,59 +19,44 @@ export default function ProjectInfo({ project }: ProjectInfoProps) {
   const t = useTranslations('ProjectInfo');
 
   return (
-    <section className="relative bg-background py-20 px-8 md:px-12 lg:px-24">
+    <section className="relative bg-background">
       {/* Background texture effect */}
       <div className="absolute inset-0 opacity-30" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
       }}></div>
       
-      <div className="relative max-w-6xl mx-auto">
-        {/* Language Switcher */}
-        <div className="flex justify-end mb-12">
-          <LanguageSwitcher />
-        </div>
-
+      <div className="relative flex flex-col sm:gap-[72px] gap-[24px]">
         {/* Project Title */}
-        <h1 className="text-5xl md:text-6xl lg:text-7xl font-normal text-foreground tracking-[3px] uppercase text-center mb-16 md:mb-20">
+        <h1 className="text-text-dark font-medium sm:text-[56px] text-[36px] leading-normal uppercase sm:tracking-[7.84px] tracking-[5.04px] font-['Montserrat']">
           {title}
         </h1>
 
         {/* Project Specifications */}
-        <div className="max-w-xl mx-auto">
-          <ul className="space-y-5 text-foreground text-base md:text-lg">
-            <li className="flex items-start">
-              <span className="mr-4 text-foreground text-lg">•</span>
-              <div className="flex-1">
-                <span className="font-normal">{t('categoryLabel')}</span>
-                <span className="mx-2">:</span>
-                <span className="font-medium">{category}</span>
-              </div>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-4 text-foreground text-lg">•</span>
-              <div className="flex-1">
-                <span className="font-normal">{t('locationLabel')}</span>
-                <span className="mx-2">:</span>
-                <span className="font-medium">{location}</span>
-              </div>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-4 text-foreground text-lg">•</span>
-              <div className="flex-1">
-                <span className="font-normal">{t('areaLabel')}</span>
-                <span className="mx-2">:</span>
-                <span className="font-medium">{area}</span>
-              </div>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-4 text-foreground text-lg">•</span>
-              <div className="flex-1">
-                <span className="font-normal">{t('yearLabel')}</span>
-                <span className="mx-2">:</span>
-                <span className="font-medium">{year}</span>
-              </div>
-            </li>
-          </ul>
+        <div className="max-w-[330px] grid grid-cols-2 sm:gap-x-[34px] gap-x-[43px] text-foreground font-montserrat text-xs tracking-[1.68px] leading-5">
+          <div className="space-y-[5px]">
+            <div className="flex items-centerfont-normal">
+              <span className="mr-4">•</span>
+              <p>{t('categoryLabel')}</p>
+            </div>
+            <div className="flex items-centerfont-normal">
+              <span className="mr-4">•</span>
+              <p>{t('locationLabel')}</p>
+            </div>
+            <div className="flex items-centerfont-normal">
+              <span className="mr-4">•</span>
+              <p>{t('areaLabel')}</p>
+            </div>
+            <div className="flex items-centerfont-normal">
+              <span className="mr-4">•</span>
+              <p>{t('yearLabel')}</p>
+            </div>
+          </div>
+          <div className="space-y-[5px]">
+            <p className="font-normal">{category}</p>
+            <p className="font-normal">{location}</p>
+            <p className="font-normal">{area} m²</p>
+            <p className="font-normal">{year}</p>
+          </div>
         </div>
       </div>
     </section>

@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
-import ProjectGallery from '@/components/projects/ProjectGallery';
 import ProjectInfo from '@/components/projects/ProjectInfo';
 import ProjectContent from '@/components/projects/ProjectContent';
-import { getProjectBySlug, getAllProjectSlugs } from '@/data/projects';
+import ProjectGalleryGrid from '@/components/projects/ProjectGalleryGrid';
+import MoreProjects from '@/components/projects/MoreProjects';
+import { getProjectBySlug, getAllProjectSlugs, getProjects } from '@/data/projects';
 import { routing } from '@/i18n/routing';
 
 interface ProjectDetailPageProps {
@@ -30,6 +31,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     notFound();
   }
 
+  const allProjects = await getProjects();
   const galleryImages = project.gallery && project.gallery.length > 0 
     ? project.gallery 
     : project.heroImage 
@@ -37,15 +39,52 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       : [];
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      {/* Gallery Section */}
-      <ProjectGallery images={galleryImages} />
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden sm:pt-[61px] pt-[25px]">
+      {/* Hero Image - Cover */}
+      {project.heroImage && (
+        <section className="w-full bg-background">
+          <div className="w-full aspect-1399/695 overflow-hidden">
+            <img
+              src={project.heroImage}
+              alt={project.title}
+              className="w-full h-full object-cover"
+              loading="eager"
+            />
+          </div>
+        </section>
+      )}
+
+      {/* Project Info Section - Left aligned */}
+      <div className="sm:mt-[82px] mt-[25px]">
+        <ProjectInfo project={project} />
+      </div>
       
-      {/* Project Info Section */}
-      <ProjectInfo project={project} />
-      
-      {/* Project Content Section */}
-      <ProjectContent content={project.content} />
+      {/* Two Column Layout */}
+      <section className="relative bg-background">
+        <div className="relative">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-[112px]">
+            <div className="lg:col-span-2">
+              <ProjectContent content={project.content} />
+              
+              <ProjectGalleryGrid images={galleryImages} maxImages={8} />
+            </div>
+
+            <div className="lg:col-span-1">
+              <MoreProjects 
+                projects={allProjects.map(p => ({
+                  slug: p.slug,
+                  title: p.title,
+                  heroImage: p.heroImage,
+                  category: p.category,
+                  location: p.location,
+                  year: p.year,
+                }))}
+                currentSlug={slug}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

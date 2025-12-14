@@ -22,7 +22,9 @@
     },
     "Projects": {
         "title": "Projects",
-        "loading": "Loading..."
+        "loading": "Loading...",
+        "moreProject": "MORE PROJECT",
+        "gallery": "GALLERY"
     },
     "ProjectInfo": {
         "location": "Location",
