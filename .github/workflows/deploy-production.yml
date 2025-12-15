@@ -40,9 +40,13 @@ jobs:
           NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL || '' }}
           EOF
           echo ".env file created (sensitive values hidden)"
+          # Wait a moment to ensure file is written
+          sleep 1
 
       - name: Create deployment package
         run: |
+          # Wait a moment to ensure .env is fully written
+          sleep 1
           # Create tar archive excluding unnecessary files
           # Note: .env is included (created from secrets above)
           tar --exclude='.git' \
@@ -58,8 +62,11 @@ jobs:
               --exclude='.idea' \
               --exclude='public/uploads' \
               --exclude='deploy-package' \
+              --exclude='deploy.tar.gz' \
               -czf deploy.tar.gz .
           ls -lh deploy.tar.gz
+          # Verify .env is in the archive
+          tar -tzf deploy.tar.gz | grep -q '^\.env$' && echo "✅ .env included in archive" || echo "⚠️ .env not found in archive"
 
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
