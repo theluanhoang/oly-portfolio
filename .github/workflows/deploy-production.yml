@@ -105,8 +105,16 @@ jobs:
             echo "Ensuring Docker engine is installed..."
             if ! command -v docker &> /dev/null; then
               echo "Docker not found. Installing Docker engine..."
-              sudo apt-get update -y
-              sudo apt-get install -y docker.io
+              if command -v apt-get &> /dev/null; then
+                sudo apt-get update -y
+                sudo apt-get install -y docker.io
+              elif command -v yum &> /dev/null; then
+                sudo yum update -y
+                sudo yum install -y docker
+              else
+                echo "ERROR: Neither apt-get nor yum is available to install Docker."
+                exit 1
+              fi
               sudo systemctl enable --now docker || true
             else
               echo "Docker already installed."
