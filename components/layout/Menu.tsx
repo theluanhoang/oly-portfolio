@@ -19,19 +19,19 @@ function Menu({ className }: MenuProps) {
         {t('projects')}
       </Link>
       <Link
-        href="#product"
+        href="/product"
         className="inline-flex h-full items-center text-[12px] font-normal text-black"
       >
         {t('product')}
       </Link>
       <Link
-        href="#about"
+        href="/about"
         className="inline-flex h-full items-center text-[12px] font-normal text-black"
       >
         {t('about')}
       </Link>
       <Link
-        href="#contact"
+        href="/contact"
         className="inline-flex h-full items-center text-[12px] font-normal text-black"
       >
         {t('contact')}

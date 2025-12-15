@@ -66,6 +66,7 @@ export function useHorizontalScroll(): UseHorizontalScrollReturn {
     function updateGalleryPosition(): void {
       const totalWidth = calculateTotalWidth();
       if (totalWidth === 0) {
+        galleryEl.style.transform = 'translateX(0px)';
         ticking = false;
         return;
       }
@@ -76,6 +77,7 @@ export function useHorizontalScroll(): UseHorizontalScrollReturn {
       
       const wrapper = galleryEl.parentElement;
       if (!wrapper) {
+        galleryEl.style.transform = 'translateX(0px)';
         ticking = false;
         return;
       }
@@ -83,9 +85,14 @@ export function useHorizontalScroll(): UseHorizontalScrollReturn {
       const wrapperWidth = wrapper.offsetWidth;
       const availableWidth = wrapperWidth;
       const maxTranslate = -(totalWidth - availableWidth);
-      const translateX = Math.max(maxTranslate, Math.min(0, maxTranslate * scrollPercentage));
-
-      galleryEl.style.transform = `translateX(${translateX}px)`;
+      
+      if (totalWidth <= availableWidth) {
+        galleryEl.style.transform = 'translateX(0px)';
+      } else {
+        const translateX = Math.max(maxTranslate, Math.min(0, maxTranslate * scrollPercentage));
+        galleryEl.style.transform = `translateX(${translateX}px)`;
+      }
+      
       ticking = false;
     }
 

@@ -22,7 +22,7 @@ interface GalleryUploadProps {
   uploading: boolean;
   uploadProgress: Record<string, UploadProgressItem>;
   isDragging: boolean;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDragLeave: (e: React.DragEvent) => void;

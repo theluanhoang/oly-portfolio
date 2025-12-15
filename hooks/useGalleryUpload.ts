@@ -24,7 +24,7 @@ interface UseGalleryUploadReturn {
   uploading: boolean;
   uploadProgress: Record<string, UploadProgressItem>;
   isDragging: boolean;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   handleDragOver: (e: React.DragEvent) => void;
   handleDragLeave: (e: React.DragEvent) => void;

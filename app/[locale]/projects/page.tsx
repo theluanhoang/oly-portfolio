@@ -118,6 +118,11 @@ export default function ProjectsPage() {
             <div
               ref={galleryRef}
               className="absolute top-0 left-0 flex gap-[10px] transition-transform duration-100 ease-out will-change-transform"
+              style={{
+                width: 'max-content',
+                minWidth: '100%',
+                justifyContent: 'flex-start'
+              }}
             >
               {sections.map((sectionImages, sectionIndex) => (
                 <ProjectSection

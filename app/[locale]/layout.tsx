@@ -32,6 +32,7 @@ export const metadata: Metadata = {
   description: "OLY Studio portfolio showcasing architectural projects and design works",
 };
 
+export const dynamic = 'force-dynamic';
 interface LocaleLayoutProps {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;

@@ -20,26 +20,28 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
   placeholder,
   error,
   required = false,
-  className = '',
+  className: wrapperClassNameProp = '',
   style,
   ...props
 }, ref) {
   const inputId = `input-${name}`;
   const hasError = !!error;
 
+  const propsClassName = 'className' in props ? (props.className as string) || '' : '';
+
   const inputClassName = type === 'file' 
-    ? props.className || ''
+    ? propsClassName
     : `w-full px-4 py-3 border bg-white text-[#333] focus:outline-none transition-colors ${
         hasError
           ? 'border-red-500 focus:border-red-600'
           : 'border-[#e0e0e0] focus:border-[#333]'
-      } ${props.className || ''}`;
+      } ${propsClassName}`;
 
-  const { className: _, ...inputProps } = props;
+  const { className: _unused, ...inputProps } = props as { className?: string; [key: string]: unknown };
 
   const wrapperClassName = type === 'file' && !label 
-    ? (props.className || className)
-    : className;
+    ? (propsClassName || wrapperClassNameProp)
+    : wrapperClassNameProp;
 
   return (
     <div className={wrapperClassName} style={style}>

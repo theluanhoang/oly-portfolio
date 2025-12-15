@@ -1,4 +1,4 @@
-.PHONY: help dev dev-up dev-down dev-logs prod-build prod-up prod-down prod-logs db-migrate db-studio db-seed db-generate clean install build lint npm-install npm-install-package npm-install-dev npm-update npm-uninstall npm-audit npm-audit-fix npm-list npm-outdated npm-ci
+.PHONY: help dev dev-up dev-down dev-logs prod-build prod-up prod-down prod-logs prod-restart prod-db-migrate prod-db-seed prod-db-studio prod-shell db-migrate db-studio db-seed db-generate clean install build lint npm-install npm-install-package npm-install-dev npm-update npm-uninstall npm-audit npm-audit-fix npm-list npm-outdated npm-ci
 
 # Docker Compose command (use 'docker compose' v2 or 'docker-compose' v1)
 # Set USE_SUDO=1 to use sudo, or USE_SUDO=0 to run without sudo
@@ -58,6 +58,19 @@ prod-logs: ## View production logs
 prod: prod-build prod-up ## Build and start production
 
 prod-restart: prod-down prod-up ## Restart production environment
+
+# Production database commands
+prod-db-migrate: ## Run database migrations in production
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml exec app npx prisma migrate deploy
+
+prod-db-seed: ## Seed database with sample data in production
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml exec app sh -c "cd /app && npx tsx prisma/seed.ts"
+
+prod-db-studio: ## Open Prisma Studio in production
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml exec app npx prisma studio
+
+prod-shell: ## Open shell in production app container
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml exec app sh
 
 # Database commands
 db-migrate: ## Run database migrations

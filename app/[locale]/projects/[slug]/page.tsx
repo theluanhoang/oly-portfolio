@@ -10,6 +10,8 @@ interface ProjectDetailPageProps {
   params: Promise<{ slug: string; locale: string }>;
 }
 
+export const dynamic = 'force-dynamic';
+
 export async function generateStaticParams() {
   const allSlugs = await getAllProjectSlugs();
   const params: Array<{ slug: string; locale: string }> = [];
@@ -60,7 +62,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       </div>
       
       {/* Two Column Layout */}
-      <section className="relative bg-background">
+      <section className="relative bg-background md:mt-[45px] mt-[25px]">
         <div className="relative">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-[112px]">
             <div className="lg:col-span-2">

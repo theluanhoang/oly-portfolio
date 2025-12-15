@@ -38,6 +38,7 @@ export default function FormField({
   const error = errors[name]?.message as string | undefined;
 
   if (type === 'select' || options) {
+    const { name: _unused, ...registerProps } = register(name);
     return (
       <Select
         label={label}
@@ -47,12 +48,13 @@ export default function FormField({
         error={error}
         className={className}
         options={options || []}
-        {...register(name)}
+        {...registerProps}
         {...props}
       />
     );
   }
 
+  const { name: _unused, ...registerProps } = register(name);
   return (
     <Input
       label={label}
@@ -62,7 +64,7 @@ export default function FormField({
       required={required}
       error={error}
       className={className}
-      {...register(name)}
+      {...registerProps}
       {...props}
     />
   );
