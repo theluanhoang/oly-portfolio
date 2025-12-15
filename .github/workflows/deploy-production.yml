@@ -121,10 +121,32 @@ jobs:
             fi
 
             echo "Setting up Docker Compose..."
-            if ! command -v docker-compose &> /dev/null; then
-              echo "docker-compose not found. Installing docker-compose standalone..."
-              sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
+            # Prefer docker compose plugin; fallback to standalone binary
+            if docker compose version &> /dev/null; then
+              echo "Docker Compose plugin already available."
+            else
+              echo "Docker Compose plugin not found. Installing..."
+              if command -v yum &> /dev/null; then
+                # Amazon Linux / RHEL family
+                sudo yum install -y docker-compose-plugin || true
+                # Amazon Linux 2023 installs plugin under /usr/libexec/docker/cli-plugins
+                if ! docker compose version &> /dev/null; then
+                  echo "Plugin not available, installing standalone binary..."
+                  sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                  sudo chmod +x /usr/local/bin/docker-compose
+                fi
+              elif command -v apt-get &> /dev/null; then
+                sudo apt-get install -y docker-compose-plugin || true
+                if ! docker compose version &> /dev/null; then
+                  echo "Plugin not available, installing standalone binary..."
+                  sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                  sudo chmod +x /usr/local/bin/docker-compose
+                fi
+              else
+                echo "No package manager found for compose plugin, installing standalone binary..."
+                sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                sudo chmod +x /usr/local/bin/docker-compose
+              fi
             fi
             
             echo "Ensuring Docker daemon is running..."
