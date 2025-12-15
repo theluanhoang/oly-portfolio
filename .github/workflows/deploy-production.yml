@@ -20,7 +20,8 @@ jobs:
 
       - name: Create deployment package
         run: |
-          # Create tar archive BEFORE creating .env to avoid conflicts
+          # Create tar archive in /tmp to avoid "file changed" error
+          # This is the recommended approach per tar documentation
           tar --exclude='.git' \
               --exclude='node_modules' \
               --exclude='.next' \
@@ -34,7 +35,10 @@ jobs:
               --exclude='public/uploads' \
               --exclude='deploy-package' \
               --exclude='deploy.tar.gz' \
-              -czf deploy.tar.gz .
+              --warning=no-file-changed \
+              -czf /tmp/deploy.tar.gz .
+          # Move to current directory for SCP
+          mv /tmp/deploy.tar.gz deploy.tar.gz
           ls -lh deploy.tar.gz
 
       - name: Create .env file from secrets
