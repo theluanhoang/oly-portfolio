@@ -5,7 +5,7 @@ on:
     branches:
       - prod
   push:
-    branches:
+    branches-ignore:
       - prod
 
 jobs:
@@ -24,6 +24,8 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
         run: |
           npm ci
 
