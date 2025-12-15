@@ -13,6 +13,7 @@ jobs:
   build-and-deploy:
     name: Build and Deploy to EC2
     runs-on: ubuntu-latest
+    environment: production
     
     steps:
       - name: Checkout code
@@ -57,6 +58,15 @@ jobs:
           ENVEOF
           echo ".env file created"
 
+      - name: Verify SSH key format
+        run: |
+          if [ -z "${{ secrets.EC2_SSH_KEY }}" ]; then
+            echo "❌ ERROR: EC2_SSH_KEY secret is not set!"
+            echo "Please add EC2_SSH_KEY to GitHub Secrets"
+            exit 1
+          fi
+          echo "✅ EC2_SSH_KEY secret is set"
+
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -68,6 +78,7 @@ jobs:
           target: "/home/${{ secrets.EC2_USER }}/app"
           strip_components: 0
           timeout: 300s
+          debug: true
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
