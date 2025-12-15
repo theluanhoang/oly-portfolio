@@ -1,0 +1,177 @@
+name: Deploy to Production (EC2)
+
+on:
+  push:
+    branches:
+      - prod
+  workflow_dispatch:
+
+env:
+  DOCKER_COMPOSE_VERSION: v2.24.0
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy to EC2
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env file from secrets
+        run: |
+          cat > .env << EOF
+          # Database Configuration
+          POSTGRES_USER=${{ secrets.POSTGRES_USER || 'postgres' }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB=${{ secrets.POSTGRES_DB || 'oly_portfolio' }}
+          POSTGRES_PORT=${{ secrets.POSTGRES_PORT || '5432' }}
+          
+          # Next.js Configuration
+          NODE_ENV=production
+          NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+          ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+          
+          # Nginx Configuration
+          NGINX_PORT=${{ secrets.NGINX_PORT || '80' }}
+          
+          # Application URLs (if needed)
+          NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL || '' }}
+          EOF
+          echo ".env file created (sensitive values hidden)"
+
+      - name: Create deployment package
+        run: |
+          # Create tar archive excluding unnecessary files
+          # Note: .env is included (created from secrets above)
+          tar --exclude='.git' \
+              --exclude='node_modules' \
+              --exclude='.next' \
+              --exclude='.env.backup' \
+              --exclude='.env.old' \
+              --exclude='*.log' \
+              --exclude='.DS_Store' \
+              --exclude='coverage' \
+              --exclude='tests' \
+              --exclude='.vscode' \
+              --exclude='.idea' \
+              --exclude='public/uploads' \
+              --exclude='deploy-package' \
+              -czf deploy.tar.gz .
+          ls -lh deploy.tar.gz
+
+      - name: Copy files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          source: "deploy.tar.gz,.env"
+          target: "/home/${{ secrets.EC2_USER }}/app"
+          strip_components: 0
+          timeout: 300s
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          script: |
+            set -e
+            
+            APP_DIR="/home/${{ secrets.EC2_USER }}/app"
+            cd $APP_DIR
+            
+            echo "Creating backup..."
+            if [ -f docker-compose.prod.yml ]; then
+              mkdir -p backup
+              cp -r . backup/ 2>/dev/null || true
+            fi
+            
+            echo "Extracting deployment package..."
+            tar -xzf deploy.tar.gz
+            rm -f deploy.tar.gz
+            
+            echo "Setting up Docker Compose..."
+            if ! command -v docker-compose &> /dev/null; then
+              echo "Installing Docker Compose..."
+              sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+            fi
+            
+            echo "Ensuring Docker is running..."
+            sudo systemctl start docker || true
+            sudo systemctl enable docker || true
+            
+            echo "Loading environment variables..."
+            if [ -f .env ]; then
+              echo "Using .env file from deployment"
+              # Backup existing .env if it exists and is different
+              if [ -f .env.backup ]; then
+                mv .env.backup .env.backup.old
+              fi
+              cp .env .env.backup 2>/dev/null || true
+            else
+              echo "WARNING: No .env file found! Please configure GitHub Secrets."
+              exit 1
+            fi
+            
+            echo "Pulling latest images..."
+            sudo docker compose -f docker-compose.prod.yml pull || true
+            
+            echo "Building and starting containers..."
+            sudo docker compose -f docker-compose.prod.yml build
+            sudo docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            
+            echo "Waiting for services to be healthy..."
+            sleep 10
+            
+            echo "Checking service health..."
+            sudo docker compose -f docker-compose.prod.yml ps
+            
+            echo "Cleaning up old images..."
+            sudo docker image prune -f
+            
+            echo "Deployment completed successfully!"
+
+      - name: Health Check
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          script: |
+            set -e
+            
+            echo "Performing health check..."
+            max_attempts=30
+            attempt=0
+            
+            while [ $attempt -lt $max_attempts ]; do
+              if curl -f http://localhost/api/health > /dev/null 2>&1; then
+                echo "Health check passed!"
+                exit 0
+              fi
+              
+              attempt=$((attempt + 1))
+              echo "Health check attempt $attempt/$max_attempts failed, retrying..."
+              sleep 5
+            done
+            
+            echo "Health check failed after $max_attempts attempts"
+            exit 1
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Deployment failed!"
+          fi
+
