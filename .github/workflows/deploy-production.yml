@@ -20,7 +20,8 @@ jobs:
 
       - name: Create .env file from secrets
         run: |
-          cat > .env << EOF
+          # Create .env file in a temporary location first
+          cat > .env.tmp << EOF
           # Database Configuration
           POSTGRES_USER=${{ secrets.POSTGRES_USER || 'postgres' }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
@@ -39,21 +40,18 @@ jobs:
           # Application URLs (if needed)
           NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL || '' }}
           EOF
+          # Move to final location after creation
+          mv .env.tmp .env
           echo ".env file created (sensitive values hidden)"
-          # Wait a moment to ensure file is written
-          sleep 1
 
       - name: Create deployment package
         run: |
-          # Wait a moment to ensure .env is fully written
-          sleep 1
           # Create tar archive excluding unnecessary files
-          # Note: .env is included (created from secrets above)
+          # Note: .env will be copied separately
           tar --exclude='.git' \
               --exclude='node_modules' \
               --exclude='.next' \
-              --exclude='.env.backup' \
-              --exclude='.env.old' \
+              --exclude='.env*' \
               --exclude='*.log' \
               --exclude='.DS_Store' \
               --exclude='coverage' \
@@ -65,8 +63,6 @@ jobs:
               --exclude='deploy.tar.gz' \
               -czf deploy.tar.gz .
           ls -lh deploy.tar.gz
-          # Verify .env is in the archive
-          tar -tzf deploy.tar.gz | grep -q '^\.env$' && echo "✅ .env included in archive" || echo "⚠️ .env not found in archive"
 
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -96,7 +92,15 @@ jobs:
             echo "Creating backup..."
             if [ -f docker-compose.prod.yml ]; then
               mkdir -p backup
-              cp -r . backup/ 2>/dev/null || true
+              # Create compressed backup (faster and smaller)
+              tar -czf backup/backup-$(date +%Y%m%d-%H%M%S).tar.gz \
+                --exclude='backup' \
+                --exclude='node_modules' \
+                --exclude='.next' \
+                --exclude='public/uploads' \
+                . 2>/dev/null || true
+              # Keep only last 3 backups to save disk space
+              ls -t backup/backup-*.tar.gz 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null || true
             fi
             
             echo "Extracting deployment package..."
@@ -127,21 +131,20 @@ jobs:
               exit 1
             fi
             
-            echo "Pulling latest images..."
-            sudo docker compose -f docker-compose.prod.yml pull || true
+            echo "Stopping old containers gracefully..."
+            sudo docker compose -f docker-compose.prod.yml stop app nginx 2>/dev/null || true
             
-            echo "Building and starting containers..."
-            sudo docker compose -f docker-compose.prod.yml build
+            echo "Building with cache and parallel build..."
+            sudo docker compose -f docker-compose.prod.yml build --parallel
+            
+            echo "Starting services..."
             sudo docker compose -f docker-compose.prod.yml up -d --remove-orphans
             
-            echo "Waiting for services to be healthy..."
-            sleep 10
+            echo "Waiting for services to be ready..."
+            sleep 5
             
-            echo "Checking service health..."
+            echo "Checking service status..."
             sudo docker compose -f docker-compose.prod.yml ps
-            
-            echo "Cleaning up old images..."
-            sudo docker image prune -f
             
             echo "Deployment completed successfully!"
 
@@ -156,29 +159,48 @@ jobs:
             set -e
             
             echo "Performing health check..."
-            max_attempts=30
+            max_attempts=20
             attempt=0
             
             while [ $attempt -lt $max_attempts ]; do
-              if curl -f http://localhost/api/health > /dev/null 2>&1; then
-                echo "Health check passed!"
+              if curl -f -s http://localhost/api/health > /dev/null 2>&1; then
+                echo "✅ Health check passed!"
                 exit 0
               fi
               
               attempt=$((attempt + 1))
-              echo "Health check attempt $attempt/$max_attempts failed, retrying..."
-              sleep 5
+              echo "Health check attempt $attempt/$max_attempts..."
+              sleep 3
             done
             
-            echo "Health check failed after $max_attempts attempts"
+            echo "❌ Health check failed after $max_attempts attempts"
+            echo "Checking container logs..."
+            sudo docker compose -f docker-compose.prod.yml logs --tail=50 app || true
             exit 1
 
-      - name: Notify deployment status
+      - name: Cleanup old Docker resources
+        if: success()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          script: |
+            echo "Cleaning up old Docker resources..."
+            sudo docker image prune -f --filter "until=24h" || true
+
+      - name: Deployment Summary
         if: always()
         run: |
           if [ "${{ job.status }}" == "success" ]; then
             echo "✅ Deployment successful!"
+            echo "📊 Summary:"
+            echo "  - Code deployed to EC2"
+            echo "  - Containers started"
+            echo "  - Health check passed"
           else
             echo "❌ Deployment failed!"
+            echo "Check logs above for details"
           fi
 
