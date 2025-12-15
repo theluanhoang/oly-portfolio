@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.6
 FROM node:20-alpine AS base
 
 RUN apk add --no-cache libc6-compat
@@ -12,8 +13,8 @@ COPY prisma.config.ts ./
 
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 
-RUN npm ci && \
-    npm cache clean --force
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --include=dev --prefer-offline --no-audit
 
 FROM base AS builder
 WORKDIR /app
@@ -27,7 +28,8 @@ COPY prisma.config.ts ./
 
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 
-RUN npx prisma generate
+RUN --mount=type=cache,target=/root/.npm \
+    npx prisma generate
 
 FROM builder AS build-continue
 WORKDIR /app
@@ -66,8 +68,8 @@ RUN mkdir -p ./node_modules
 COPY --from=build-continue --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=build-continue --chown=nextjs:nodejs /app/package-lock.json* ./package-lock.json
 # Install Prisma CLI for running migrations
-RUN npm install --production --no-save prisma@^7.1.0 && \
-    npm cache clean --force && \
+RUN --mount=type=cache,target=/root/.npm \
+    npm install --production --no-save prisma@^7.1.0 && \
     chown -R nextjs:nodejs ./node_modules 2>/dev/null || true
 # Copy dotenv from builder stage (more reliable than installing)
 # dotenv is needed for prisma.config.ts to load DATABASE_URL from environment
