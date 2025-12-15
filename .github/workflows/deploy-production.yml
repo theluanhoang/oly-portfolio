@@ -64,27 +64,33 @@ jobs:
             echo "❌ ERROR: EC2_SSH_KEY secret is not set!"
             exit 1
           fi
-          # Create SSH key file from secret (preserve newlines)
-          mkdir -p ~/.ssh
-          # Use printf to preserve newlines properly
-          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key
-          chmod 600 ~/.ssh/ec2_key
-          echo "✅ SSH key file created"
-          # Verify key format
-          if head -1 ~/.ssh/ec2_key | grep -q "BEGIN.*PRIVATE KEY"; then
+          # Create SSH key file in workspace (accessible to Docker containers)
+          # EC2 key pair (.pem) format is supported
+          mkdir -p .ssh
+          # Write SSH key preserving all newlines and formatting
+          # Use echo with -e to preserve newlines from secret
+          echo -e "${{ secrets.EC2_SSH_KEY }}" > .ssh/ec2_key
+          chmod 600 .ssh/ec2_key
+          echo "✅ SSH key file created at $(pwd)/.ssh/ec2_key"
+          # Verify key format (EC2 .pem files can be RSA or OpenSSH format)
+          if head -1 .ssh/ec2_key | grep -qE "BEGIN.*(RSA|OPENSSH|PRIVATE KEY)"; then
             echo "✅ SSH key format looks correct"
+            echo "Key type: $(head -1 .ssh/ec2_key)"
           else
             echo "⚠️ WARNING: SSH key format may be incorrect"
-            echo "First line: $(head -1 ~/.ssh/ec2_key)"
-            echo "Key should start with -----BEGIN and end with -----END"
+            echo "First line: $(head -1 .ssh/ec2_key)"
+            echo "Expected: -----BEGIN RSA PRIVATE KEY----- or -----BEGIN OPENSSH PRIVATE KEY-----"
           fi
+          # Show key file info (without revealing content)
+          echo "Key file size: $(wc -c < .ssh/ec2_key) bytes"
+          echo "Key file lines: $(wc -l < .ssh/ec2_key) lines"
 
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key_path: ~/.ssh/ec2_key
+          key_path: ${{ github.workspace }}/.ssh/ec2_key
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
           source: "deploy.tar.gz,.env"
           target: "/home/${{ secrets.EC2_USER }}/app"
@@ -97,7 +103,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key_path: ~/.ssh/ec2_key
+          key_path: ${{ github.workspace }}/.ssh/ec2_key
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
           script: |
             set -e
@@ -169,7 +175,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key_path: ~/.ssh/ec2_key
+          key_path: ${{ github.workspace }}/.ssh/ec2_key
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
           script: |
             set -e
@@ -200,7 +206,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key_path: ~/.ssh/ec2_key
+          key_path: ${{ github.workspace }}/.ssh/ec2_key
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
           script: |
             echo "Cleaning up old Docker resources..."
