@@ -58,21 +58,33 @@ jobs:
           ENVEOF
           echo ".env file created"
 
-      - name: Verify SSH key format
+      - name: Setup SSH key
         run: |
           if [ -z "${{ secrets.EC2_SSH_KEY }}" ]; then
             echo "❌ ERROR: EC2_SSH_KEY secret is not set!"
-            echo "Please add EC2_SSH_KEY to GitHub Secrets"
             exit 1
           fi
-          echo "✅ EC2_SSH_KEY secret is set"
+          # Create SSH key file from secret (preserve newlines)
+          mkdir -p ~/.ssh
+          # Use printf to preserve newlines properly
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
+          echo "✅ SSH key file created"
+          # Verify key format
+          if head -1 ~/.ssh/ec2_key | grep -q "BEGIN.*PRIVATE KEY"; then
+            echo "✅ SSH key format looks correct"
+          else
+            echo "⚠️ WARNING: SSH key format may be incorrect"
+            echo "First line: $(head -1 ~/.ssh/ec2_key)"
+            echo "Key should start with -----BEGIN and end with -----END"
+          fi
 
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key_path: ~/.ssh/ec2_key
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
           source: "deploy.tar.gz,.env"
           target: "/home/${{ secrets.EC2_USER }}/app"
@@ -85,7 +97,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key_path: ~/.ssh/ec2_key
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
           script: |
             set -e
@@ -157,7 +169,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key_path: ~/.ssh/ec2_key
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
           script: |
             set -e
@@ -188,7 +200,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key_path: ~/.ssh/ec2_key
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
           script: |
             echo "Cleaning up old Docker resources..."
