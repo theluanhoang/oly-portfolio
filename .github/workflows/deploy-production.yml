@@ -121,31 +121,25 @@ jobs:
             fi
 
             echo "Setting up Docker Compose..."
-            # Prefer docker compose plugin; fallback to standalone binary
+            # Prefer docker compose plugin; fallback to standalone binary docker-compose
+            DC_CMD="docker compose"
             if docker compose version &> /dev/null; then
               echo "Docker Compose plugin already available."
             else
               echo "Docker Compose plugin not found. Installing..."
               if command -v yum &> /dev/null; then
-                # Amazon Linux / RHEL family
                 sudo yum install -y docker-compose-plugin || true
-                # Amazon Linux 2023 installs plugin under /usr/libexec/docker/cli-plugins
-                if ! docker compose version &> /dev/null; then
-                  echo "Plugin not available, installing standalone binary..."
-                  sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-                  sudo chmod +x /usr/local/bin/docker-compose
-                fi
               elif command -v apt-get &> /dev/null; then
                 sudo apt-get install -y docker-compose-plugin || true
-                if ! docker compose version &> /dev/null; then
-                  echo "Plugin not available, installing standalone binary..."
-                  sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-                  sudo chmod +x /usr/local/bin/docker-compose
-                fi
+              fi
+              if docker compose version &> /dev/null; then
+                DC_CMD="docker compose"
+                echo "Docker Compose plugin installed."
               else
-                echo "No package manager found for compose plugin, installing standalone binary..."
+                echo "Plugin still not available, installing standalone binary..."
                 sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
                 sudo chmod +x /usr/local/bin/docker-compose
+                DC_CMD="docker-compose"
               fi
             fi
             
@@ -166,14 +160,16 @@ jobs:
               exit 1
             fi
             
+            echo "Using compose command: $DC_CMD"
+
             echo "Stopping old containers gracefully..."
-            sudo docker compose -f docker-compose.prod.yml stop app nginx 2>/dev/null || true
-            
+            sudo $DC_CMD -f docker-compose.prod.yml stop app nginx 2>/dev/null || true
+
             echo "Building with cache and parallel build..."
-            sudo docker compose -f docker-compose.prod.yml build --parallel
-            
+            sudo $DC_CMD -f docker-compose.prod.yml build --parallel
+
             echo "Starting services..."
-            sudo docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            sudo $DC_CMD -f docker-compose.prod.yml up -d --remove-orphans
             
             echo "Waiting for services to be ready..."
             sleep 5
