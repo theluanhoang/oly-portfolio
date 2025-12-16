@@ -1,96 +1,102 @@
 # syntax=docker/dockerfile:1.6
-FROM node:20-alpine AS base
-
-RUN apk add --no-cache libc6-compat
+FROM node:22-alpine AS base
+RUN apk add --no-cache libc6-compat openssl ca-certificates
 WORKDIR /app
-
 FROM base AS deps
-WORKDIR /app
-
+ENV NODE_ENV=development
 COPY package.json package-lock.json* ./
-COPY prisma ./prisma
-COPY prisma.config.ts ./
-
-ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
-
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --include=dev --prefer-offline --no-audit
-
-FROM base AS builder
-WORKDIR /app
-
+    npm ci --include=dev --ignore-scripts --prefer-offline --no-audit
+FROM deps AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
-
-COPY --from=deps /app/node_modules ./node_modules
-
-COPY prisma ./prisma
-COPY prisma.config.ts ./
-
+ENV NODE_ENV=production
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
-
-RUN --mount=type=cache,target=/root/.npm \
-    npx prisma generate
-
-FROM builder AS build-continue
-WORKDIR /app
-COPY . .
-
 ENV NEXTAUTH_SECRET="dummy-secret-for-build-only"
 ENV ADMIN_USERNAME="dummy"
 ENV ADMIN_PASSWORD="dummy"
-
-RUN npm run build
-
-FROM base AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN --mount=type=cache,target=/root/.npm \
+    npx prisma generate
+RUN --mount=type=cache,target=/root/.npm \
+    npm run build
+RUN npm prune --omit=dev && \
+    find .next/standalone -name "*.map" -delete 2>/dev/null || true && \
+    find .next/standalone -type f -name "*.d.ts" -delete 2>/dev/null || true && \
+    find .next/standalone -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "*.test.js" -o -name "*.spec.js" -o -name ".cache" -o -name "docs" -o -name "examples" \) -exec rm -rf {} + 2>/dev/null || true && \
+    find .next/standalone -type f \( -name "*.test.js" -o -name "*.spec.js" -o -name "*.md" -o -name "CHANGELOG*" -o -name "LICENSE*" -o -name "README*" \) -delete 2>/dev/null || true && \
+    find .next/standalone/node_modules -type d \( -name "test" -o -name "__tests__" -o -name ".cache" -o -name "docs" -o -name "examples" -o -name "*.test.js" -o -name "*.spec.js" \) -exec rm -rf {} + 2>/dev/null || true && \
+    find .next/standalone/node_modules -type f \( -name "*.map" -o -name "*.md" -o -name "*.d.ts" -o -name "CHANGELOG*" -o -name "LICENSE*" -o -name "README*" \) -delete 2>/dev/null || true && \
+    find .next/standalone/node_modules -type f -name "*.ts" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
+    find .next/standalone/node_modules -type f -name "*.tsx" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true
+FROM base AS prisma-cli
 ENV NEXT_TELEMETRY_DISABLED=1
-
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
-
-COPY --from=build-continue --chown=nextjs:nodejs /app/.next/standalone ./
-
-COPY --from=build-continue --chown=nextjs:nodejs /app/public ./public
-
-COPY --from=build-continue --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-RUN mkdir -p ./public/uploads && \
-    chown -R nextjs:nodejs ./public
-
-COPY --from=build-continue --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=build-continue --chown=nextjs:nodejs /app/app/generated ./app/generated
-COPY --from=build-continue --chown=nextjs:nodejs /app/lib ./lib
-COPY --from=build-continue --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
-
-RUN mkdir -p ./node_modules
-COPY --from=build-continue --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=build-continue --chown=nextjs:nodejs /app/package-lock.json* ./package-lock.json
-# Install Prisma CLI for running migrations
+COPY package.json package-lock.json* ./
+COPY prisma.config.ts ./
+RUN npm pkg delete scripts.postinstall || true
 RUN --mount=type=cache,target=/root/.npm \
-    npm install --production --no-save prisma@^7.1.0 && \
-    chown -R nextjs:nodejs ./node_modules 2>/dev/null || true
-# Copy dotenv from builder stage (more reliable than installing)
-# dotenv is needed for prisma.config.ts to load DATABASE_URL from environment
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/dotenv ./node_modules/dotenv
-
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/tsx ./node_modules/tsx
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/typescript ./node_modules/typescript
-
-COPY --chown=nextjs:nodejs docker/entrypoint.sh ./docker/entrypoint.sh
-RUN chmod +x ./docker/entrypoint.sh
-
+    npm install --omit=dev --prefer-offline --no-audit --ignore-scripts prisma dotenv
+RUN rm -rf /root/.npm || true
+RUN find /app/node_modules -type f -name "*.map" -delete 2>/dev/null || true && \
+    find /app/node_modules -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "docs" -o -name "examples" \) -exec rm -rf {} + 2>/dev/null || true && \
+    find /app/node_modules -type f \( -name "*.md" -o -name "CHANGELOG*" -o -name "LICENSE*" -o -name "README*" -o -name "*.txt" \) -delete 2>/dev/null || true && \
+    find /app/node_modules -type f -name "*.ts" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
+    find /app/node_modules -type f -name "*.tsx" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
+    find /app/node_modules -type f -name "*.js.map" -delete 2>/dev/null || true
+COPY docker/copy-prisma-deps.sh /app/copy-prisma-deps.sh
+RUN chmod +x /app/copy-prisma-deps.sh && \
+    mkdir -p /app/prisma-minimal && \
+    /app/copy-prisma-deps.sh /app /app/prisma-minimal && \
+    find /app/prisma-minimal -type f -name "*.map" -delete 2>/dev/null || true && \
+    find /app/prisma-minimal -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "docs" -o -name "examples" -o -name ".cache" \) -exec rm -rf {} + 2>/dev/null || true && \
+    find /app/prisma-minimal -type f \( -name "*.md" -o -name "CHANGELOG*" -o -name "LICENSE*" -o -name "README*" \) -delete 2>/dev/null || true && \
+    find /app/prisma-minimal -type f -name "*.ts" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
+    find /app/prisma-minimal -type f -name "*.tsx" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
+    find /app/prisma-minimal -type f -name "*.d.ts" -delete 2>/dev/null || true && \
+    rm -rf /app/prisma-minimal/node_modules/.cache /app/prisma-minimal/node_modules/.npm 2>/dev/null || true && \
+    find /app/prisma-minimal/node_modules -type d -name ".cache" -exec rm -rf {} + 2>/dev/null || true && \
+    find /app/prisma-minimal/node_modules -type f -name "*.js.map" -delete 2>/dev/null || true && \
+    find /app/prisma-minimal/node_modules -type f \( -name "*.json" ! -name "package.json" -o -name "*.lock" -o -name "*.log" \) -delete 2>/dev/null || true && \
+    chown -R nextjs:nodejs /app/prisma-minimal
+FROM base AS runner
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+WORKDIR /app
+RUN mkdir -p ./public/uploads && chown -R nextjs:nodejs /app
+COPY --from=builder /app/public ./public
+RUN rm -rf ./public/uploads/* 2>/dev/null || true && \
+    find ./public -name "*.map" -delete 2>/dev/null || true && \
+    find ./public -type f \( -name "*.svg" ! -path "*/assets/*" -o -name "next.svg" -o -name "vercel.svg" \) -delete 2>/dev/null || true && \
+    chown -R nextjs:nodejs ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+RUN find .next -name "*.map" -delete 2>/dev/null || true && \
+    find .next -type f -name "*.d.ts" -delete 2>/dev/null || true && \
+    find .next -type d -name ".cache" -exec rm -rf {} + 2>/dev/null || true && \
+    find .next/node_modules -type f -name "*.ts" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
+    find .next/node_modules -type f -name "*.tsx" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
+    find .next/node_modules -type f \( -name "*.json" ! -name "package.json" -o -name "*.lock" -o -name "*.log" \) -delete 2>/dev/null || true && \
+    chown -R nextjs:nodejs .next
+COPY --from=builder /app/prisma ./prisma
+RUN chown -R nextjs:nodejs ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+RUN chown nextjs:nodejs ./prisma.config.ts
+COPY --from=builder /app/app/generated/prisma ./app/generated/prisma
+RUN chown -R nextjs:nodejs ./app/generated
+COPY --from=prisma-cli /app/prisma-minimal/.bin ./node_modules/.bin
+COPY --from=prisma-cli /app/prisma-minimal/node_modules ./node_modules
+COPY --from=builder /app/docker/entrypoint.sh ./docker/entrypoint.sh
+RUN chmod +x ./docker/entrypoint.sh && \
+    chown nextjs:nodejs ./docker/entrypoint.sh ./server.js 2>/dev/null || true
 USER nextjs
-
 EXPOSE 3000
-
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
+CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 ENTRYPOINT ["./docker/entrypoint.sh"]
 CMD ["node", "server.js"]
-

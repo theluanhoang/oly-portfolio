@@ -67,6 +67,7 @@ tsconfig.tsbuildinfo
 
 # Uploads (should be mounted as volume in production)
 uploads
+public/uploads
 *.tmp
 *.temp
 

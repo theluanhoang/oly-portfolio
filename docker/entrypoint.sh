@@ -14,11 +14,11 @@ if [ "$1" = "node" ] && [ "$2" = "server.js" ]; then
     export DATABASE_URL="${DATABASE_URL}"
     
     echo "Deploying migrations..."
-    if npx prisma migrate deploy --schema=./prisma/schema.prisma; then
+    if npx prisma migrate deploy --config=./prisma.config.ts; then
         echo "Migrations deployed successfully"
     else
         echo "Migration deploy failed, attempting db push as fallback..."
-        if npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss; then
+        if npx prisma db push --config=./prisma.config.ts --accept-data-loss; then
             echo "Database schema pushed successfully"
         else
             echo "ERROR: Both migrate deploy and db push failed!"

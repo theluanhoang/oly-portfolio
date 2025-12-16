@@ -1,4 +1,4 @@
-.PHONY: help dev dev-up dev-down dev-logs prod-build prod-up prod-down prod-logs prod-restart prod-db-migrate prod-db-seed prod-db-studio prod-shell db-migrate db-studio db-seed db-generate clean install build lint npm-install npm-install-package npm-install-dev npm-update npm-uninstall npm-audit npm-audit-fix npm-list npm-outdated npm-ci
+.PHONY: help dev dev-up dev-down dev-logs prod-build prod-up prod-down prod-logs prod-restart prod-db-migrate prod-db-seed prod-db-studio prod-shell db-migrate db-studio db-seed db-generate clean install build lint npm-install npm-install-package npm-install-dev npm-update npm-uninstall npm-audit npm-audit-fix npm-list npm-outdated npm-ci test-build test-up test-down test-logs test
 
 # Docker Compose command (use 'docker compose' v2 or 'docker-compose' v1)
 # Set USE_SUDO=1 to use sudo, or USE_SUDO=0 to run without sudo
@@ -43,10 +43,15 @@ dev: dev-up dev-logs ## Start dev and follow logs
 dev-restart: dev-down dev-up ## Restart development environment
 
 # Production commands
-prod-build: ## Build production images
+prod-setup-uploads: ## Setup uploads directory with correct permissions
+	@mkdir -p public/uploads
+	@chmod 777 public/uploads
+	@echo "Uploads directory created with permissions 777"
+
+prod-build: prod-setup-uploads ## Build production images
 	$(DOCKER_COMPOSE) -f docker-compose.prod.yml build
 
-prod-up: ## Start production environment
+prod-up: prod-setup-uploads ## Start production environment
 	$(DOCKER_COMPOSE) -f docker-compose.prod.yml up -d
 
 prod-down: ## Stop production environment
@@ -58,6 +63,20 @@ prod-logs: ## View production logs
 prod: prod-build prod-up ## Build and start production
 
 prod-restart: prod-down prod-up ## Restart production environment
+
+test-build: ## Build test images using docker-compose.test.yml
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml build
+
+test-up: ## Start test stack using docker-compose.test.yml
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d
+
+test-down: ## Stop test stack using docker-compose.test.yml
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml down
+
+test-logs: ## Follow test stack logs
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml logs -f
+
+test: test-build test-up test-logs ## Build and start test stack then follow logs
 
 # Production database commands
 prod-db-migrate: ## Run database migrations in production

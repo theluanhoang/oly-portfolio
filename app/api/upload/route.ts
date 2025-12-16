@@ -49,7 +49,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     await writeFile(filepath, buffer);
 
-    const publicUrl = `/api/uploads/${filename}`;
+    const publicUrl = `/uploads/${filename}`;
 
     return NextResponse.json({
       success: true,

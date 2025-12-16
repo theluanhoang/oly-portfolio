@@ -45,7 +45,7 @@ services:
       PORT: 3000
       HOSTNAME: "0.0.0.0"
     volumes:
-      - uploads_data_prod:/app/public/uploads
+      - ./public/uploads:/app/public/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -81,6 +81,8 @@ services:
     restart: unless-stopped
     ports:
       - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./public/uploads:/usr/share/nginx/html/uploads:ro
     depends_on:
       app:
         condition: service_started
@@ -98,7 +100,5 @@ networks:
 
 volumes:
   postgres_data_prod:
-    driver: local
-  uploads_data_prod:
     driver: local
 
