@@ -32,6 +32,33 @@ services:
           cpus: '0.5'
           memory: 512M
 
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: oly-portfolio-ts-pgadmin-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    volumes:
+      - pgadmin_data_prod:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${PGADMIN_PORT:-8080}:80"
+    networks:
+      - oly-network-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
   app:
     image: ${APP_IMAGE:-oly-studio-portfolio:latest}
     pull_policy: always
@@ -100,5 +127,7 @@ networks:
 
 volumes:
   postgres_data_prod:
+    driver: local
+  pgadmin_data_prod:
     driver: local
 

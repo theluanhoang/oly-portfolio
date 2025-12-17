@@ -59,6 +59,10 @@ jobs:
           POSTGRES_DB=${{ secrets.POSTGRES_DB || 'oly_portfolio' }}
           POSTGRES_PORT=${{ secrets.POSTGRES_PORT || '5432' }}
 
+          PGADMIN_DEFAULT_EMAIL=${{ secrets.PGADMIN_DEFAULT_EMAIL || '' }}
+          PGADMIN_DEFAULT_PASSWORD=${{ secrets.PGADMIN_DEFAULT_PASSWORD || '' }}
+          PGADMIN_PORT=${{ secrets.PGADMIN_PORT || '8080' }}
+
           NODE_ENV=production
           NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
 
