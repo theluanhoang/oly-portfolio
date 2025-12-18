@@ -119,5 +119,8 @@
         "eduardoRole": "Nhà thiết kế",
         "founderRole": "Người sáng lập",
         "designerRole": "Nhà thiết kế"
+    },
+    "ContactPage": {
+        "heroAlt": "Hero Liên hệ"
     }
 }
