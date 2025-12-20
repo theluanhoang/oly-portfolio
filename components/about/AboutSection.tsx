@@ -8,7 +8,7 @@ const PROFILE_PDF_URL = 'https://cdn.prod.website-files.com/62e93d1913e5a06515d7
 export default function AboutSection() {
   const t = useTranslations('AboutPage');
 
-  const handleProfileClick = () => {
+  const handleSeeMoreClick = () => {
     window.open(PROFILE_PDF_URL, '_blank', 'noopener,noreferrer');
   };
 
@@ -16,11 +16,12 @@ export default function AboutSection() {
     <div className="grid max-[1122px]:grid-cols-1 min-[1123px]:grid-cols-[min(400px,100%)_1fr] min-[1392px]:grid-cols-[min(490px,100%)_1fr] min-[1392px]:gap-x-[152px] min-[1123px]:gap-x-[60px]">
       <div className="md:hidden flex gap-7 justify-end mb-[62px]">
         <Button 
-          onClick={handleProfileClick}
-          className="w-[113px] h-6 flex p-0! pt-[4px]! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center font-gayathri text-[10px] font-normal leading-[20px] tracking-[1.4px]">
+          className="w-[113px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px]">
           {t('profile')}
         </Button>
-        <Button className="w-[113px] h-6 sm:flex hidden p-0! pt-[4px]! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center font-gayathri text-[10px] font-normal leading-[20px] tracking-[1.4px]">
+        <Button 
+          onClick={handleSeeMoreClick}
+          className="w-[113px] h-6 sm:flex hidden p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px]">
           {t('seeMore')}
         </Button>
       </div>
@@ -29,25 +30,26 @@ export default function AboutSection() {
       </h1>
       <div className="flex flex-col md:flex-row md:justify-between md:flex-1 gap-6 md:gap-0">
         <div>
-          <p className="md:max-w-[443px] max-w-full text-text-dark text-justify font-mulish text-[12px] font-normal leading-[20px]">
+          <p className="md:max-w-[443px] max-w-full text-text-dark text-justify text-[12px] font-normal leading-[20px]">
             {t('aboutDescriptionFull')}
           </p>
           <div className="flex w-full flex-col justify-center items-end md:items-start">
             <div
               className="sm:mt-[11px] mt-[18px] w-[147px] aspect-147/73 bg-[url('/assets/signature.png')] bg-black bg-center bg-cover bg-no-repeat mix-blend-exclusion"
             />
-            <p className="text-black text-justify font-mulish text-[16px] font-normal leading-[46px] sm:mt-7 mt-[19px]">
+            <p className="text-black text-justify text-[16px] font-normal leading-[46px] sm:mt-7 mt-[19px]">
               {t('founderName')}
             </p>
           </div>
         </div>
         <div className="md:flex hidden flex-col gap-7">
           <Button 
-            onClick={handleProfileClick}
-            className="w-[113px] h-6 flex p-0! pt-[4px]! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center font-gayathri text-[10px] font-normal leading-[20px] tracking-[1.4px]">
+            className="w-[113px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px]">
             {t('profile')}
           </Button>
-          <Button className="w-[113px] h-6 flex p-0! pt-[4px]! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center font-gayathri text-[10px] font-normal leading-[20px] tracking-[1.4px]">
+          <Button 
+            onClick={handleSeeMoreClick}
+            className="w-[113px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px]">
             {t('seeMore')}
           </Button>
         </div>

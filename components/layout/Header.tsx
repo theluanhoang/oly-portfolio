@@ -33,8 +33,8 @@ export default function Header({ isFixed = false }: HeaderProps) {
   const LogoLink = isAdminPage ? Link : LocaleLink;
   
   return (
-    <header className={`bg-background shadow-md ${positionClasses}`}>
-      <div className="wrapper h-12 flex items-center min-[394px]:justify-between justify-around">
+    <header className={`bg-background ${positionClasses}`} style={{ paddingTop: '18px', paddingBottom: '18px' }}>
+      <div className="wrapper h-12  flex items-center min-[394px]:justify-between justify-around">
         {isAdminPage ? (
           <>
             <div className="flex items-center">
@@ -48,13 +48,13 @@ export default function Header({ isFixed = false }: HeaderProps) {
             </div>
 
             <nav className="flex items-center justify-center flex-1 gap-8">
-              <Link href="/projects" className="text-[12px] font-normal leading-normal text-black mt-[5px]">
+              <Link href="/projects" className="text-[12px] font-normal leading-normal text-black">
                 {tNav('projects')}
               </Link>
-              <Link href="/products" className="text-[12px] font-normal leading-normal text-black mt-[5px]">
+              <Link href="/products" className="text-[12px] font-normal leading-normal text-black">
                 {tNav('products')}
               </Link>
-              <Link href="/users" className="text-[12px] font-normal leading-normal text-black mt-[5px]">
+              <Link href="/users" className="text-[12px] font-normal leading-normal text-black">
                 {tNav('users')}
               </Link>
             </nav>
@@ -95,7 +95,7 @@ export default function Header({ isFixed = false }: HeaderProps) {
             </div>
 
             <div className="flex items-center min-[468px]:w-5/6 min-[1072px]:w-1/2 min-[844px]:w-2/3 w-auto justify-between">
-              <Menu className="flex items-center sm:gap-15 min-[468px]:gap-7 gap-5 mt-[5px] sm:justify-between justify-around" />
+              <Menu className="flex items-center sm:gap-15 min-[468px]:gap-7 gap-5 sm:justify-between justify-around" />
               <button
                 type="button"
                 aria-label={tNav('search')}

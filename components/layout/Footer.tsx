@@ -39,7 +39,7 @@ export default function Footer({ isFixed = false }: FooterProps) {
               </div>
             </div>
             <Button
-              className="min-[1455px]:block hidden px-[10px]! pt-[5px]! pb-0! gap-[10px] border-[0.5px] border-black bg-white text-black! text-center font-['Gayathri'] text-[10px] font-normal leading-[20px] tracking-[1.4px] uppercase hover:bg-white"
+              className="min-[1455px]:block hidden px-[10px]! py-[5px]! gap-[10px] border-[0.5px] border-black bg-white text-black! text-center text-[10px] font-normal leading-[20px] tracking-[0.5px]! uppercase hover:bg-white"
               style={{ textEdge: "cap", leadingTrim: "both" } as React.CSSProperties}
             >
               {t('contactForConsultation')}
@@ -50,13 +50,7 @@ export default function Footer({ isFixed = false }: FooterProps) {
                   className="cursor-pointer text-black text-[12px] font-bold leading-normal hover:underline active:underline decoration-skip-ink-none"
                   style={{ textUnderlinePosition: "from-font" }}
                 >
-                  {t('address')}
-                </p>
-                <p
-                  className="cursor-pointer text-black text-[12px] font-bold leading-normal hover:underline active:underline decoration-skip-ink-none"
-                  style={{ textUnderlinePosition: "from-font" }}
-                >
-                  {t('office')}
+                  {t('zalo')}
                 </p>
                 <p
                   className="cursor-pointer text-black text-[12px] font-bold leading-normal hover:underline active:underline decoration-skip-ink-none"
@@ -75,7 +69,7 @@ export default function Footer({ isFixed = false }: FooterProps) {
                 {t('officeAddress')}
               </p>
               <Button
-                className="min-[1455px]:hidden block w-[208px] px-[10px]! pt-[5px]! pb-0! gap-[10px] border-[0.5px] border-black bg-white text-black! text-center font-['Gayathri'] text-[10px] font-normal leading-[20px] tracking-[1.4px] uppercase hover:bg-white"
+                className="min-[1455px]:hidden block w-[208px] px-[10px]! py-[5px]! gap-[10px] border-[0.5px] border-black bg-white text-black! text-center text-[10px] font-normal leading-[20px] tracking-[0.5px]! uppercase hover:bg-white"
                 style={{ textEdge: "cap", leadingTrim: "both" } as React.CSSProperties}
               >
                 {t('contactForConsultation')}
@@ -90,13 +84,7 @@ export default function Footer({ isFixed = false }: FooterProps) {
                   className="cursor-pointer text-black text-[12px] font-bold leading-normal hover:underline active:underline decoration-skip-ink-none"
                   style={{ textUnderlinePosition: "from-font" }}
                 >
-                  {t('address')}
-                </p>
-                <p
-                  className="cursor-pointer text-black text-[12px] font-bold leading-normal hover:underline active:underline decoration-skip-ink-none"
-                  style={{ textUnderlinePosition: "from-font" }}
-                >
-                  {t('office')}
+                  {t('zalo')}
                 </p>
                 <p
                   className="cursor-pointer text-black text-[12px] font-bold leading-normal hover:underline active:underline decoration-skip-ink-none"
@@ -140,14 +128,14 @@ export default function Footer({ isFixed = false }: FooterProps) {
                     {t('hotlineNumber')}
                   </p>
                   <Button
-                  className="min-[390px]:hidden block min-[464px]:w-[208px] w-auto min-[464px]:px-[10px]! px-1! pt-[5px]! pb-0! gap-[10px] border-[0.5px] border-black bg-white text-black! text-center font-['Gayathri'] text-[10px] font-normal leading-[20px] tracking-[1.4px] uppercase hover:bg-white"
+                  className="min-[390px]:hidden block min-[464px]:w-[208px] w-auto min-[464px]:px-[10px]! py-[5px]! px-1! gap-[10px] border-[0.5px] border-black bg-white text-black! text-center text-[10px] font-normal leading-[20px] tracking-[0.5px]! uppercase hover:bg-white"
                   style={{ textEdge: "cap", leadingTrim: "both" } as React.CSSProperties}
                 >
                   {t('contactForConsultation')}
                 </Button>
                 </div>
                 <Button
-                  className="min-[390px]:block hidden min-[464px]:w-[208px] w-auto min-[464px]:px-[10px]! px-1! pt-[5px]! pb-0! gap-[10px] border-[0.5px] border-black bg-white text-black! text-center font-['Gayathri'] text-[10px] font-normal leading-[20px] tracking-[1.4px] uppercase hover:bg-white"
+                  className="min-[390px]:block hidden min-[464px]:w-[208px] w-auto min-[464px]:px-[10px]! py-[5px]! px-1! gap-[10px] border-[0.5px] border-black bg-white text-black! text-center text-[10px] font-normal leading-[20px] tracking-[0.5px]! uppercase hover:bg-white"
                   style={{ textEdge: "cap", leadingTrim: "both" } as React.CSSProperties}
                 >
                   {t('contactForConsultation')}

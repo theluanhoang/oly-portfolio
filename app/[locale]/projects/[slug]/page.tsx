@@ -41,7 +41,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       : [];
 
   return (
-    <div className="min-h-screen bg-background text-foreground lg:pt-[61px] pt-[25px]">
+    <div className="min-h-screen bg-background text-foreground lg:pt-[43px] pt-[7px]">
       {/* Hero Image - Cover */}
       {project.heroImage && (
         <section className="breakout-full-width bg-background">

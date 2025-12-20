@@ -19,8 +19,7 @@ export default function LanguageSwitcher() {
     <button
       type="button"
       onClick={toggleLanguage}
-      className='text-[12px] font-bold leading-normal text-black transition-colors hover:text-[#666] min-[468px]:block hidden'
-      style={{ fontFamily: 'Geeza Pro' }}
+      className='text-[12px] font-extrabold leading-normal text-black transition-colors hover:text-[#666] min-[468px]:block hidden'
     >
       {locale === 'en' ? t('vietnamese') : t('english')}
     </button>
