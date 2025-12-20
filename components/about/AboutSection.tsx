@@ -16,7 +16,7 @@ export default function AboutSection() {
     <div className="grid max-[1122px]:grid-cols-1 min-[1123px]:grid-cols-[min(400px,100%)_1fr] min-[1392px]:grid-cols-[min(490px,100%)_1fr] min-[1392px]:gap-x-[152px] min-[1123px]:gap-x-[60px]">
       <div className="md:hidden flex gap-7 justify-end mb-[62px]">
         <Button 
-          className="w-[113px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px]">
+          className="w-[113px] sm:mt-0 mt-[23px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px]">
           {t('profile')}
         </Button>
         <Button 
@@ -25,7 +25,7 @@ export default function AboutSection() {
           {t('seeMore')}
         </Button>
       </div>
-      <h1 className="text-text-dark max-[324px]:text-4xl min-[325px]:text-[48px] min-[1122px]:text-4xl min-[1392px]:text-[48px] font-thin tracking-[6.72px] uppercase leading-normal">
+      <h1 className="text-text-dark max-[324px]:text-4xl min-[325px]:text-[48px] min-[1122px]:text-4xl min-[1392px]:text-[48px] font-thin tracking-[2px] uppercase leading-normal">
         {t('aboutOly')}
       </h1>
       <div className="flex flex-col md:flex-row md:justify-between md:flex-1 gap-6 md:gap-0">
