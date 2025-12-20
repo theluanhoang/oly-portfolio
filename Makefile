@@ -64,6 +64,22 @@ prod: prod-build prod-up ## Build and start production
 
 prod-restart: prod-down prod-up ## Restart production environment
 
+prod-cleanup-images: ## Clean up old Docker images (keeps 3 most recent by default)
+	@echo "Cleaning up old Docker images..."
+	@bash deploy/cleanup-images.sh keep-recent $(KEEP_COUNT)
+
+prod-cleanup-images-dry: ## Dry run: show what images would be deleted
+	@DRY_RUN=1 bash deploy/cleanup-images.sh keep-recent $(KEEP_COUNT)
+
+prod-cleanup-unused: ## Remove all unused/dangling Docker images
+	@bash deploy/cleanup-images.sh unused
+
+prod-cleanup-by-age: ## Remove images older than X days (usage: make prod-cleanup-by-age DAYS=14)
+	@bash deploy/cleanup-images.sh by-age $(DAYS)
+
+prod-images-usage: ## Show Docker disk usage and image list
+	@bash deploy/cleanup-images.sh usage
+
 test-build: ## Build test images using docker-compose.test.yml
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml build
 

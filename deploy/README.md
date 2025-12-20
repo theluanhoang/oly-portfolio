@@ -191,14 +191,12 @@ Workflow files đã được tạo trong `.github/workflows/`:
 ### Workflow tự động làm gì:
 
 1. ✅ Checkout code từ branch `prod`
-2. ✅ Tạo `.env` file từ GitHub Secrets
-3. ✅ Tạo deployment package (loại trừ file không cần thiết)
-4. ✅ Copy files lên EC2 qua SCP
-5. ✅ Backup version hiện tại
-6. ✅ Extract và build Docker images
-7. ✅ Start containers với Docker Compose
-8. ✅ Health check để đảm bảo app hoạt động
-9. ✅ Cleanup old images
+2. ✅ Build và push Docker image lên Docker Hub
+3. ✅ Tạo `.env` file từ GitHub Secrets
+4. ✅ Copy files lên EC2 qua rsync (bao gồm cả script cleanup)
+5. ✅ Pull và start containers với Docker Compose
+6. ✅ Health check để đảm bảo app hoạt động
+7. ✅ **Tự động cleanup old images** - giữ lại N images mới nhất (default: 3)
 
 ## 📝 Bước 4: Deploy
 
@@ -338,6 +336,156 @@ sudo docker compose ...
 
 2. **Kiểm tra workflow logs**:
    - Xem step "Create .env file from secrets" có chạy thành công không
+
+## 🧹 Docker Image Cleanup
+
+Sau nhiều lần deploy, server sẽ tích lũy nhiều Docker images cũ, chiếm dung lượng đĩa. **Cleanup tự động chạy sau mỗi lần deploy thành công** qua GitHub Actions workflow.
+
+### ✅ Tự động Cleanup (Mặc định)
+
+**GitHub Actions workflow tự động cleanup images sau mỗi lần deploy thành công!**
+
+- ✅ Tự động chạy sau khi deploy và health check thành công
+- ✅ Giữ lại **3 images mới nhất** (có thể config qua GitHub Secret `KEEP_IMAGES`)
+- ✅ Tự động skip images đang được sử dụng
+- ✅ Không cần làm gì thêm - hoàn toàn tự động!
+
+### Cấu hình số lượng images muốn giữ lại
+
+Thêm GitHub Secret `KEEP_IMAGES` để thay đổi số lượng images muốn giữ lại:
+
+1. Vào **GitHub Repository → Settings → Secrets and variables → Actions**
+2. Click **New repository secret**
+3. Name: `KEEP_IMAGES`
+4. Value: Số lượng images muốn giữ lại (ví dụ: `5`)
+5. Click **Add secret**
+
+Nếu không set, mặc định sẽ giữ lại **3 images mới nhất**.
+
+### Cleanup thủ công
+
+#### 1. Sử dụng Makefile (từ local machine)
+
+```bash
+# Cleanup images, giữ lại 3 images mới nhất (default)
+make prod-cleanup-images
+
+# Giữ lại 5 images mới nhất
+KEEP_COUNT=5 make prod-cleanup-images
+
+# Dry run - xem những images nào sẽ bị xóa (không xóa thật)
+make prod-cleanup-images-dry
+
+# Xóa tất cả unused/dangling images
+make prod-cleanup-unused
+
+# Xóa images cũ hơn 14 ngày
+DAYS=14 make prod-cleanup-by-age
+
+# Xem disk usage và danh sách images
+make prod-images-usage
+```
+
+#### 2. Sử dụng script trực tiếp trên EC2
+
+```bash
+# SSH vào EC2
+ssh -i your-key.pem ubuntu@your-ec2-ip
+
+cd /home/ubuntu/app
+
+# Cleanup - giữ lại 3 images mới nhất (default)
+bash deploy/cleanup-images.sh keep-recent
+
+# Giữ lại 5 images mới nhất
+KEEP_COUNT=5 bash deploy/cleanup-images.sh keep-recent 5
+
+# Dry run - xem sẽ xóa gì (không xóa thật)
+DRY_RUN=1 bash deploy/cleanup-images.sh keep-recent
+
+# Xóa images cũ hơn 7 ngày
+bash deploy/cleanup-images.sh by-age 7
+
+# Xóa tất cả unused/dangling images
+bash deploy/cleanup-images.sh unused
+
+# Xem disk usage
+bash deploy/cleanup-images.sh usage
+```
+
+### Các chiến lược cleanup
+
+Script hỗ trợ nhiều chiến lược cleanup khác nhau:
+
+1. **Keep Recent (Khuyến nghị)**: Giữ lại N images mới nhất
+   ```bash
+   bash deploy/cleanup-images.sh keep-recent 3
+   ```
+
+2. **By Age**: Xóa images cũ hơn X ngày
+   ```bash
+   bash deploy/cleanup-images.sh by-age 14
+   ```
+
+3. **Unused**: Xóa tất cả unused/dangling images
+   ```bash
+   bash deploy/cleanup-images.sh unused
+   ```
+
+4. **All Repo**: Xóa TẤT CẢ images của repository (nguy hiểm!)
+   ```bash
+   bash deploy/cleanup-images.sh all-repo
+   ```
+
+### Environment Variables
+
+```bash
+# Repository name (default: luantrum27/oly-studio-portfolio)
+REPO_NAME="your-repo/image-name"
+
+# Số lượng images muốn giữ lại (default: 3)
+KEEP_COUNT=5
+
+# Sử dụng sudo (default: 1)
+USE_SUDO=1
+
+# Dry run mode - chỉ xem, không xóa (default: 0)
+DRY_RUN=1
+```
+
+### Best Practices
+
+1. **Giữ lại ít nhất 2-3 images mới nhất** để có thể rollback nhanh
+2. **Chạy dry run trước** để xem sẽ xóa gì: `DRY_RUN=1 bash deploy/cleanup-images.sh keep-recent`
+3. **Cleanup định kỳ**: Tự động cleanup sau mỗi deploy hoặc chạy cron job hàng tuần
+4. **Monitor disk usage**: Chạy `bash deploy/cleanup-images.sh usage` để theo dõi
+
+### Cron Job (Tự động cleanup hàng tuần)
+
+Thêm vào crontab để tự động cleanup mỗi tuần:
+
+```bash
+# SSH vào EC2
+crontab -e
+
+# Thêm dòng sau (cleanup mỗi Chủ nhật lúc 2 giờ sáng)
+0 2 * * 0 cd /home/ubuntu/app && bash deploy/cleanup-images.sh keep-recent 3 >> /var/log/docker-cleanup.log 2>&1
+```
+
+### Troubleshooting Cleanup
+
+**Lỗi: "Image is in use"**
+- Image đang được sử dụng bởi container đang chạy
+- Script sẽ tự động skip các images này
+- Để xóa, cần dừng container trước: `sudo docker compose -f docker-compose.prod.yml down`
+
+**Lỗi: "Permission denied"**
+- Cần quyền sudo: `USE_SUDO=1 bash deploy/cleanup-images.sh keep-recent`
+- Hoặc thêm user vào docker group: `sudo usermod -aG docker $USER`
+
+**Không đủ dung lượng sau cleanup**
+- Chạy cleanup unused: `bash deploy/cleanup-images.sh unused`
+- Xóa tất cả unused resources: `sudo docker system prune -af`
 
 ## 🔄 Rollback
 

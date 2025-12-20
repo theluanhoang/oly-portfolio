@@ -85,6 +85,7 @@ jobs:
           rsync -az --info=progress2 \
             docker-compose.prod.yml \
             docker \
+            deploy \
             .env \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/app/
           rm -f /tmp/rsync_key
@@ -178,9 +179,9 @@ jobs:
             echo "Health check passed!"
 
       # =====================
-      # Cleanup
+      # Cleanup old Docker images (keep only recent ones)
       # =====================
-      - name: Cleanup old Docker resources
+      - name: Cleanup old Docker images
         if: success()
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -189,7 +190,36 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
           script: |
-            docker image prune -f --filter "until=24h"
+            set -e
+            APP_DIR="/home/${{ secrets.EC2_USER }}/app"
+            cd "$APP_DIR"
+            
+            # Make cleanup script executable
+            if [ -f "deploy/cleanup-images.sh" ]; then
+              chmod +x deploy/cleanup-images.sh
+              
+              # Cleanup: keep only 3 most recent images (configurable via KEEP_IMAGES secret)
+              KEEP_COUNT="${{ secrets.KEEP_IMAGES || '3' }}"
+              REPO_NAME="${{ env.DOCKER_IMAGE_NAME }}"
+              
+              echo "Cleaning up old Docker images..."
+              echo "Repository: $REPO_NAME"
+              echo "Keeping $KEEP_COUNT most recent images"
+              
+              # Run cleanup script
+              REPO_NAME="$REPO_NAME" KEEP_COUNT="$KEEP_COUNT" USE_SUDO=0 bash deploy/cleanup-images.sh keep-recent "$KEEP_COUNT" || {
+                echo "⚠️ Cleanup had some issues, but deployment succeeded"
+              }
+              
+              echo "✅ Image cleanup completed"
+            else
+              echo "⚠️ Cleanup script not found, skipping cleanup"
+              # Fallback to basic prune
+              docker image prune -f --filter "until=24h" || true
+            fi
+            
+            # Also cleanup unused/dangling images
+            docker image prune -f || true
 
       # =====================
       # Summary
