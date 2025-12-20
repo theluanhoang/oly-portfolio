@@ -31,10 +31,10 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
 
   const inputClassName = type === 'file' 
     ? propsClassName
-    : `w-full px-4 py-3 border bg-white text-[#333] focus:outline-none transition-colors ${
+    : `w-full h-[44px] px-4 rounded-lg border bg-white text-[#333] focus:outline-none transition-colors ${
         hasError
           ? 'border-red-500 focus:border-red-600'
-          : 'border-[#e0e0e0] focus:border-[#333]'
+          : 'border-black focus:border-black'
       } ${propsClassName}`;
 
   const { className: _unused, ...inputProps } = props as { className?: string; [key: string]: unknown };
@@ -48,7 +48,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
       {label && (
         <label
           htmlFor={inputId}
-          className="block text-xs font-medium text-[#666] tracking-[1px] uppercase mb-2"
+          className="block text-base font-bold text-black tracking-[0.16px] leading-normal mb-2 font-montserrat"
         >
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
