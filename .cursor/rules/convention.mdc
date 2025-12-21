@@ -1,7 +1,0 @@
----
-alwaysApply: true
----
-
-1. Don't access to create any comments or icons in the source code.
-2. Using `nvm use 22` before any commands with npm (ex: nvm use 22 && npm install).
-3. Using `sudo` for any docker commands (ex: sudo docker ps).

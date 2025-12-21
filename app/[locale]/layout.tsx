@@ -50,7 +50,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   return (
     <html lang={locale}>
       <body
-        className={`${montserrat.variable} ${gayathri.variable} ${mulish.variable} antialiased`}
+        className={`${montserrat.variable} antialiased`}
       >
         <SessionProvider>
           <NextIntlClientProvider messages={messages}>

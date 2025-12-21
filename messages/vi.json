@@ -121,6 +121,53 @@
         "designerRole": "Nhà thiết kế"
     },
     "ContactPage": {
-        "heroAlt": "Hero Liên hệ"
+        "heroAlt": "Hero Liên hệ",
+        "title": "CONTACT",
+        "form": {
+            "customerName": "Tên khách hàng",
+            "email": "Email",
+            "phone": "Số điện thoại",
+            "category": "Thể loại",
+            "location": "Vị trí",
+            "area": "Diện tích (m²)",
+            "budget": "Ngân sách dự tính (VND)",
+            "notes": "Ghi chú cho chúng tôi",
+            "submit": "Gửi",
+            "placeholders": {
+                "customerName": "Nhập tên của bạn",
+                "email": "example@email.com",
+                "phone": "0900 000 000",
+                "category": "Chọn thể loại",
+                "location": "Nhập địa chỉ dự án",
+                "area": "Ví dụ: 100 m²",
+                "budget": "Nhập ngân sách dự tính",
+                "notes": "Nhập ghi chú hoặc yêu cầu của bạn..."
+            },
+            "categories": {
+                "select": "Chọn thể loại",
+                "residential": "Nhà ở",
+                "commercial": "Thương mại",
+                "office": "Văn phòng",
+                "other": "Khác"
+            },
+            "errors": {
+                "customerNameRequired": "Tên khách hàng phải có ít nhất 2 ký tự",
+                "emailRequired": "Vui lòng nhập email",
+                "emailInvalid": "Email không hợp lệ",
+                "phoneRequired": "Vui lòng nhập số điện thoại",
+                "phoneInvalid": "Số điện thoại không hợp lệ (ví dụ: 0900123456)",
+                "categoryRequired": "Vui lòng chọn thể loại"
+            },
+            "messages": {
+                "submitting": "Đang gửi...",
+                "success": "Gửi thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất có thể.",
+                "error": "Có lỗi xảy ra. Vui lòng thử lại sau."
+            }
+        },
+        "contactInfo": {
+            "email": "info@olystudio.vn",
+            "hotline": "Hotline: 0900 000 000",
+            "address": "193/9P Điện Biên Phủ, Phường 15, Quận Bình Thạnh, TP.HCM"
+        }
     }
 }
