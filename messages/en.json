@@ -168,6 +168,14 @@
             "email": "info@olystudio.vn",
             "hotline": "Hotline: 0900 000 000",
             "address": "193/9P Dien Bien Phu, Ward 15, Binh Thanh District, Ho Chi Minh City"
+        },
+        "map": {
+            "loading": "Loading map...",
+            "placeholder": "Map will load here...",
+            "error": "Failed to load map",
+            "retry": "Retry",
+            "title": "Google Maps - Location",
+            "loadMap": "Load map"
         }
     }
 }

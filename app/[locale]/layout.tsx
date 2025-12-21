@@ -7,6 +7,7 @@ import { routing } from '@/i18n/routing';
 import "../globals.css";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import SessionProvider from "@/components/providers/SessionProvider";
+import MapPreconnect from "@/components/layout/MapPreconnect";
 
 const montserrat = localFont({
   src: "../../fonts/Montserrat/Montserrat-Regular.ttf",
@@ -52,6 +53,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       <body
         className={`${montserrat.variable} antialiased`}
       >
+        <MapPreconnect />
         <SessionProvider>
           <NextIntlClientProvider messages={messages}>
             <LayoutWrapper>

@@ -168,6 +168,14 @@
             "email": "info@olystudio.vn",
             "hotline": "Hotline: 0900 000 000",
             "address": "193/9P Điện Biên Phủ, Phường 15, Quận Bình Thạnh, TP.HCM"
+        },
+        "map": {
+            "loading": "Đang tải bản đồ...",
+            "placeholder": "Bản đồ sẽ được tải tại đây...",
+            "error": "Không thể tải bản đồ",
+            "retry": "Thử lại",
+            "title": "Google Maps - Vị trí",
+            "loadMap": "Tải bản đồ"
         }
     }
 }
