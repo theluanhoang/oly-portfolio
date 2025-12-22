@@ -19,7 +19,7 @@ function Menu({ className }: MenuProps) {
         {t('projects')}
       </Link>
       <Link
-        href="/product"
+        href="/products"
         className="inline-flex h-full items-center text-[12px] font-normal text-black"
       >
         {t('product')}

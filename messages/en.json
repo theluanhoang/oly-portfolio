@@ -20,6 +20,11 @@
         "signOut": "Sign Out",
         "admin": "Admin"
     },
+    "Products": {
+        "title": "PRODUCT",
+        "loading": "Loading products...",
+        "loadError": "Failed to load products"
+    },
     "Projects": {
         "title": "Projects",
         "loading": "Loading...",

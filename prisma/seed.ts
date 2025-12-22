@@ -1,5 +1,6 @@
 import { Prisma } from "../app/generated/prisma/client";
 import prisma from "../lib/prisma";
+import { seedProducts } from "./seed-products";
 
 const getPlaceholderImage = (index: number, width = 1200, height = 800) => {
   return `https://picsum.photos/seed/project-${index}/${width}/${height}`;
@@ -247,6 +248,8 @@ export async function main() {
       console.error(`✗ Error creating project ${project.slug}:`, error instanceof Error ? error.message : String(error));
     }
   }
+
+  await seedProducts(prisma);
 
   console.log('Seed completed!');
 }

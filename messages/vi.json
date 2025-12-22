@@ -20,6 +20,11 @@
         "signOut": "Đăng Xuất",
         "admin": "Quản trị"
     },
+    "Products": {
+        "title": "SẢN PHẨM",
+        "loading": "Đang tải sản phẩm...",
+        "loadError": "Không thể tải danh sách sản phẩm"
+    },
     "Projects": {
         "title": "Dự án",
         "loading": "Đang tải...",

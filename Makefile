@@ -216,6 +216,10 @@ shell: ## Open shell in app container
 shell-db: ## Open PostgreSQL shell
 	$(DOCKER_COMPOSE) exec postgres psql -U postgres -d oly_portfolio
 
+db-clear-table: ## Clear data for a specific table, usage: make db-clear-table TABLE=products
+	@if [ -z "$(TABLE)" ]; then echo "Error: TABLE is required, e.g. make db-clear-table TABLE=products"; exit 1; fi; \
+	$(DOCKER_COMPOSE) exec postgres psql -U postgres -d oly_portfolio -c "TRUNCATE TABLE \"$(TABLE)\" RESTART IDENTITY CASCADE;"
+
 ps: ## Show running containers
 	$(DOCKER_COMPOSE) ps
 

@@ -5,6 +5,7 @@
   --foreground: #000000;
   --color-dark: #221F1F;
   --color-text-dark: #231F20;
+  --color-product-border: #7E7E7E;
 }
 
 @theme inline {
@@ -12,6 +13,7 @@
   --color-foreground: var(--foreground);
   --color-dark: var(--color-dark);
   --color-text-dark: var(--color-text-dark);
+  --color-product-border: var(--color-product-border);
   --font-montserrat: var(--font-montserrat);
   --font-gayathri: var(--font-gayathri);
   --font-mulish: var(--font-mulish);
@@ -72,6 +74,10 @@ html {
     right: auto;
     transform: none;
   }
+}
+
+.product-card-border {
+  border: 0.5px solid var(--color-product-border);
 }
 
 /* Tiptap Editor Styles */
