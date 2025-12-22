@@ -82,6 +82,9 @@ export default function NewProjectPage() {
     onError: (error) => {
       setSaveMessage({ type: 'error', text: error });
     },
+    onReorder: (urls) => {
+      setValue('gallery', urls, { shouldValidate: true });
+    },
   });
 
   useEffect(() => {
@@ -312,6 +315,7 @@ export default function NewProjectPage() {
                     });
                   }}
                   onSetHero={gallery.handleSetHeroImage}
+                  onReorder={gallery.handleReorder}
                   error={errors.gallery?.message as string | undefined}
                 />
 

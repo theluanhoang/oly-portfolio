@@ -1,6 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useRef } from 'react';
+import type { UniqueIdentifier } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
+import { useRef, useState } from "react";
 
 interface GalleryItem {
   url: string;
@@ -16,6 +18,7 @@ interface UploadProgressItem {
 interface UseGalleryUploadOptions {
   onUploadSuccess?: (urls: string[]) => void;
   onError?: (error: string) => void;
+  onReorder?: (urls: string[]) => void;
 }
 
 interface UseGalleryUploadReturn {
@@ -32,11 +35,12 @@ interface UseGalleryUploadReturn {
   handleClick: () => void;
   handleGalleryUrlRemove: (index: number, onRemove?: (urls: string[]) => void) => void;
   handleSetHeroImage: (index: number) => void;
+  handleReorder: (activeId: UniqueIdentifier, overId: UniqueIdentifier) => void;
   reset: () => void;
   getGalleryUrlStrings: () => string[];
 }
 
-export function useGalleryUpload({ onUploadSuccess, onError }: UseGalleryUploadOptions): UseGalleryUploadReturn {
+export function useGalleryUpload({ onUploadSuccess, onError, onReorder }: UseGalleryUploadOptions): UseGalleryUploadReturn {
   const [galleryUrls, setGalleryUrls] = useState<(string | GalleryItem)[]>([]);
   const [uploadedFileNames, setUploadedFileNames] = useState<Set<string>>(new Set());
   const [heroImageIndex, setHeroImageIndex] = useState<number>(0);
@@ -44,6 +48,8 @@ export function useGalleryUpload({ onUploadSuccess, onError }: UseGalleryUploadO
   const [uploadProgress, setUploadProgress] = useState<Record<string, UploadProgressItem>>({});
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const getItemId = (item: string | GalleryItem): string => typeof item === 'string' ? item : item.url;
 
   const uploadFiles = async (files: FileList | File[]): Promise<void> => {
     if (files.length === 0) return;
@@ -146,6 +152,31 @@ export function useGalleryUpload({ onUploadSuccess, onError }: UseGalleryUploadO
     }
   };
 
+  const handleReorder = (activeId: UniqueIdentifier, overId: UniqueIdentifier): void => {
+    setGalleryUrls((prev) => {
+      const oldIndex = prev.findIndex((item) => getItemId(item) === activeId);
+      const newIndex = prev.findIndex((item) => getItemId(item) === overId);
+      if (oldIndex === -1 || newIndex === -1) {
+        return prev;
+      }
+
+      const heroId = prev[heroImageIndex] ? getItemId(prev[heroImageIndex]) : null;
+      const updated = arrayMove(prev, oldIndex, newIndex);
+
+      if (heroId) {
+        const nextHeroIndex = updated.findIndex((item) => getItemId(item) === heroId);
+        if (nextHeroIndex >= 0 && nextHeroIndex !== heroImageIndex) {
+          setHeroImageIndex(nextHeroIndex);
+        }
+      }
+
+      const galleryUrlStrings = updated.map((item) => typeof item === 'string' ? item : item.url);
+      onReorder?.(galleryUrlStrings);
+
+      return updated;
+    });
+  };
+
   const handleDragOver = (e: React.DragEvent): void => {
     e.preventDefault();
     e.stopPropagation();
@@ -227,6 +258,7 @@ export function useGalleryUpload({ onUploadSuccess, onError }: UseGalleryUploadO
     handleClick,
     handleGalleryUrlRemove,
     handleSetHeroImage,
+    handleReorder,
     reset,
     getGalleryUrlStrings,
   };

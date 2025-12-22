@@ -24,7 +24,7 @@ export default function ProjectGalleryGrid({ images, maxImages = 8 }: ProjectGal
       <div className="grid grid-cols-4 sm:gap-6 gap-[6px]">
         {displayImages.map((image, index) => (
           <div
-            key={index}
+            key={image}
             className="relative max-w-[210px] aspect-square overflow-hidden"
           >
             <img
