@@ -10,6 +10,7 @@ interface ConvergeTextProps {
   side: 'left' | 'right';
   distanceFromCenter: number;
   isCenterWord: boolean;
+  viewportWidth: number;
 }
 
 function ConvergeText({
@@ -18,9 +19,12 @@ function ConvergeText({
   side,
   distanceFromCenter: wordOffset,
   isCenterWord,
+  viewportWidth,
 }: ConvergeTextProps) {
   const chars = text.split('');
-  const spreadAmount = 400;
+  const effectiveWidth = viewportWidth || 1440;
+  const spreadBase = effectiveWidth * 0.65;
+  const spreadStep = effectiveWidth * 0.08;
   const delayStep = 40;
   const baseDuration = 1000;
 
@@ -43,9 +47,8 @@ function ConvergeText({
           }
         }
         
-        const initialOffset = side === 'left' 
-          ? -spreadAmount * (1 + charDistanceFromCenter * 0.25)
-          : spreadAmount * (1 + charDistanceFromCenter * 0.25);
+        const offsetByIndex = spreadBase + charDistanceFromCenter * spreadStep;
+        const initialOffset = side === 'left' ? -offsetByIndex : offsetByIndex;
         
         const translateX = isConverged ? 0 : initialOffset;
         const delay = charDistanceFromCenter * delayStep;
@@ -74,18 +77,22 @@ function ConvergeText({
 interface ConvergeTextSplitProps {
   text: string;
   isConverged: boolean;
+  viewportWidth: number;
 }
 
 function ConvergeTextSplit({
   text,
   isConverged,
+  viewportWidth,
 }: ConvergeTextSplitProps) {
   const chars = text.split('');
   const midPoint = Math.floor(chars.length / 2);
   const leftHalf = chars.slice(0, midPoint);
   const rightHalf = chars.slice(midPoint);
-  
-  const spreadAmount = 300;
+
+  const effectiveWidth = viewportWidth || 1512;
+  const spreadBase = effectiveWidth * 0.55;
+  const spreadStep = effectiveWidth * 0.06;
   const delayStep = 35;
   const baseDuration = 900;
 
@@ -93,7 +100,8 @@ function ConvergeTextSplit({
     <div className="flex">
       {leftHalf.map((char, index) => {
         const distanceFromCenter = leftHalf.length - 1 - index;
-        const initialOffset = -spreadAmount * (1 + distanceFromCenter * 0.3);
+        const offsetByIndex = spreadBase + distanceFromCenter * spreadStep;
+        const initialOffset = -offsetByIndex;
         const translateX = isConverged ? 0 : initialOffset;
         const delay = distanceFromCenter * delayStep;
 
@@ -116,7 +124,8 @@ function ConvergeTextSplit({
       })}
       {rightHalf.map((char, index) => {
         const distanceFromCenter = index;
-        const initialOffset = spreadAmount * (1 + distanceFromCenter * 0.3);
+        const offsetByIndex = spreadBase + distanceFromCenter * spreadStep;
+        const initialOffset = offsetByIndex;
         const translateX = isConverged ? 0 : initialOffset;
         const delay = distanceFromCenter * delayStep;
 
@@ -146,6 +155,7 @@ export default function Home() {
   const t = useTranslations('HomePage');
   const [isConverged, setIsConverged] = useState(false);
   const [isMdUp, setIsMdUp] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(0);
 
   useEffect(() => {
     const convergeTimer = setTimeout(() => {
@@ -170,6 +180,13 @@ export default function Home() {
     return () => mq.removeEventListener('change', update);
   }, []);
 
+  useEffect(() => {
+    const updateWidth = () => setViewportWidth(window.innerWidth || 0);
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+
   const architecture = t('architecture');
   const construction = t('construction');
   const interior = t('interior');
@@ -187,6 +204,7 @@ export default function Home() {
                 side="left"
                 distanceFromCenter={construction.length}
                 isCenterWord={false}
+                viewportWidth={viewportWidth}
               />
               <ConvergeText 
                 text={construction} 
@@ -194,6 +212,7 @@ export default function Home() {
                 side="left"
                 distanceFromCenter={0}
                 isCenterWord={true}
+                viewportWidth={viewportWidth}
               />
             </div>
 
@@ -212,6 +231,7 @@ export default function Home() {
                 side="right"
                 distanceFromCenter={0}
                 isCenterWord={true}
+                viewportWidth={viewportWidth}
               />
               <ConvergeText 
                 text={furniture} 
@@ -219,6 +239,7 @@ export default function Home() {
                 side="right"
                 distanceFromCenter={interior.length}
                 isCenterWord={false}
+                viewportWidth={viewportWidth}
               />
             </div>
           </>
@@ -228,10 +249,12 @@ export default function Home() {
               <ConvergeTextSplit 
                 text={architecture} 
                 isConverged={isConverged} 
+                viewportWidth={viewportWidth}
               />
               <ConvergeTextSplit 
                 text={construction} 
                 isConverged={isConverged} 
+                viewportWidth={viewportWidth}
               />
             </div>
 
@@ -247,10 +270,12 @@ export default function Home() {
               <ConvergeTextSplit 
                 text={interior} 
                 isConverged={isConverged} 
+                viewportWidth={viewportWidth}
               />
               <ConvergeTextSplit 
                 text={furniture} 
                 isConverged={isConverged} 
+                viewportWidth={viewportWidth}
               />
             </div>
           </>
