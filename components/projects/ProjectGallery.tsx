@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface ProjectGalleryProps {
   images?: string[];
@@ -10,13 +10,77 @@ export default function ProjectGallery({ images = [] }: ProjectGalleryProps) {
   const [selectedImage, setSelectedImage] = useState(0);
   const [thumbnailStartIndex, setThumbnailStartIndex] = useState(0);
 
-  // Nếu không có images, trả về null
-  if (!images || images.length === 0) {
+  const hasImages = images.length > 0;
+  const isSingleImage = images.length === 1;
+
+  // Tính toán các thumbnail cần hiển thị
+  const maxThumbnails = 5;
+  const totalImages = images.length;
+  const remainingImages = totalImages - thumbnailStartIndex - maxThumbnails;
+  const showRemainingCount = remainingImages > 0;
+
+  const maxStartIndex = Math.max(totalImages - maxThumbnails, 0);
+
+  const updateSelection = (targetIndex: number) => {
+    setSelectedImage(targetIndex);
+    setThumbnailStartIndex((currentStart) => {
+      let nextStart = currentStart;
+
+      if (targetIndex < nextStart) {
+        nextStart = targetIndex;
+      }
+
+      const showingRemaining = nextStart < maxStartIndex;
+      const windowSize = showingRemaining ? maxThumbnails - 1 : maxThumbnails;
+
+      if (targetIndex >= nextStart + windowSize) {
+        nextStart = Math.min(targetIndex - (windowSize - 1), maxStartIndex);
+      }
+
+      nextStart = Math.max(0, Math.min(nextStart, maxStartIndex));
+      return nextStart;
+    });
+  };
+
+  // Lấy các thumbnail cần hiển thị (tối đa 4 ảnh + 1 ảnh đếm số lượng còn lại)
+  const visibleThumbnails = images.slice(
+    thumbnailStartIndex,
+    thumbnailStartIndex + (showRemainingCount ? maxThumbnails - 1 : maxThumbnails)
+  );
+
+
+  // Xử lý khi click vào thumbnail
+  const handleThumbnailClick = (index: number): void => {
+    const actualIndex = thumbnailStartIndex + index;
+    updateSelection(actualIndex);
+  };
+
+  // Xử lý khi click vào ảnh đếm số lượng còn lại
+  const handleRemainingClick = (): void => {
+    const nextIndex = thumbnailStartIndex + maxThumbnails - 1;
+    if (nextIndex < totalImages) {
+      updateSelection(nextIndex);
+      // Cập nhật thumbnail slider để hiển thị ảnh tiếp theo
+      setThumbnailStartIndex((prev) => Math.min(prev + 1, maxStartIndex));
+    }
+  };
+
+  // Xử lý khi click vào arrow để chuyển ảnh chính
+  const handlePrevImage = (): void => {
+    const newIndex = selectedImage > 0 ? selectedImage - 1 : Math.max(totalImages - 1, 0);
+    updateSelection(newIndex);
+  };
+
+  const handleNextImage = (): void => {
+    const newIndex = selectedImage < totalImages - 1 ? selectedImage + 1 : 0;
+    updateSelection(newIndex);
+  };
+
+  if (!hasImages) {
     return null;
   }
 
-  // Nếu chỉ có 1 ảnh, hiển thị đơn giản
-  if (images.length === 1) {
+  if (isSingleImage) {
     return (
       <section className="w-full bg-background">
         <div className="w-full overflow-hidden">
@@ -30,66 +94,6 @@ export default function ProjectGallery({ images = [] }: ProjectGalleryProps) {
       </section>
     );
   }
-
-  // Tính toán các thumbnail cần hiển thị
-  const maxThumbnails = 5;
-  const totalImages = images.length;
-  const remainingImages = totalImages - thumbnailStartIndex - maxThumbnails;
-  const showRemainingCount = remainingImages > 0;
-
-  // Tự động điều chỉnh thumbnail slider khi selectedImage thay đổi
-  useEffect(() => {
-    // Nếu ảnh được chọn nằm ngoài phạm vi hiển thị của thumbnail slider
-    if (selectedImage < thumbnailStartIndex) {
-      // Ảnh ở bên trái, scroll về trái
-      setThumbnailStartIndex(Math.max(0, selectedImage));
-    } else if (selectedImage >= thumbnailStartIndex + (showRemainingCount ? maxThumbnails - 1 : maxThumbnails)) {
-      // Ảnh ở bên phải, scroll về phải
-      const newStartIndex = Math.min(
-        totalImages - maxThumbnails,
-        selectedImage - (maxThumbnails - 2)
-      );
-      setThumbnailStartIndex(Math.max(0, newStartIndex));
-    }
-  }, [selectedImage, thumbnailStartIndex, showRemainingCount, maxThumbnails, totalImages]);
-
-  // Lấy các thumbnail cần hiển thị (tối đa 4 ảnh + 1 ảnh đếm số lượng còn lại)
-  const visibleThumbnails = images.slice(
-    thumbnailStartIndex,
-    thumbnailStartIndex + (showRemainingCount ? maxThumbnails - 1 : maxThumbnails)
-  );
-
-
-  // Xử lý khi click vào thumbnail
-  const handleThumbnailClick = (index: number): void => {
-    const actualIndex = thumbnailStartIndex + index;
-    setSelectedImage(actualIndex);
-  };
-
-  // Xử lý khi click vào ảnh đếm số lượng còn lại
-  const handleRemainingClick = (): void => {
-    const nextIndex = thumbnailStartIndex + maxThumbnails - 1;
-    if (nextIndex < totalImages) {
-      setSelectedImage(nextIndex);
-      // Cập nhật thumbnail slider để hiển thị ảnh tiếp theo
-      const newStartIndex = Math.min(
-        totalImages - maxThumbnails,
-        thumbnailStartIndex + 1
-      );
-      setThumbnailStartIndex(newStartIndex);
-    }
-  };
-
-  // Xử lý khi click vào arrow để chuyển ảnh chính
-  const handlePrevImage = (): void => {
-    const newIndex = selectedImage > 0 ? selectedImage - 1 : totalImages - 1;
-    setSelectedImage(newIndex);
-  };
-
-  const handleNextImage = (): void => {
-    const newIndex = selectedImage < totalImages - 1 ? selectedImage + 1 : 0;
-    setSelectedImage(newIndex);
-  };
 
   return (
     <section className="w-full bg-background py-8 md:py-12">

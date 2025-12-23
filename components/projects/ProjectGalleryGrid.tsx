@@ -1,5 +1,7 @@
 'use client';
 
+import { useMemo, useState } from 'react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 interface ProjectGalleryGridProps {
@@ -9,32 +11,98 @@ interface ProjectGalleryGridProps {
 
 export default function ProjectGalleryGrid({ images, maxImages = 8 }: ProjectGalleryGridProps) {
   const t = useTranslations('Projects');
-  
-  if (!images || images.length === 0) {
+  const [pageIndex, setPageIndex] = useState(0);
+
+  const safeImages = useMemo(() => images || [], [images]);
+  const hasImages = safeImages.length > 0;
+  const visibleCount = hasImages ? Math.min(maxImages, safeImages.length) : 0;
+  const pages = useMemo(() => {
+    if (!hasImages || visibleCount === 0) return [];
+    const chunks: string[][] = [];
+    for (let i = 0; i < safeImages.length; i += visibleCount) {
+      chunks.push(safeImages.slice(i, i + visibleCount));
+    }
+    return chunks;
+  }, [hasImages, safeImages, visibleCount]);
+
+  const totalPages = pages.length;
+  const isCarousel = totalPages > 1;
+  const maxPageIndex = Math.max(totalPages - 1, 0);
+  const clampedPageIndex = Math.min(pageIndex, maxPageIndex);
+
+  const handlePrev = () => {
+    setPageIndex((prev) => {
+      const safePrev = Math.min(prev, maxPageIndex);
+      return Math.max(safePrev - 1, 0);
+    });
+  };
+
+  const handleNext = () => {
+    setPageIndex((prev) => {
+      const safePrev = Math.min(prev, maxPageIndex);
+      return Math.min(safePrev + 1, maxPageIndex);
+    });
+  };
+
+  if (!hasImages) {
     return null;
   }
 
-  const displayImages = images.slice(0, maxImages);
-
   return (
     <>
-      <h2 className="text-black text-[32px] font-bold leading-normal tracking-[4.48px] uppercase">
+      <h2 className="text-black text-[32px] font-bold leading-normal tracking-[4.48px] uppercase mb-[30px]">
         {t('gallery')}
       </h2>
-      <div className="grid grid-cols-4 sm:gap-6 gap-[6px]">
-        {displayImages.map((image, index) => (
+      <div className="relative">
+        {isCarousel && (
+          <>
+            <button
+              type="button"
+              onClick={handlePrev}
+              disabled={clampedPageIndex === 0}
+              className="absolute left-2 md:left-[-18px] top-1/2 -translate-y-1/2 z-20 h-10 w-10 md:h-11 md:w-11 rounded-full bg-white border border-[#e0e0e0] shadow-sm text-[#333] flex items-center justify-center hover:shadow-md hover:border-[#cfcfcf] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Previous images"
+            >
+              <ArrowLeft size={18} strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={clampedPageIndex >= totalPages - 1}
+              className="absolute right-2 md:right-[-18px] top-1/2 -translate-y-1/2 z-20 h-10 w-10 md:h-11 md:w-11 rounded-full bg-white border border-[#e0e0e0] shadow-sm text-[#333] flex items-center justify-center hover:shadow-md hover:border-[#cfcfcf] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Next images"
+            >
+              <ArrowRight size={18} strokeWidth={1.75} />
+            </button>
+          </>
+        )}
+        <div className="overflow-hidden">
           <div
-            key={image}
-            className="relative max-w-[210px] aspect-square overflow-hidden"
+            className="flex transition-transform duration-300 ease-in-out"
+            style={{ transform: `translateX(-${clampedPageIndex * 100}%)` }}
           >
-            <img
-              src={image}
-              alt={`Gallery image ${index + 1}`}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
+            {pages.map((pageImages, pageIdx) => (
+              <div
+                key={`page-${pageIdx}`}
+                className="w-full shrink-0 grid grid-cols-4 sm:gap-6 gap-[6px]"
+              >
+                {pageImages.map((image, index) => (
+                  <div
+                    key={`${image}-${pageIdx}-${index}`}
+                    className="relative max-w-[210px] aspect-square overflow-hidden"
+                  >
+                    <img
+                      src={image}
+                      alt={`Gallery image ${pageIdx * visibleCount + index + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
     </>
   );
