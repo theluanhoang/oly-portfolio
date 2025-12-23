@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
     if (!token) {
       const currentLocale = locale || routing.defaultLocale;
       const loginUrl = new URL(`/${currentLocale}/admin/login`, request.url);
-      loginUrl.searchParams.set('callbackUrl', pathname);
+      loginUrl.searchParams.set('callbackUrl', pathnameAfterLocale || '/');
       const redirectResponse = NextResponse.redirect(loginUrl);
       return applySecurityHeaders(redirectResponse);
     }

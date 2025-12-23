@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useRouter as useIntlRouter, usePathname } from '@/i18n/routing';
+import { useRouter as useIntlRouter } from '@/i18n/routing';
 import Input from '@/components/forms/Input';
 import Button from '@/components/ui/Button';
 import Link from '@/components/ui/Link';
@@ -12,7 +12,6 @@ import Link from '@/components/ui/Link';
 export default function LoginPage() {
   const router = useRouter();
   const intlRouter = useIntlRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const t = useTranslations('Admin.login');
   const [username, setUsername] = useState('');
@@ -26,7 +25,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const defaultCallbackUrl = pathname.replace('/admin/login', '/admin/projects/new');
+      const defaultCallbackUrl = '/admin/projects/new';
       const callbackUrl = searchParams.get('callbackUrl') || defaultCallbackUrl;
       
       const result = await signIn('credentials', {
