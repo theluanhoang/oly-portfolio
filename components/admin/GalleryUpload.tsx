@@ -74,8 +74,8 @@ export default function GalleryUpload({
   const [activeId, setActiveId] = React.useState<UniqueIdentifier | null>(null);
 
   const sensors = useSensors(
-    useSensor(MouseSensor),
-    useSensor(TouchSensor),
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -272,10 +272,13 @@ function SortableImageCard({ id, url, index, isHero, onSetHero, onRemove }: Sort
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
       className="relative group touch-none select-none"
     >
-      <div className="aspect-square overflow-hidden border border-[#e0e0e0] bg-[#f5f5f5]">
+      <div
+        className="aspect-square overflow-hidden border border-[#e0e0e0] bg-[#f5f5f5] cursor-move"
+        {...attributes}
+        {...listeners}
+      >
         <img
           src={url}
           alt={`Gallery ${index + 1}`}
@@ -344,4 +347,5 @@ function ImagePreview({ url }: ImagePreviewProps) {
     </div>
   );
 }
+
 
