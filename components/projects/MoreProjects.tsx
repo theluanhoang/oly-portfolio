@@ -32,7 +32,7 @@ export default function MoreProjects({
 
   return (
     <div className="sticky top-8">
-      <h2 className="text-black text-[32px] font-bold leading-normal tracking-[4.48px] uppercase">
+      <h2 className="text-black text-[32px] font-bold leading-normal tracking-[4.48px] uppercase mb-[30px]">
         {t('moreProject')}
       </h2>
       <div className="flex flex-col gap-[41px]">

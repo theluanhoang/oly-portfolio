@@ -307,3 +307,33 @@ html {
     font-size: 0.95rem;
   }
 }
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.5s ease-in-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s ease-in-out;
+}

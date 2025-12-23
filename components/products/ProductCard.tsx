@@ -1,3 +1,7 @@
+'use client';
+
+import { Link } from '@/i18n/routing';
+
 interface ProductCardProps {
   id: string;
   slug: string;
@@ -13,24 +17,26 @@ function getDisplayName(slug: string) {
 
 export function ProductCard({ product }: { product: ProductCardProps }) {
   return (
-    <article className="product-card-border bg-white px-[26px] py-6">
-      <div className="aspect-square overflow-hidden">
-        <img
-          src={product.thumbnail}
-          alt={getDisplayName(product.slug)}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
-      </div>
-      <div className="mt-3">
-        <h2 className="text-black text-[12px] font-bold tracking-[1.68px] uppercase">
-          {getDisplayName(product.slug)}
-        </h2>
-        <p className="text-black text-[12px] font-bold tracking-[1.68px] mt-[8px]">
-          {product.category}
-        </p>
-      </div>
-    </article>
+    <Link href={`/products/${product.slug}`} className="block w-full">
+      <article className="w-full border-0 lg:border-[0.5px] lg:border-product-border bg-white py-[13px] px-[12px] lg:px-[26px] lg:py-6 transition-transform duration-300 hover:scale-[1.02] cursor-pointer">
+        <div className="aspect-square overflow-hidden">
+          <img
+            src={product.thumbnail}
+            alt={getDisplayName(product.slug)}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+        <div className="mt-3">
+          <h2 className="text-black text-[12px] font-bold tracking-[1.68px] uppercase">
+            {getDisplayName(product.slug)}
+          </h2>
+          <p className="text-black text-[12px] font-bold tracking-[1.68px] mt-[8px]">
+            {product.category} · {product.year}
+          </p>
+        </div>
+      </article>
+    </Link>
   );
 }
 

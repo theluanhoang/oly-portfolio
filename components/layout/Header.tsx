@@ -34,7 +34,7 @@ export default function Header({ isFixed = false }: HeaderProps) {
   
   return (
     <header className={`bg-background ${positionClasses}`} style={{ paddingTop: '18px', paddingBottom: '18px' }}>
-      <div className="wrapper h-12  flex items-center min-[394px]:justify-between justify-around">
+      <div className="wrapper h-12  flex items-center justify-between">
         {isAdminPage ? (
           <>
             <div className="flex items-center">

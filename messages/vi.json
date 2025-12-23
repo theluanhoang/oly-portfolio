@@ -23,7 +23,18 @@
     "Products": {
         "title": "SẢN PHẨM",
         "loading": "Đang tải sản phẩm...",
-        "loadError": "Không thể tải danh sách sản phẩm"
+        "loadError": "Không thể tải danh sách sản phẩm",
+        "moreProducts": "SẢN PHẨM KHÁC"
+    },
+    "ProductInfo": {
+        "category": "Danh mục",
+        "material": "Vật liệu",
+        "year": "Năm",
+        "categoryLabel": "Danh mục",
+        "materialLabel": "Vật liệu",
+        "yearLabel": "Năm",
+        "prologue": "LỜI MỞ ĐẦU",
+        "order": "Đặt hàng"
     },
     "Projects": {
         "title": "Dự án",

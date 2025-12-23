@@ -23,7 +23,18 @@
     "Products": {
         "title": "PRODUCT",
         "loading": "Loading products...",
-        "loadError": "Failed to load products"
+        "loadError": "Failed to load products",
+        "moreProducts": "MORE PRODUCTS"
+    },
+    "ProductInfo": {
+        "category": "Category",
+        "material": "Material",
+        "year": "Year",
+        "categoryLabel": "Category",
+        "materialLabel": "Material",
+        "yearLabel": "Year",
+        "prologue": "THE PROLOGUE",
+        "order": "Order"
     },
     "Projects": {
         "title": "Projects",
