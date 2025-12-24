@@ -18,7 +18,7 @@ function getDisplayName(slug: string) {
 export function ProductCard({ product }: { product: ProductCardProps }) {
   return (
     <Link href={`/products/${product.slug}`} className="block w-full">
-      <article className="w-full border-0 lg:border-[0.5px] lg:border-product-border bg-white py-[13px] px-[12px] lg:px-[26px] lg:py-6 transition-transform duration-300 hover:scale-[1.02] cursor-pointer">
+      <article className="max-w-[232px] border-0 lg:border-[0.5px] lg:border-product-border bg-white py-[13px] px-[12px] lg:px-[26px] lg:py-6 transition-transform duration-300 hover:scale-[1.02] cursor-pointer">
         <div className="aspect-square overflow-hidden">
           <img
             src={product.thumbnail}

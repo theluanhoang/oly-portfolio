@@ -27,8 +27,8 @@ export default function ProductsPage() {
         if (!res.ok) {
           throw new Error('Failed to fetch products');
         }
-        const data = (await res.json()) as Product[];
-        setProducts(data);
+        const data = (await res.json()) as { items?: Product[] };
+        setProducts(Array.isArray(data.items) ? data.items : []);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Unknown error');
       } finally {
@@ -78,4 +78,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-
