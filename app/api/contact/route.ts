@@ -218,11 +218,11 @@ function formatEmailAsHTML(data: ContactFormData): string {
         </div>
         <div class="field">
           <span class="field-label">Diện Tích</span>
-          <div class="field-value">${data.area ? escapeHtml(data.area) : '<span style="color: #999999; font-style: italic;">Chưa cung cấp</span>'}</div>
+          <div class="field-value">${data.area ? `${escapeHtml(data.area)} m²` : '<span style="color: #999999; font-style: italic;">Chưa cung cấp</span>'}</div>
         </div>
         <div class="field">
           <span class="field-label">Ngân Sách</span>
-          <div class="field-value">${data.budget ? escapeHtml(data.budget) : '<span style="color: #999999; font-style: italic;">Chưa cung cấp</span>'}</div>
+          <div class="field-value">${data.budget ? `${escapeHtml(data.budget)} VND` : '<span style="color: #999999; font-style: italic;">Chưa cung cấp</span>'}</div>
         </div>
       </div>
 
@@ -270,8 +270,8 @@ Thông Tin Khách Hàng:
 
 Chi Tiết Dự Án:
 - Vị Trí: ${data.location || 'Chưa cung cấp'}
-- Diện Tích: ${data.area || 'Chưa cung cấp'}
-- Ngân Sách: ${data.budget || 'Chưa cung cấp'}
+- Diện Tích: ${data.area ? `${data.area} m²` : 'Chưa cung cấp'}
+- Ngân Sách: ${data.budget ? `${data.budget} VND` : 'Chưa cung cấp'}
 
 Ghi Chú:
 ${data.notes || 'Không có ghi chú'}

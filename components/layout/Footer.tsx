@@ -2,6 +2,7 @@
 
 import { useResponsive } from "@/hooks/useResponsive";
 import { useTranslations } from 'next-intl';
+import { useRouter } from '@/i18n/routing';
 import { Button } from "../ui";
 
 interface FooterProps {
@@ -10,10 +11,15 @@ interface FooterProps {
 
 export default function Footer({ isFixed = false }: FooterProps) {
   const t = useTranslations('Footer');
+  const router = useRouter();
   const positionClasses = isFixed
     ? "fixed bottom-0 left-0 right-0 z-10"
     : "relative z-10";
   const { isSm } = useResponsive();
+
+  const handleContactClick = () => {
+    router.push('/contact');
+  };
   return (
     <footer className={`${positionClasses} bg-background`}>
       <div className="wrapper flex items-start justify-between py-10! min-[468px]:pr-10! pr-[6px]!">
@@ -39,6 +45,7 @@ export default function Footer({ isFixed = false }: FooterProps) {
               </div>
             </div>
             <Button
+              onClick={handleContactClick}
               className="min-[1455px]:block hidden px-[10px]! py-[5px]! gap-[10px] border-[0.5px] border-black bg-white text-black! text-center text-[10px] font-normal leading-[20px] tracking-[0.5px]! uppercase hover:bg-white"
               style={{ textEdge: "cap", leadingTrim: "both" } as React.CSSProperties}
             >
@@ -69,6 +76,7 @@ export default function Footer({ isFixed = false }: FooterProps) {
                 {t('officeAddress')}
               </p>
               <Button
+                onClick={handleContactClick}
                 className="min-[1455px]:hidden block w-[208px] px-[10px]! py-[5px]! gap-[10px] border-[0.5px] border-black bg-white text-black! text-center text-[10px] font-normal leading-[20px] tracking-[0.5px]! uppercase hover:bg-white"
                 style={{ textEdge: "cap", leadingTrim: "both" } as React.CSSProperties}
               >
@@ -128,6 +136,7 @@ export default function Footer({ isFixed = false }: FooterProps) {
                     {t('hotlineNumber')}
                   </p>
                   <Button
+                  onClick={handleContactClick}
                   className="min-[390px]:hidden block min-[464px]:w-[208px] w-auto min-[464px]:px-[10px]! py-[5px]! px-1! gap-[10px] border-[0.5px] border-black bg-white text-black! text-center text-[10px] font-normal leading-[20px] tracking-[0.5px]! uppercase hover:bg-white"
                   style={{ textEdge: "cap", leadingTrim: "both" } as React.CSSProperties}
                 >
@@ -135,6 +144,7 @@ export default function Footer({ isFixed = false }: FooterProps) {
                 </Button>
                 </div>
                 <Button
+                  onClick={handleContactClick}
                   className="min-[390px]:block hidden min-[464px]:w-[208px] w-auto min-[464px]:px-[10px]! py-[5px]! px-1! gap-[10px] border-[0.5px] border-black bg-white text-black! text-center text-[10px] font-normal leading-[20px] tracking-[0.5px]! uppercase hover:bg-white"
                   style={{ textEdge: "cap", leadingTrim: "both" } as React.CSSProperties}
                 >

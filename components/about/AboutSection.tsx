@@ -16,12 +16,12 @@ export default function AboutSection() {
     <div className="grid max-[1122px]:grid-cols-1 min-[1123px]:grid-cols-[min(400px,100%)_1fr] min-[1392px]:grid-cols-[min(490px,100%)_1fr] min-[1392px]:gap-x-[152px] min-[1123px]:gap-x-[60px]">
       <div className="md:hidden flex gap-7 justify-end mb-[62px]">
         <Button 
-          className="w-[113px] sm:mt-0 mt-[23px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px]">
+          className="w-[113px] sm:mt-0 mt-[23px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px] hover:bg-white cursor-pointer">
           {t('profile')}
         </Button>
         <Button 
           onClick={handleSeeMoreClick}
-          className="w-[113px] h-6 sm:flex hidden p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px]">
+          className="w-[113px] h-6 sm:flex hidden p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px] hover:bg-white cursor-pointer">
           {t('seeMore')}
         </Button>
       </div>
@@ -44,12 +44,12 @@ export default function AboutSection() {
         </div>
         <div className="md:flex hidden flex-col gap-7">
           <Button 
-            className="w-[113px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px]">
+            className="w-[113px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px] hover:bg-white cursor-pointer">
             {t('profile')}
           </Button>
           <Button 
             onClick={handleSeeMoreClick}
-            className="w-[113px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px]">
+            className="w-[113px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px] hover:bg-white cursor-pointer">
             {t('seeMore')}
           </Button>
         </div>

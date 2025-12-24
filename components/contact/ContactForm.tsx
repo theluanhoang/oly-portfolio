@@ -321,7 +321,7 @@ export default function ContactForm() {
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-[113px] py-[5px]! flex justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[12px] font-normal disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-[113px] py-[5px]! flex justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[12px] font-normal disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white cursor-pointer"
         >
           {isSubmitting ? t('form.messages.submitting') : t('form.submit')}
         </Button>

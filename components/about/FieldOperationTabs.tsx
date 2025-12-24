@@ -24,7 +24,7 @@ export default function FieldOperationTabs() {
       </h1>
       <Link 
         href="/projects"
-        className="w-[113px] mb-[83px] h-6 sm:hidden flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px] no-underline"
+        className="w-[113px] mb-[83px] h-6 sm:hidden flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px] no-underline hover:bg-white cursor-pointer"
       >
         {t('viewProjects')}
       </Link>

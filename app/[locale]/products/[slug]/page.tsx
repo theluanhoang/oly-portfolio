@@ -94,7 +94,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         </div>
       </div>
       
-      <section className="relative bg-background lg:mt-[169px] md:mt-12 mt-8">
+      <section className="relative bg-background lg:mt-[169px] md:mt-12 mt-8 pb-[150px]">
         <div className="">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-[112px]">
             <div className="lg:col-span-2">
