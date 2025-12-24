@@ -25,7 +25,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const defaultCallbackUrl = '/admin/projects/new';
+      const defaultCallbackUrl = '/admin/projects';
       const callbackUrl = searchParams.get('callbackUrl') || defaultCallbackUrl;
       
       const result = await signIn('credentials', {

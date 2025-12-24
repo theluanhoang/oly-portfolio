@@ -1,12 +1,12 @@
 'use client';
 
+import { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import Link from '@/components/ui/Link';
 import { Link as LocaleLink } from '@/i18n/routing';
-import Button from '@/components/ui/Button';
-import { User } from 'lucide-react';
+import { Settings, LogOut, ChevronDown } from 'lucide-react';
 import Menu from './Menu';
 import LanguageSwitcher from './LanguageSwitcher';
 
@@ -18,17 +18,52 @@ export default function Header({ isFixed = false }: HeaderProps) {
   const { data: session } = useSession();
   const pathname = usePathname();
   const locale = useLocale();
+  const router = useRouter();
   const t = useTranslations('Common');
   const tNav = useTranslations('Navigation');
   const isAdminPage = pathname?.includes('/admin') && !pathname?.includes('/admin/login');
+  
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
   const positionClasses = isFixed 
     ? "fixed top-0 left-0 right-0 z-50" 
     : "relative z-50";
 
   const handleSignOut = async () => {
+    setIsDropdownOpen(false);
     await signOut({ callbackUrl: `/${locale}/admin/login` });
   };
+
+  const handleSettings = () => {
+    setIsDropdownOpen(false);
+    router.push(`/${locale}/admin/settings`);
+  };
+
+  const getUserInitials = (name?: string | null) => {
+    if (!name) return 'A';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name[0].toUpperCase();
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   const LogoLink = isAdminPage ? Link : LocaleLink;
   
@@ -61,23 +96,51 @@ export default function Header({ isFixed = false }: HeaderProps) {
 
             <div className="flex items-center gap-4">
               {session && (
-                <>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f5f5f5] border border-[#e0e0e0] rounded-sm">
-                    <User size={14} className="text-[#666]" strokeWidth={1.5} />
-                    <span className="text-[12px] font-medium leading-normal text-[#333] tracking-wide pt-[5px]">
-                      {session.user?.name || t('admin')}
-                    </span>
-                  </div>
-                  <Button
+                <div className="relative" ref={dropdownRef}>
+                  <button
                     type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleSignOut}
-                    className="md:text-xs md:px-4 md:py-1.5"
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-200"
+                    aria-label="User menu"
+                    aria-expanded={isDropdownOpen}
                   >
-                    {t('signOut')}
-                  </Button>
-                </>
+                    <div className="flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 text-white text-sm font-semibold shadow-sm">
+                      {getUserInitials(session.user?.name)}
+                    </div>
+                    <div className="flex flex-col items-start min-w-0">
+                      <span className="text-sm font-medium text-gray-900 truncate max-w-[120px]">
+                        {session.user?.name || t('admin')}
+                      </span>
+                      <span className="text-xs text-gray-500">Admin</span>
+                    </div>
+                    <ChevronDown 
+                      size={16} 
+                      className={`text-gray-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  {isDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 transition-all duration-200 ease-out">
+                      <button
+                        type="button"
+                        onClick={handleSettings}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <Settings size={16} className="text-gray-500" />
+                        <span>{t('settings')}</span>
+                      </button>
+                      <div className="border-t border-gray-100 my-1"></div>
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <LogOut size={16} className="text-red-500" />
+                        <span>{t('signOut')}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
               <LanguageSwitcher />
             </div>
