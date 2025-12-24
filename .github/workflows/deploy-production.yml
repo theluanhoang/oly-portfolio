@@ -71,6 +71,11 @@ jobs:
 
           NGINX_PORT=${{ secrets.NGINX_PORT || '80' }}
           NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL || '' }}
+
+          FROM_EMAIL=${{ secrets.FROM_EMAIL || '' }}
+          FROM_NAME=${{ secrets.FROM_NAME || '' }}
+          BREVO_API_KEY=${{ secrets.BREVO_API_KEY || '' }}
+          CONTACT_EMAIL=${{ secrets.CONTACT_EMAIL || '' }}
           ENVEOF
 
       # =====================
