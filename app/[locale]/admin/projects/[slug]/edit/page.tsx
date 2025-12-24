@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { useRouter } from '@/i18n/routing';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
@@ -11,12 +13,15 @@ import { Header, PageHeader, StepIndicator } from '@/components/layout';
 import { Button } from '@/components/ui';
 import { useGalleryUpload } from '@/hooks/useGalleryUpload';
 import { projectSchema, ProjectSchema, ProjectCategory } from '@/lib/validations/projectSchema';
-import { generateSlug } from '@/lib/utils';
 import { getTypeOptionsByCategory } from '@/lib/constants/projectConstants';
 
-export default function NewProjectPage() {
+export default function EditProjectPage() {
+  const params = useParams();
+  const router = useRouter();
+  const slug = typeof params.slug === 'string' ? params.slug : '';
   const t = useTranslations('Admin.projects');
   const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -36,11 +41,9 @@ export default function NewProjectPage() {
     mode: 'onBlur',
   });
 
-  const { handleSubmit, trigger, setValue, watch, formState: { errors } } = methods;
+  const { handleSubmit, trigger, setValue, watch, formState: { errors }, reset } = methods;
   const content = watch('content');
-  const title = watch('title');
   const category = watch('category');
-  const previousTitleRef = useRef('');
 
   const typeOptions = getTypeOptionsByCategory(category);
 
@@ -58,17 +61,45 @@ export default function NewProjectPage() {
   });
 
   useEffect(() => {
-    if (title && title !== previousTitleRef.current) {
-      const generatedSlug = generateSlug(title);
-      const currentSlug = watch('slug');
-      const previousGeneratedSlug = previousTitleRef.current ? generateSlug(previousTitleRef.current) : '';
-      
-      if (!currentSlug || currentSlug === previousGeneratedSlug) {
-        setValue('slug', generatedSlug, { shouldValidate: false });
+    async function loadProject() {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/projects/${encodeURIComponent(slug)}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch project');
+        }
+        const project = await response.json();
+        
+        const heroImageIndex = project.gallery && project.gallery.length > 0
+          ? project.gallery.findIndex((url: string) => url === project.heroImage)
+          : -1;
+
+        reset({
+          title: project.title || '',
+          slug: project.slug || '',
+          category: (project.category as ProjectCategory) || ProjectCategory.Architecture,
+          type: project.type || '',
+          location: project.location || '',
+          area: project.area || '',
+          year: project.year || '',
+          gallery: project.gallery || [],
+          content: project.content || '',
+        });
+
+        gallery.setGalleryUrls(project.gallery || []);
+        gallery.setHeroImageIndex(heroImageIndex >= 0 ? heroImageIndex : 0);
+      } catch (error) {
+        console.error('Error loading project:', error);
+        setSaveMessage({ type: 'error', text: t('edit.error') });
+      } finally {
+        setIsLoading(false);
       }
-      previousTitleRef.current = title;
     }
-  }, [title, setValue, watch]);
+
+    if (slug) {
+      loadProject();
+    }
+  }, [slug, reset]);
 
   useEffect(() => {
     if (!category) {
@@ -102,7 +133,7 @@ export default function NewProjectPage() {
     try {
       const galleryUrlStrings = gallery.getGalleryUrlStrings();
       const projectData = {
-        slug: data.slug || generateSlug(data.title),
+        slug: data.slug,
         title: data.title,
         category: data.category,
         type: data.type && data.type.trim() ? data.type.trim() : '',
@@ -116,8 +147,8 @@ export default function NewProjectPage() {
         content: data.content || '',
       };
       
-      const response = await fetch('/api/projects/save', {
-        method: 'POST',
+      const response = await fetch(`/api/projects/${encodeURIComponent(slug)}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -135,39 +166,35 @@ export default function NewProjectPage() {
       }
       
       if (!response.ok) {
-        const errorMessage = result.error || t('new.error');
+        const errorMessage = result.error || t('edit.error');
         const errorDetails = result.details ? `\nDetails: ${JSON.stringify(result.details, null, 2)}` : '';
         throw new Error(`${errorMessage}${errorDetails}`);
       }
       
-      setSaveMessage({ type: 'success', text: t('new.success') });
-      
-      methods.reset({
-        title: '',
-        slug: '',
-        category: ProjectCategory.Architecture,
-        type: '',
-        location: '',
-        area: '',
-        year: '',
-        gallery: [],
-        content: '',
-      });
-      gallery.reset();
-      setCurrentStep(1);
+      setSaveMessage({ type: 'success', text: t('edit.success') });
       
       setTimeout(() => {
-        setSaveMessage(null);
-      }, 3000);
+        router.push('/admin/projects');
+      }, 1500);
       
     } catch (error) {
-      console.error('Error saving project:', error);
-      const errorMessage = error instanceof Error ? error.message : t('new.error');
+      console.error('Error updating project:', error);
+      const errorMessage = error instanceof Error ? error.message : t('edit.error');
       setSaveMessage({ type: 'error', text: errorMessage });
     } finally {
       setIsSaving(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-[#666]">{t('edit.loading')}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -175,7 +202,7 @@ export default function NewProjectPage() {
 
       <div className="max-w-5xl mx-auto py-12 px-8 md:px-4">
         <PageHeader
-          title={t('new.title')}
+          title={t('edit.title')}
           subtitle={`${t('new.step')} ${currentStep} ${t('new.of')} 2`}
         />
 
@@ -314,7 +341,7 @@ export default function NewProjectPage() {
                     {t('new.back')}
                   </Button>
                   <Button type="submit" disabled={isSaving}>
-                    {isSaving ? t('new.saving') : t('new.save')}
+                    {isSaving ? t('edit.updating') : t('edit.update')}
                   </Button>
                 </div>
               </div>

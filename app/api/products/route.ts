@@ -13,6 +13,8 @@ export async function GET(request: Request): Promise<Response> {
 
     const page = Math.max(Number(pageParam) || 1, 1);
     const pageSize = Math.min(Math.max(Number(pageSizeParam) || 12, 1), 100);
+    const sortField = searchParams.get('sortField')?.trim() || 'createdAt';
+    const sortDirection = searchParams.get('sortDirection')?.trim() || 'desc';
 
     const andConditions: Prisma.ProductWhereInput[] = [];
 
@@ -73,12 +75,23 @@ export async function GET(request: Request): Promise<Response> {
     const where: Prisma.ProductWhereInput | undefined =
       andConditions.length > 0 ? { AND: andConditions } : undefined;
 
+    const validSortFields: Record<string, keyof Prisma.ProductOrderByWithRelationInput> = {
+      slug: 'slug',
+      category: 'category',
+      material: 'material',
+      year: 'year',
+      createdAt: 'createdAt',
+    };
+
+    const orderByField = validSortFields[sortField] || 'createdAt';
+    const orderByDirection = sortDirection === 'asc' ? 'asc' : 'desc';
+
     const [total, items] = await Promise.all([
       prisma.product.count({ where }),
       prisma.product.findMany({
         where,
         orderBy: {
-          createdAt: 'desc',
+          [orderByField]: orderByDirection,
         },
         skip: (page - 1) * pageSize,
         take: pageSize,

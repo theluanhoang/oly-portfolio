@@ -1,13 +1,11 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Product } from '@/types/product';
-import { AdminTableView, TableColumn } from '@/components/admin/AdminTableView';
+import { Project } from '@/types/project';
+import { AdminTableView, TableColumn, SortDirection } from '@/components/admin/AdminTableView';
 
-import { SortDirection } from '@/components/admin/AdminTableView';
-
-interface ProductsTableViewProps {
-  products: Product[];
+interface ProjectsTableViewProps {
+  projects: Project[];
   loading: boolean;
   error: string | null;
   totalItems: number;
@@ -16,15 +14,15 @@ interface ProductsTableViewProps {
   startItem: number;
   endItem: number;
   onPageChange: (page: number) => void;
-  onDeleteClick: (product: Product) => void;
-  onEditClick: (product: Product) => void;
+  onDeleteClick: (project: Project) => void;
+  onEditClick: (project: Project) => void;
   sortField?: string | null;
   sortDirection?: SortDirection;
   onSortChange?: (field: string, direction: SortDirection) => void;
 }
 
-export function ProductsTableView({
-  products,
+export function ProjectsTableView({
+  projects,
   loading,
   error,
   totalItems,
@@ -38,21 +36,21 @@ export function ProductsTableView({
   sortField,
   sortDirection,
   onSortChange,
-}: ProductsTableViewProps) {
-  const columns = useMemo<TableColumn<Product>[]>(() => [
+}: ProjectsTableViewProps) {
+  const columns = useMemo<TableColumn<Project>[]>(() => [
     {
-      key: 'slug',
-      headerKey: 'slug',
+      key: 'title',
+      headerKey: 'title',
       sortable: true,
-      sortKey: 'slug',
-      render: (product) => (
-        <div className="truncate max-w-[120px] sm:max-w-[150px] md:max-w-none">{product.slug}</div>
+      sortKey: 'title',
+      render: (project) => (
+        <div className="truncate max-w-[120px] sm:max-w-[150px] md:max-w-none">{project.title}</div>
       ),
-      mobileRender: (product) => (
+      mobileRender: (project) => (
         <>
-          <div className="truncate max-w-[120px] sm:max-w-[150px] md:max-w-none">{product.slug}</div>
+          <div className="truncate max-w-[120px] sm:max-w-[150px] md:max-w-none">{project.title}</div>
           <div className="text-[10px] text-[#777] mt-0.5">
-            {product.category} • {product.material}
+            {project.category} • {project.location}
           </div>
         </>
       ),
@@ -62,15 +60,15 @@ export function ProductsTableView({
       headerKey: 'category',
       sortable: true,
       sortKey: 'category',
-      render: (product) => product.category,
+      render: (project) => project.category,
       responsive: { hidden: 'sm' },
     },
     {
-      key: 'material',
-      headerKey: 'material',
+      key: 'location',
+      headerKey: 'location',
       sortable: true,
-      sortKey: 'material',
-      render: (product) => product.material,
+      sortKey: 'location',
+      render: (project) => project.location,
       responsive: { hidden: 'md' },
     },
     {
@@ -78,16 +76,16 @@ export function ProductsTableView({
       headerKey: 'year',
       sortable: true,
       sortKey: 'year',
-      render: (product) => product.year,
+      render: (project) => project.year,
     },
     {
-      key: 'thumbnail',
-      headerKey: 'thumbnail',
-      render: (product) => (
+      key: 'heroImage',
+      headerKey: 'heroImage',
+      render: (project) => (
         <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 border border-[#e0e0e0] bg-[#f8f8f8] overflow-hidden">
           <img
-            src={product.thumbnail}
-            alt={product.slug}
+            src={project.heroImage}
+            alt={project.title}
             className="w-full h-full object-cover"
             loading="lazy"
             onError={(e) => {
@@ -105,7 +103,7 @@ export function ProductsTableView({
       headerKey: 'created',
       sortable: true,
       sortKey: 'createdAt',
-      render: (product) => new Date(product.createdAt).toLocaleDateString(),
+      render: (project) => new Date(project.createdAt).toLocaleDateString(),
       className: 'text-[#666]',
       responsive: { hidden: 'md' },
     },
@@ -113,7 +111,7 @@ export function ProductsTableView({
 
   return (
     <AdminTableView
-      items={products}
+      items={projects}
       loading={loading}
       error={error}
       totalItems={totalItems}
@@ -125,10 +123,10 @@ export function ProductsTableView({
       onDeleteClick={onDeleteClick}
       onEditClick={onEditClick}
       columns={columns}
-      translationNamespace="Admin.products"
-      viewUrlBuilder={(product, locale) => `/${locale}/products/${product.slug}`}
-      getItemIdentifier={(product) => product.slug}
-      emptyMessageKey="noProducts"
+      translationNamespace="Admin.projects.list"
+      viewUrlBuilder={(project, locale) => `/${locale}/projects/${project.slug}`}
+      getItemIdentifier={(project) => project.title}
+      emptyMessageKey="noProjects"
       errorMessageKey="error"
       sortField={sortField}
       sortDirection={sortDirection}
@@ -136,5 +134,4 @@ export function ProductsTableView({
     />
   );
 }
-
 

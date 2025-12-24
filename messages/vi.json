@@ -92,6 +92,14 @@
                 "success": "Dự án đã được lưu thành công!",
                 "error": "Không thể lưu dự án"
             },
+            "edit": {
+                "title": "Chỉnh Sửa Dự Án",
+                "loading": "Đang tải dự án...",
+                "updating": "Đang cập nhật...",
+                "update": "Cập Nhật Dự Án",
+                "success": "Dự án đã được cập nhật thành công!",
+                "error": "Không thể cập nhật dự án"
+            },
             "fields": {
                 "title": "Tên dự án",
                 "slug": "Slug",
@@ -107,6 +115,55 @@
             "categories": {
                 "architecture": "Architecture",
                 "interiorConstruction": "Interior & Construction"
+            },
+            "list": {
+                "title": "Dự Án",
+                "subtitle": "Quản lý danh sách dự án",
+                "searchPlaceholder": "Tìm theo tiêu đề, danh mục, địa điểm...",
+                "filter": "Lọc",
+                "tableView": "Bảng",
+                "grid": "Lưới",
+                "reload": "Tải lại",
+                "addProject": "Thêm dự án",
+                "filterDialog": {
+                    "title": "Bộ lọc",
+                    "category": "Danh mục",
+                    "location": "Địa điểm",
+                    "year": "Năm",
+                    "categoryPlaceholder": "Nhập danh mục",
+                    "locationPlaceholder": "Nhập địa điểm",
+                    "yearPlaceholder": "Ví dụ: 2024",
+                    "clearFilters": "Xóa bộ lọc",
+                    "close": "Đóng",
+                    "closeAriaLabel": "Đóng"
+                },
+                "deleteDialog": {
+                    "title": "Xóa dự án",
+                    "confirmMessage": "Bạn có chắc chắn muốn xóa dự án",
+                    "cannotUndo": "Hành động này không thể hoàn tác.",
+                    "cancel": "Hủy",
+                    "deleting": "Đang xóa...",
+                    "delete": "Xóa"
+                },
+                "actions": {
+                    "view": "Xem",
+                    "edit": "Sửa",
+                    "delete": "Xóa"
+                },
+                "table": {
+                    "headers": {
+                        "title": "Tiêu đề",
+                        "category": "Danh mục",
+                        "location": "Địa điểm",
+                        "year": "Năm",
+                        "heroImage": "Ảnh đại diện",
+                        "created": "Ngày tạo",
+                        "actions": "Thao tác"
+                    },
+                    "loading": "Đang tải...",
+                    "noProjects": "Chưa có dự án nào."
+                },
+                "error": "Lỗi khi tải dự án"
             }
         },
         "products": {

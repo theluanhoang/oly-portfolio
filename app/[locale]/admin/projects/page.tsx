@@ -1,32 +1,35 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { ProductsToolbar } from '@/components/admin/products/ProductsToolbar';
-import { ProductsTableView } from '@/components/admin/products/ProductsTableView';
-import { ProductsGridView } from '@/components/admin/products/ProductsGridView';
-import { DeleteProductDialog } from '@/components/admin/products/DeleteProductDialog';
-import { ProductsFilterDialog } from '@/components/admin/products/ProductsFilterDialog';
-import type { Product } from '@/types/product';
+import { useRouter } from '@/i18n/routing';
+import { ProjectsToolbar } from '@/components/admin/projects/ProjectsToolbar';
+import { ProjectsTableView } from '@/components/admin/projects/ProjectsTableView';
+import { ProjectsGridView } from '@/components/admin/projects/ProjectsGridView';
+import { DeleteProjectDialog } from '@/components/admin/projects/DeleteProjectDialog';
+import { ProjectsFilterDialog } from '@/components/admin/projects/ProjectsFilterDialog';
+import type { Project } from '@/types/project';
 import type { SortDirection } from '@/components/admin/AdminTableView';
 
-interface ProductsResponse {
-  items: Product[];
+interface ProjectsResponse {
+  items: Project[];
   total: number;
   page: number;
   pageSize: number;
 }
 
-export default function AdminProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+export default function AdminProjectsPage() {
+  const router = useRouter();
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [search, setSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -37,7 +40,7 @@ export default function AdminProductsPage() {
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
-  const loadProducts = useCallback(async () => {
+  const loadProjects = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -56,18 +59,22 @@ export default function AdminProductsPage() {
       if (yearTrimmed.length > 0) {
         params.set('year', yearTrimmed);
       }
+      const locationTrimmed = locationFilter.trim();
+      if (locationTrimmed.length > 0) {
+        params.set('location', locationTrimmed);
+      }
       if (sortField && sortDirection) {
         params.set('sortField', sortField);
         params.set('sortDirection', sortDirection);
       }
-      const res = await fetch(`/api/products?${params.toString()}`, {
+      const res = await fetch(`/api/projects?${params.toString()}`, {
         cache: 'no-store',
       });
       if (!res.ok) {
-        throw new Error('Failed to fetch products');
+        throw new Error('Failed to fetch projects');
       }
-      const data = (await res.json()) as ProductsResponse;
-      setProducts(data.items);
+      const data = (await res.json()) as ProjectsResponse;
+      setProjects(data.items);
       setTotalItems(data.total);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -75,42 +82,46 @@ export default function AdminProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchQuery, categoryFilter, yearFilter, sortField, sortDirection]);
+  }, [currentPage, pageSize, searchQuery, categoryFilter, yearFilter, locationFilter, sortField, sortDirection]);
 
   useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+    loadProjects();
+  }, [loadProjects]);
 
-  const handleDeleteClick = (product: Product) => {
-    setProductToDelete(product);
+  const handleDeleteClick = (project: Project) => {
+    setProjectToDelete(project);
   };
 
   const handleCancelDelete = () => {
     if (isDeleting) return;
-    setProductToDelete(null);
+    setProjectToDelete(null);
   };
 
   const handleConfirmDelete = async () => {
-    if (!productToDelete) return;
+    if (!projectToDelete) return;
     try {
       setIsDeleting(true);
-      const res = await fetch(`/api/products/${encodeURIComponent(productToDelete.slug)}`, {
+      const res = await fetch(`/api/projects/${encodeURIComponent(projectToDelete.slug)}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
-        throw new Error('Failed to delete product');
+        throw new Error('Failed to delete project');
       }
-      await loadProducts();
-      setProductToDelete(null);
+      await loadProjects();
+      setProjectToDelete(null);
     } finally {
       setIsDeleting(false);
     }
   };
 
+  const handleEditClick = (project: Project) => {
+    router.push(`/admin/projects/${project.slug}/edit`);
+  };
+
   const totalPages = Math.max(Math.ceil(totalItems / pageSize), 1);
   const safePage = Math.min(currentPage, totalPages);
   const startItem = totalItems === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const endItem = totalItems === 0 ? 0 : startItem + products.length - 1;
+  const endItem = totalItems === 0 ? 0 : startItem + projects.length - 1;
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages) return;
@@ -127,7 +138,7 @@ export default function AdminProductsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [categoryFilter, yearFilter]);
+  }, [categoryFilter, yearFilter, locationFilter]);
 
   const handleSortChange = (field: string, direction: SortDirection) => {
     setSortField(direction ? field : null);
@@ -138,7 +149,7 @@ export default function AdminProductsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground pt-4 sm:pt-6 md:pt-10 pb-8 sm:pb-12 md:pb-16 px-3 sm:px-4 md:px-6">
       <div className="max-w-6xl mx-auto space-y-4 sm:space-y-5 md:space-y-6">
-        <ProductsToolbar
+        <ProjectsToolbar
           search={search}
           onSearchChange={setSearch}
           viewMode={viewMode}
@@ -147,14 +158,14 @@ export default function AdminProductsPage() {
             setCurrentPage(1);
           }}
           loading={loading}
-          onReload={loadProducts}
-          onAdd={() => alert('Chức năng thêm sản phẩm sẽ được bổ sung.')}
+          onReload={loadProjects}
+          onAdd={() => router.push('/admin/projects/new')}
           onOpenFilter={() => setIsFilterOpen(true)}
         />
 
         {viewMode === 'table' ? (
-          <ProductsTableView
-            products={products}
+          <ProjectsTableView
+            projects={projects}
             loading={loading}
             error={error}
             totalItems={totalItems}
@@ -164,14 +175,14 @@ export default function AdminProductsPage() {
             endItem={endItem}
             onPageChange={handlePageChange}
             onDeleteClick={handleDeleteClick}
-            onEditClick={(product) => alert(`Edit product: ${product.slug}`)}
+            onEditClick={handleEditClick}
             sortField={sortField}
             sortDirection={sortDirection}
             onSortChange={handleSortChange}
           />
         ) : (
-          <ProductsGridView
-            products={products}
+          <ProjectsGridView
+            projects={projects}
             loading={loading}
             error={error}
             totalItems={totalItems}
@@ -181,25 +192,28 @@ export default function AdminProductsPage() {
             endItem={endItem}
             onPageChange={handlePageChange}
             onDeleteClick={handleDeleteClick}
-            onEditClick={(product) => alert(`Edit product: ${product.slug}`)}
+            onEditClick={handleEditClick}
           />
         )}
       </div>
-      <DeleteProductDialog
-        product={productToDelete}
+      <DeleteProjectDialog
+        project={projectToDelete}
         isDeleting={isDeleting}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
       />
-      <ProductsFilterDialog
+      <ProjectsFilterDialog
         isOpen={isFilterOpen}
         category={categoryFilter}
         year={yearFilter}
+        location={locationFilter}
         onCategoryChange={setCategoryFilter}
         onYearChange={setYearFilter}
+        onLocationChange={setLocationFilter}
         onReset={() => {
           setCategoryFilter('');
           setYearFilter('');
+          setLocationFilter('');
         }}
         onClose={() => setIsFilterOpen(false)}
       />

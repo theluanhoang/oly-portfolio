@@ -33,12 +33,19 @@ export default function ProjectsPage() {
         const response = await fetch('/api/projects');
         if (!response.ok) throw new Error('Failed to fetch projects');
         
-        const projects = await response.json() as Array<{
-          heroImage: string;
-          title: string;
-          slug: string;
-          category: string;
-        }>;
+        const data = await response.json() as {
+          items: Array<{
+            heroImage: string;
+            title: string;
+            slug: string;
+            category: string;
+          }>;
+          total: number;
+          page: number;
+          pageSize: number;
+        };
+        
+        const projects = data.items || [];
         
         const images: ProjectImage[] = projects.map((project) => ({
           src: project.heroImage,

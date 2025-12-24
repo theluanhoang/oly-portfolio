@@ -38,6 +38,8 @@ interface UseGalleryUploadReturn {
   handleReorder: (activeId: UniqueIdentifier, overId: UniqueIdentifier) => void;
   reset: () => void;
   getGalleryUrlStrings: () => string[];
+  setGalleryUrls: (urls: string[]) => void;
+  setHeroImageIndex: (index: number) => void;
 }
 
 export function useGalleryUpload({ onUploadSuccess, onError, onReorder }: UseGalleryUploadOptions): UseGalleryUploadReturn {
@@ -244,6 +246,10 @@ export function useGalleryUpload({ onUploadSuccess, onError, onReorder }: UseGal
     return galleryUrls.map(item => typeof item === 'string' ? item : item.url);
   };
 
+  const setGalleryUrlsExternal = (urls: string[]): void => {
+    setGalleryUrls(urls.map(url => ({ url, originalName: url })));
+  };
+
   return {
     galleryUrls,
     heroImageIndex,
@@ -261,6 +267,8 @@ export function useGalleryUpload({ onUploadSuccess, onError, onReorder }: UseGal
     handleReorder,
     reset,
     getGalleryUrlStrings,
+    setGalleryUrls: setGalleryUrlsExternal,
+    setHeroImageIndex,
   };
 }
 

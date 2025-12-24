@@ -2,7 +2,7 @@
 
 import { AdminToolbar } from '@/components/admin/AdminToolbar';
 
-interface ProductsToolbarProps {
+interface ProjectsToolbarProps {
   search: string;
   onSearchChange: (value: string) => void;
   viewMode: 'table' | 'grid';
@@ -13,14 +13,13 @@ interface ProductsToolbarProps {
   onOpenFilter: () => void;
 }
 
-export function ProductsToolbar(props: ProductsToolbarProps) {
+export function ProjectsToolbar(props: ProjectsToolbarProps) {
   return (
     <AdminToolbar
       {...props}
-      translationNamespace="Admin.products"
-      addButtonKey="addProduct"
+      translationNamespace="Admin.projects.list"
+      addButtonKey="addProject"
     />
   );
 }
-
 

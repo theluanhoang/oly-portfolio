@@ -92,6 +92,14 @@
                 "success": "Project saved successfully!",
                 "error": "Failed to save project"
             },
+            "edit": {
+                "title": "Edit Project",
+                "loading": "Loading project...",
+                "updating": "Updating...",
+                "update": "Update Project",
+                "success": "Project updated successfully!",
+                "error": "Failed to update project"
+            },
             "fields": {
                 "title": "Project name",
                 "slug": "Slug",
@@ -107,6 +115,55 @@
             "categories": {
                 "architecture": "Architecture",
                 "interiorConstruction": "Interior & Construction"
+            },
+            "list": {
+                "title": "Projects",
+                "subtitle": "Manage project list",
+                "searchPlaceholder": "Search by title, category, location...",
+                "filter": "Filter",
+                "tableView": "Table",
+                "grid": "Grid",
+                "reload": "Reload",
+                "addProject": "Add Project",
+                "filterDialog": {
+                    "title": "Filters",
+                    "category": "Category",
+                    "location": "Location",
+                    "year": "Year",
+                    "categoryPlaceholder": "Enter category",
+                    "locationPlaceholder": "Enter location",
+                    "yearPlaceholder": "Example: 2024",
+                    "clearFilters": "Clear Filters",
+                    "close": "Close",
+                    "closeAriaLabel": "Close"
+                },
+                "deleteDialog": {
+                    "title": "Delete Project",
+                    "confirmMessage": "Are you sure you want to delete project",
+                    "cannotUndo": "This action cannot be undone.",
+                    "cancel": "Cancel",
+                    "deleting": "Deleting...",
+                    "delete": "Delete"
+                },
+                "actions": {
+                    "view": "View",
+                    "edit": "Edit",
+                    "delete": "Delete"
+                },
+                "table": {
+                    "headers": {
+                        "title": "Title",
+                        "category": "Category",
+                        "location": "Location",
+                        "year": "Year",
+                        "heroImage": "Hero Image",
+                        "created": "Created",
+                        "actions": "Actions"
+                    },
+                    "loading": "Loading...",
+                    "noProjects": "No projects yet."
+                },
+                "error": "Error loading projects"
             }
         },
         "products": {
