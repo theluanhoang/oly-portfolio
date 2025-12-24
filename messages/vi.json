@@ -18,7 +18,15 @@
         "comingSoon": "Sắp ra mắt",
         "loading": "Đang tải...",
         "signOut": "Đăng Xuất",
-        "admin": "Quản trị"
+        "admin": "Quản trị",
+        "pagination": {
+            "showing": "Hiển thị",
+            "of": "trên",
+            "items": "mục",
+            "prev": "Trước",
+            "next": "Sau",
+            "page": "Trang"
+        }
     },
     "Products": {
         "title": "SẢN PHẨM",
@@ -100,6 +108,53 @@
                 "architecture": "Architecture",
                 "interiorConstruction": "Interior & Construction"
             }
+        },
+        "products": {
+            "title": "Sản Phẩm",
+            "subtitle": "Quản lý danh sách sản phẩm",
+            "searchPlaceholder": "Tìm theo slug, material...",
+            "filter": "Lọc",
+            "tableView": "Bảng",
+            "grid": "Lưới",
+            "reload": "Tải lại",
+            "addProduct": "Thêm sản phẩm",
+            "filterDialog": {
+                "title": "Bộ lọc",
+                "category": "Category",
+                "year": "Năm",
+                "categoryPlaceholder": "Nhập category",
+                "yearPlaceholder": "Ví dụ: 2024",
+                "clearFilters": "Xóa bộ lọc",
+                "close": "Đóng",
+                "closeAriaLabel": "Đóng"
+            },
+            "deleteDialog": {
+                "title": "Xóa sản phẩm",
+                "confirmMessage": "Bạn có chắc chắn muốn xóa sản phẩm",
+                "cannotUndo": "Hành động này không thể hoàn tác.",
+                "cancel": "Hủy",
+                "deleting": "Đang xóa...",
+                "delete": "Xóa"
+            },
+            "actions": {
+                "view": "Xem",
+                "edit": "Sửa",
+                "delete": "Xóa"
+            },
+            "table": {
+                "headers": {
+                    "slug": "Slug",
+                    "category": "Danh mục",
+                    "material": "Vật liệu",
+                    "year": "Năm",
+                    "thumbnail": "Ảnh đại diện",
+                    "created": "Ngày tạo",
+                    "actions": "Thao tác"
+                },
+                "loading": "Đang tải...",
+                "noProducts": "Chưa có sản phẩm nào."
+            },
+            "error": "Lỗi khi tải sản phẩm"
         }
     },
     "Footer": {

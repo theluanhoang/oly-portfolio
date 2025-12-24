@@ -32,3 +32,27 @@ export async function GET(request: Request, { params }: RouteParams): Promise<Re
   }
 }
 
+export async function DELETE(request: Request, { params }: RouteParams): Promise<Response> {
+  try {
+    const { slug } = await params;
+    const prismaWithProduct = prisma as typeof prisma & {
+      product: {
+        delete(args: { where: { slug: string } }): Promise<unknown>;
+      };
+    };
+
+    const deleted = await prismaWithProduct.product.delete({
+      where: { slug },
+    });
+
+    return Response.json(deleted);
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return Response.json(
+      { error: 'Failed to delete product', details: errorMessage },
+      { status: 500 }
+    );
+  }
+}
+

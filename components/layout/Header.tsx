@@ -48,13 +48,13 @@ export default function Header({ isFixed = false }: HeaderProps) {
             </div>
 
             <nav className="flex items-center justify-center flex-1 gap-8">
-              <Link href="/projects" className="text-[12px] font-normal leading-normal text-black">
+              <Link href="/admin/projects" className="text-[12px] font-normal leading-normal text-black">
                 {tNav('projects')}
               </Link>
-              <Link href="/products" className="text-[12px] font-normal leading-normal text-black">
+              <Link href="/admin/products" className="text-[12px] font-normal leading-normal text-black">
                 {tNav('products')}
               </Link>
-              <Link href="/users" className="text-[12px] font-normal leading-normal text-black">
+              <Link href="/admin/users" className="text-[12px] font-normal leading-normal text-black">
                 {tNav('users')}
               </Link>
             </nav>

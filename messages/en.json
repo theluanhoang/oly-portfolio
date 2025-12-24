@@ -18,7 +18,15 @@
         "comingSoon": "Coming soon",
         "loading": "Loading...",
         "signOut": "Sign Out",
-        "admin": "Admin"
+        "admin": "Admin",
+        "pagination": {
+            "showing": "Showing",
+            "of": "of",
+            "items": "items",
+            "prev": "Prev",
+            "next": "Next",
+            "page": "Page"
+        }
     },
     "Products": {
         "title": "PRODUCT",
@@ -100,6 +108,53 @@
                 "architecture": "Architecture",
                 "interiorConstruction": "Interior & Construction"
             }
+        },
+        "products": {
+            "title": "Products",
+            "subtitle": "Manage product list",
+            "searchPlaceholder": "Search by slug, material...",
+            "filter": "Filter",
+            "tableView": "Table",
+            "grid": "Grid",
+            "reload": "Reload",
+            "addProduct": "Add Product",
+            "filterDialog": {
+                "title": "Filters",
+                "category": "Category",
+                "year": "Year",
+                "categoryPlaceholder": "Enter category",
+                "yearPlaceholder": "Example: 2024",
+                "clearFilters": "Clear Filters",
+                "close": "Close",
+                "closeAriaLabel": "Close"
+            },
+            "deleteDialog": {
+                "title": "Delete Product",
+                "confirmMessage": "Are you sure you want to delete product",
+                "cannotUndo": "This action cannot be undone.",
+                "cancel": "Cancel",
+                "deleting": "Deleting...",
+                "delete": "Delete"
+            },
+            "actions": {
+                "view": "View",
+                "edit": "Edit",
+                "delete": "Delete"
+            },
+            "table": {
+                "headers": {
+                    "slug": "Slug",
+                    "category": "Category",
+                    "material": "Material",
+                    "year": "Year",
+                    "thumbnail": "Thumbnail",
+                    "created": "Created",
+                    "actions": "Actions"
+                },
+                "loading": "Loading...",
+                "noProducts": "No products yet."
+            },
+            "error": "Error loading products"
         }
     },
     "Footer": {
