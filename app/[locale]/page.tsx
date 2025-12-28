@@ -154,6 +154,7 @@ export default function Home() {
   const router = useRouter();
   const t = useTranslations('HomePage');
   const [isConverged, setIsConverged] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [isMdUp, setIsMdUp] = useState(false);
   const [viewportWidth, setViewportWidth] = useState(0);
 
@@ -162,12 +163,17 @@ export default function Home() {
       setIsConverged(true);
     }, 500);
 
+    const fadeOutTimer = setTimeout(() => {
+      setIsTransitioning(true);
+    }, 3500); 
+
     const redirectTimer = setTimeout(() => {
       router.push('/projects');
-    }, 3000);
+    }, 4000);
 
     return () => {
       clearTimeout(convergeTimer);
+      clearTimeout(fadeOutTimer);
       clearTimeout(redirectTimer);
     };
   }, [router]);
@@ -193,8 +199,16 @@ export default function Home() {
   const furniture = t('furniture');
 
   return (
-    <div className="fixed inset-0 bg-dark flex items-center justify-center overflow-hidden">
-      <div className="relative w-full max-w-6xl mx-auto px-6 md:px-8 flex flex-col md:flex-row items-center md:items-center justify-center md:justify-between md:gap-8">
+    <div 
+      className={`fixed inset-0 bg-dark flex items-center justify-center overflow-hidden transition-opacity duration-500 ease-in-out ${
+        isTransitioning ? 'opacity-0' : 'opacity-100'
+      }`}
+    >
+      <div 
+        className={`relative w-full max-w-6xl mx-auto px-6 md:px-8 flex flex-col md:flex-row items-center md:items-center justify-center md:justify-between md:gap-8 transition-transform duration-500 ease-in-out ${
+          isTransitioning ? 'scale-95' : 'scale-100'
+        }`}
+      >
         {isMdUp ? (
           <>
             <div className="flex flex-col md:flex-row items-center gap-10 md:gap-8 order-2 md:order-1 mt-[60px] md:mt-0">
