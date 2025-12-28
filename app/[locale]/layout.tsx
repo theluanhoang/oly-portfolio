@@ -8,6 +8,7 @@ import "../globals.css";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import SessionProvider from "@/components/providers/SessionProvider";
 import MapPreconnect from "@/components/layout/MapPreconnect";
+import { initAdmin } from "@/lib/initAdmin";
 
 const montserrat = localFont({
   src: "../../fonts/Montserrat/Montserrat-Regular.ttf",
@@ -45,6 +46,8 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
     notFound();
   }
+
+  await initAdmin();
 
   const messages = await getMessages();
 

@@ -5,13 +5,11 @@ import type { NextRequest } from 'next/server';
 import type { JWT } from 'next-auth/jwt';
 import type { Session, User } from 'next-auth';
 import { checkRateLimit, recordFailedLogin, recordSuccessfulLogin } from '@/lib/rateLimit';
+import prisma from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
 if (!process.env.NEXTAUTH_SECRET) {
   throw new Error('NEXTAUTH_SECRET must be set in environment variables');
-}
-
-if (!process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD) {
-  throw new Error('ADMIN_USERNAME and ADMIN_PASSWORD must be set in environment variables');
 }
 
 const baseAuthHandler = NextAuth({
@@ -23,22 +21,38 @@ const baseAuthHandler = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials): Promise<{ id: string; name: string; email: string; role: string } | null> {
-        const adminUsername = process.env.ADMIN_USERNAME;
-        const adminPassword = process.env.ADMIN_PASSWORD;
-
-        if (
-          credentials?.username === adminUsername &&
-          credentials?.password === adminPassword
-        ) {
-          return {
-            id: '1',
-            name: 'Admin',
-            email: 'admin@oly-studio.com',
-            role: 'admin',
-          };
+        if (!credentials?.username || !credentials?.password) {
+          return null;
         }
 
-        return null;
+        try {
+          const user = await prisma.user.findUnique({
+            where: { username: credentials.username },
+          });
+
+          if (!user) {
+            return null;
+          }
+
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isPasswordValid) {
+            return null;
+          }
+
+          return {
+            id: user.id,
+            name: user.username,
+            email: user.email,
+            role: user.role,
+          };
+        } catch (error) {
+          console.error('[AUTH] Error during authorization:', error);
+          return null;
+        }
       },
     }),
   ],
