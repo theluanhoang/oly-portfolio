@@ -20,6 +20,8 @@
         "signOut": "Sign Out",
         "settings": "Settings",
         "admin": "Admin",
+        "showPassword": "Show password",
+        "hidePassword": "Hide password",
         "pagination": {
             "showing": "Showing",
             "of": "of",
@@ -235,7 +237,25 @@
                 "passwordsNotMatch": "New passwords do not match",
                 "currentPasswordRequired": "Current password is required",
                 "newPasswordRequired": "New password is required",
-                "confirmPasswordRequired": "Please confirm your new password"
+                "confirmPasswordRequired": "Please confirm your new password",
+                "currentPasswordIncorrect": "Current password is incorrect",
+                "passwordTooWeak": "Password does not meet requirements",
+                "passwordRequirements": "Password must be at least 8 characters and contain uppercase, lowercase, number, and special character",
+                "passwordDifferent": "New password must be different from your current password",
+                "passwordSameAsCurrent": "New password must be different from your current password",
+                "unauthorized": "Unauthorized. Please log in to change your password.",
+                "tooManyAttempts": "Too many attempts. Please try again later.",
+                "passwordRequirementsTitle": "Password Requirements:",
+                "requirementMinLength": "At least 8 characters",
+                "requirementUppercase": "One uppercase letter",
+                "requirementLowercase": "One lowercase letter",
+                "requirementNumber": "One number",
+                "requirementSpecialChar": "One special character",
+                "validationMinLength": "Password must be at least 8 characters long",
+                "validationUppercase": "Password must contain at least one uppercase letter",
+                "validationLowercase": "Password must contain at least one lowercase letter",
+                "validationNumber": "Password must contain at least one number",
+                "validationSpecialChar": "Password must contain at least one special character"
             }
         }
     },

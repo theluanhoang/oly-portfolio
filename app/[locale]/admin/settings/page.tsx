@@ -1,64 +1,165 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import Input from '@/components/forms/Input';
 import Button from '@/components/ui/Button';
-import { User, Lock, Mail, Shield } from 'lucide-react';
+import { User, Lock, Mail, Shield, Check, X } from 'lucide-react';
+import { z } from 'zod';
+import { validatePassword } from '@/lib/validations/passwordValidation';
+import type { ChangePasswordInput } from '@/lib/validations/passwordSchema';
 
 export default function AdminSettingsPage() {
   const { data: session } = useSession();
   const t = useTranslations('Admin.settings');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  
+  const [passwordValidation, setPasswordValidation] = useState<ReturnType<typeof validatePassword> | null>(null);
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
 
-  const handlePasswordUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError('');
+  const schemaWithTranslation = useMemo(
+    () => {
+      const passwordSchemaWithTranslation = z
+        .string()
+        .min(8, t('changePassword.validationMinLength'))
+        .regex(/[A-Z]/, t('changePassword.validationUppercase'))
+        .regex(/[a-z]/, t('changePassword.validationLowercase'))
+        .regex(/[0-9]/, t('changePassword.validationNumber'))
+        .regex(/[^A-Za-z0-9]/, t('changePassword.validationSpecialChar'));
+
+      return z.object({
+        currentPassword: z.string().min(1, t('changePassword.currentPasswordRequired')),
+        newPassword: passwordSchemaWithTranslation,
+        confirmPassword: z.string().min(1, t('changePassword.confirmPasswordRequired')),
+      })
+      .refine(
+        (data) => data.newPassword === data.confirmPassword,
+        {
+          message: t('changePassword.passwordsNotMatch'),
+          path: ['confirmPassword'],
+        }
+      )
+      .refine(
+        (data) => data.currentPassword !== data.newPassword,
+        {
+          message: t('changePassword.passwordDifferent'),
+          path: ['newPassword'],
+        }
+      );
+    },
+    [t]
+  );
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setError,
+    clearErrors,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<ChangePasswordInput>({
+    resolver: zodResolver(schemaWithTranslation),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
+  });
+
+  const newPassword = watch('newPassword', '');
+
+  useEffect(() => {
+    if (newPassword) {
+      const validation = validatePassword(newPassword);
+      setPasswordValidation(validation);
+      setShowPasswordRequirements(true);
+      
+      if (validation.isValid) {
+        clearErrors('newPassword');
+      }
+    } else {
+      setPasswordValidation(null);
+      setShowPasswordRequirements(false);
+    }
+  }, [newPassword, clearErrors]);
+
+  const onSubmit = async (data: ChangePasswordInput) => {
     setSuccess('');
-
-    // Validation
-    if (!currentPassword.trim()) {
-      setError(t('changePassword.currentPasswordRequired'));
-      return;
-    }
-    if (!newPassword.trim()) {
-      setError(t('changePassword.newPasswordRequired'));
-      return;
-    }
-    if (!confirmPassword.trim()) {
-      setError(t('changePassword.confirmPasswordRequired'));
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError(t('changePassword.passwordsNotMatch'));
-      return;
-    }
 
     try {
       setIsUpdating(true);
-      // TODO: Implement API call to update password
-      // const res = await fetch('/api/admin/change-password', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ currentPassword, newPassword }),
-      // });
-      // if (!res.ok) throw new Error('Failed to update password');
       
-      // Simulate API call for now
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const res = await fetch('/api/admin/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      const responseData = await res.json();
+
+      if (!res.ok) {
+        if (responseData.fieldErrors && typeof responseData.fieldErrors === 'object') {
+          Object.keys(responseData.fieldErrors).forEach((field) => {
+            if (field === 'currentPassword' || field === 'newPassword' || field === 'confirmPassword') {
+              setError(field as keyof ChangePasswordInput, {
+                type: 'server',
+                message: responseData.fieldErrors[field],
+              });
+            }
+          });
+        } else if (responseData.field) {
+          setError(responseData.field as keyof ChangePasswordInput, {
+            type: 'server',
+            message: responseData.error,
+          });
+        } else if (responseData.details && Array.isArray(responseData.details)) {
+          responseData.details.forEach((err: { field: string; message: string }) => {
+            if (err.field === 'currentPassword' || err.field === 'newPassword' || err.field === 'confirmPassword') {
+              setError(err.field as keyof ChangePasswordInput, {
+                type: 'server',
+                message: err.message,
+              });
+            }
+          });
+        } else if (responseData.error) {
+          const errorMsg = responseData.error.toLowerCase();
+          if (errorMsg.includes('current') || errorMsg.includes('incorrect')) {
+            setError('currentPassword', {
+              type: 'server',
+              message: responseData.error,
+            });
+          } else if (errorMsg.includes('new') || errorMsg.includes('password must') || errorMsg.includes('different')) {
+            setError('newPassword', {
+              type: 'server',
+              message: responseData.error,
+            });
+          } else if (errorMsg.includes('confirm') || errorMsg.includes('match')) {
+            setError('confirmPassword', {
+              type: 'server',
+              message: responseData.error,
+            });
+          } else {
+            setError('newPassword', {
+              type: 'server',
+              message: responseData.error || t('changePassword.error'),
+            });
+          }
+        }
+        return;
+      }
       
       setSuccess(t('changePassword.success'));
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      reset();
+      setPasswordValidation(null);
+      setShowPasswordRequirements(false);
     } catch (err) {
-      setError(t('changePassword.error'));
+      console.error('Password change error:', err);
+      setError('newPassword', {
+        type: 'server',
+        message: t('changePassword.error'),
+      });
     } finally {
       setIsUpdating(false);
     }
@@ -144,45 +245,85 @@ export default function AdminSettingsPage() {
             </h2>
           </div>
 
-          <form onSubmit={handlePasswordUpdate} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <Input
               label={t('changePassword.currentPassword')}
-              name="currentPassword"
               type="password"
               placeholder="••••••••"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
+              {...register('currentPassword')}
               required
-              error={error && error.includes('current') ? error : undefined}
+              error={errors.currentPassword?.message}
             />
 
-            <Input
-              label={t('changePassword.newPassword')}
-              name="newPassword"
-              type="password"
-              placeholder="••••••••"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              error={error && error.includes('new') ? error : undefined}
-            />
+            <div>
+              <Input
+                label={t('changePassword.newPassword')}
+                type="password"
+                placeholder="••••••••"
+                {...register('newPassword')}
+                required
+                error={errors.newPassword?.message}
+              />
+              
+              {showPasswordRequirements && passwordValidation && (
+                <div className="mt-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                    {t('changePassword.passwordRequirementsTitle')}
+                  </p>
+                  <div className="space-y-1.5">
+                    <div className={`flex items-center gap-2 text-xs ${passwordValidation.checks.minLength ? 'text-green-600' : 'text-gray-500'}`}>
+                      {passwordValidation.checks.minLength ? (
+                        <Check size={14} className="shrink-0" />
+                      ) : (
+                        <X size={14} className="shrink-0" />
+                      )}
+                      <span>{t('changePassword.requirementMinLength')}</span>
+                    </div>
+                    <div className={`flex items-center gap-2 text-xs ${passwordValidation.checks.hasUppercase ? 'text-green-600' : 'text-gray-500'}`}>
+                      {passwordValidation.checks.hasUppercase ? (
+                        <Check size={14} className="shrink-0" />
+                      ) : (
+                        <X size={14} className="shrink-0" />
+                      )}
+                      <span>{t('changePassword.requirementUppercase')}</span>
+                    </div>
+                    <div className={`flex items-center gap-2 text-xs ${passwordValidation.checks.hasLowercase ? 'text-green-600' : 'text-gray-500'}`}>
+                      {passwordValidation.checks.hasLowercase ? (
+                        <Check size={14} className="shrink-0" />
+                      ) : (
+                        <X size={14} className="shrink-0" />
+                      )}
+                      <span>{t('changePassword.requirementLowercase')}</span>
+                    </div>
+                    <div className={`flex items-center gap-2 text-xs ${passwordValidation.checks.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
+                      {passwordValidation.checks.hasNumber ? (
+                        <Check size={14} className="shrink-0" />
+                      ) : (
+                        <X size={14} className="shrink-0" />
+                      )}
+                      <span>{t('changePassword.requirementNumber')}</span>
+                    </div>
+                    <div className={`flex items-center gap-2 text-xs ${passwordValidation.checks.hasSpecialChar ? 'text-green-600' : 'text-gray-500'}`}>
+                      {passwordValidation.checks.hasSpecialChar ? (
+                        <Check size={14} className="shrink-0" />
+                      ) : (
+                        <X size={14} className="shrink-0" />
+                      )}
+                      <span>{t('changePassword.requirementSpecialChar')}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <Input
               label={t('changePassword.confirmPassword')}
-              name="confirmPassword"
               type="password"
               placeholder="••••••••"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              {...register('confirmPassword')}
               required
-              error={error && (error.includes('confirm') || error.includes('match')) ? error : undefined}
+              error={errors.confirmPassword?.message}
             />
-
-            {error && !error.includes('current') && !error.includes('new') && !error.includes('confirm') && (
-              <div className="px-4 py-3 bg-red-50 border-2 border-red-500 text-red-700 text-sm rounded-lg">
-                {error}
-              </div>
-            )}
 
             {success && (
               <div className="px-4 py-3 bg-green-50 border-2 border-green-500 text-green-700 text-sm rounded-lg">
@@ -193,7 +334,7 @@ export default function AdminSettingsPage() {
             <div className="flex justify-end pt-2">
               <Button
                 type="submit"
-                disabled={isUpdating}
+                disabled={isUpdating || !isValid}
                 className="min-w-[160px]"
               >
                 {isUpdating ? t('changePassword.updating') : t('changePassword.update')}

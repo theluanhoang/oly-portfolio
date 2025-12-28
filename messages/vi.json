@@ -20,6 +20,8 @@
         "signOut": "Đăng Xuất",
         "settings": "Cài đặt",
         "admin": "Quản trị",
+        "showPassword": "Hiển thị mật khẩu",
+        "hidePassword": "Ẩn mật khẩu",
         "pagination": {
             "showing": "Hiển thị",
             "of": "trên",
@@ -235,7 +237,25 @@
                 "passwordsNotMatch": "Mật khẩu mới không khớp",
                 "currentPasswordRequired": "Vui lòng nhập mật khẩu hiện tại",
                 "newPasswordRequired": "Vui lòng nhập mật khẩu mới",
-                "confirmPasswordRequired": "Vui lòng xác nhận mật khẩu mới"
+                "confirmPasswordRequired": "Vui lòng xác nhận mật khẩu mới",
+                "currentPasswordIncorrect": "Mật khẩu hiện tại không đúng",
+                "passwordTooWeak": "Mật khẩu không đáp ứng yêu cầu",
+                "passwordRequirements": "Mật khẩu phải có ít nhất 8 ký tự và bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt",
+                "passwordDifferent": "Mật khẩu mới phải khác với mật khẩu hiện tại",
+                "passwordSameAsCurrent": "Mật khẩu mới phải khác với mật khẩu hiện tại của bạn",
+                "unauthorized": "Chưa được xác thực. Vui lòng đăng nhập để đổi mật khẩu.",
+                "tooManyAttempts": "Quá nhiều lần thử. Vui lòng thử lại sau.",
+                "passwordRequirementsTitle": "Yêu Cầu Mật Khẩu:",
+                "requirementMinLength": "Ít nhất 8 ký tự",
+                "requirementUppercase": "Một chữ hoa",
+                "requirementLowercase": "Một chữ thường",
+                "requirementNumber": "Một số",
+                "requirementSpecialChar": "Một ký tự đặc biệt",
+                "validationMinLength": "Mật khẩu phải có ít nhất 8 ký tự",
+                "validationUppercase": "Mật khẩu phải chứa ít nhất một chữ hoa",
+                "validationLowercase": "Mật khẩu phải chứa ít nhất một chữ thường",
+                "validationNumber": "Mật khẩu phải chứa ít nhất một số",
+                "validationSpecialChar": "Mật khẩu phải chứa ít nhất một ký tự đặc biệt"
             }
         }
     },
