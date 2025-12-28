@@ -314,7 +314,10 @@
                 "location": "Nhập địa chỉ dự án",
                 "area": "Ví dụ: 100 m²",
                 "budget": "Nhập ngân sách dự tính",
-                "notes": "Nhập ghi chú hoặc yêu cầu của bạn..."
+                "notes": "Nhập ghi chú của bạn..."
+            },
+            "hints": {
+                "notes": "Ghi chú cho chúng tôi:\n- Chúng tôi cần bạn gửi mặt bằng hiện trạng như: sổ đất, vị trí, hình ảnh.v.v...\n- Hãy nhắn cho chúng tôi biết nhu cầu cơ bản về công năng sử dụng bạn cần.\n- Cám ơn bạn đã tin tưởng chia sẽ thông tin để team kiến trúc sư bên OLY có đủ dữ liệu nghiên cứu tìm hiểu chuẩn bị trước khi chúng ta có cuộc gặp trực tiếp."
             },
             "categories": {
                 "select": "Chọn thể loại",

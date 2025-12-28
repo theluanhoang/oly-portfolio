@@ -314,7 +314,10 @@
                 "location": "Enter project address",
                 "area": "Example: 100 m²",
                 "budget": "Enter estimated budget",
-                "notes": "Enter your notes or requirements..."
+                "notes": "Enter your notes..."
+            },
+            "hints": {
+                "notes": "Notes for us:\n- We need you to send current site plans such as: land certificate, location, images, etc...\n- Please let us know your basic functional needs.\n- Thank you for trusting and sharing information so that the OLY architecture team has sufficient data to research and prepare before we have a direct meeting."
             },
             "categories": {
                 "select": "Select category",

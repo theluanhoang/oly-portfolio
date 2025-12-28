@@ -301,8 +301,9 @@ export default function ContactForm() {
       <Textarea
         label={t('form.notes')}
         {...register('notes')}
-        placeholder={t('form.placeholders.notes')}
-        rows={6}
+        placeholder={t('form.hints.notes')}
+        rows={7}
+        multilinePlaceholder={true}
       />
 
       {submitStatus === 'success' && (
