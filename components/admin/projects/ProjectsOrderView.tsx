@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { Project } from '@/types/project';
 
 interface ProjectsOrderViewProps {
@@ -20,6 +20,11 @@ interface DragOverRefs {
   projectSlug: string | null;
   section: number | null;
   isEmpty: boolean;
+}
+
+interface PendingUpdate {
+  slug: string;
+  displayOrder: number;
 }
 
 const PROJECTS_PER_SECTION = 4;
@@ -84,12 +89,40 @@ const groupProjectsBySections = (projects: Project[]): (Project | null)[][] => {
   return groupedSections;
 };
 
-const updateProjectDisplayOrder = async (slug: string, displayOrder: number): Promise<Response> => {
-  return fetch(`/api/projects/${encodeURIComponent(slug)}`, {
-    method: 'PATCH',
+const batchReorderProjects = async (updates: PendingUpdate[]): Promise<Response> => {
+  return fetch('/api/projects/reorder', {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ displayOrder }),
+    body: JSON.stringify({ updates }),
   });
+};
+
+const reorderProjectsOptimistically = (
+  projects: Project[],
+  draggedProject: Project,
+  targetProject: Project | undefined,
+  targetSectionIndex: number | undefined,
+  targetPosition: number | undefined
+): Project[] => {
+  if (targetSectionIndex !== undefined && targetPosition !== undefined && !targetProject) {
+    const newDisplayOrder = calculateDisplayOrder(targetSectionIndex, targetPosition);
+    return projects.map(p =>
+      p.slug === draggedProject.slug ? { ...p, displayOrder: newDisplayOrder } : p
+    );
+  } else if (targetProject && draggedProject.slug !== targetProject.slug) {
+    const draggedOrder = draggedProject.displayOrder || 0;
+    const targetOrder = targetProject.displayOrder || 0;
+    return projects.map(p => {
+      if (p.slug === draggedProject.slug) {
+        return { ...p, displayOrder: targetOrder };
+      }
+      if (p.slug === targetProject.slug) {
+        return { ...p, displayOrder: draggedOrder };
+      }
+      return p;
+    });
+  }
+  return projects;
 };
 
 const formatProjectsForLog = (projectsList: Project[], label: string) => {
@@ -131,6 +164,7 @@ export function ProjectsOrderView({
   projects,
   loading,
   error,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onOrderUpdate,
 }: ProjectsOrderViewProps) {
   const [dragState, setDragState] = useState<DragState>({
@@ -138,17 +172,40 @@ export function ProjectsOrderView({
     overProject: null,
     overSection: null,
   });
-  const [isUpdating, setIsUpdating] = useState(false);
+  
+  const [localProjects, setLocalProjects] = useState<Project[]>(projects);
+  const [pendingUpdates, setPendingUpdates] = useState<Map<string, PendingUpdate>>(new Map());
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  
+  const projectsSnapshotRef = useRef<Project[]>(projects);
+  const lastSyncedProjectsRef = useRef<Project[]>(projects);
 
-  // Refs để track target hiện tại, tránh update state không cần thiết
   const dragOverRefs = useRef<DragOverRefs>({
     projectSlug: null,
     section: null,
     isEmpty: false,
   });
 
-  // Memoize grouped sections để tránh tính toán lại không cần thiết
-  const groupedSections = useMemo(() => groupProjectsBySections(projects), [projects]);
+  useEffect(() => {
+    if (pendingUpdates.size === 0 && !isSyncing) {
+      const lastSynced = lastSyncedProjectsRef.current;
+      const projectsChanged = 
+        projects.length !== lastSynced.length ||
+        projects.some((p, idx) => {
+          const last = lastSynced[idx];
+          return !last || p.slug !== last.slug || p.displayOrder !== last.displayOrder;
+        });
+      
+      if (projectsChanged) {
+        setLocalProjects(projects);
+        projectsSnapshotRef.current = projects;
+        lastSyncedProjectsRef.current = projects;
+      }
+    }
+  }, [projects, pendingUpdates.size, isSyncing]);
+
+  const groupedSections = useMemo(() => groupProjectsBySections(localProjects), [localProjects]);
 
   const resetDragState = useCallback(() => {
     setDragState({
@@ -221,8 +278,52 @@ export function ProjectsOrderView({
     }
   }, []);
 
+  useEffect(() => {
+    if (pendingUpdates.size === 0) return;
+
+    const timer = setTimeout(async () => {
+      const updatesArray = Array.from(pendingUpdates.values());
+      
+      if (updatesArray.length === 0) {
+        setPendingUpdates(new Map());
+        return;
+      }
+
+      setIsSyncing(true);
+      setSyncError(null);
+
+      try {
+        const response = await batchReorderProjects(updatesArray);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(errorData.error || 'Failed to sync order');
+        }
+
+        setPendingUpdates(new Map());
+        setLocalProjects(current => {
+          projectsSnapshotRef.current = [...current];
+          return current;
+        });
+      } catch (error) {
+        console.error('[Sync Error]', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to sync order';
+        setSyncError(errorMessage);
+        
+        setLocalProjects(projectsSnapshotRef.current);
+        setPendingUpdates(new Map());
+        
+        alert(`Không thể đồng bộ thứ tự: ${errorMessage}`);
+      } finally {
+        setIsSyncing(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [pendingUpdates]);
+
   const handleDrop = useCallback(
-    async (
+    (
       e: React.DragEvent,
       targetProject?: Project,
       targetSectionIndex?: number,
@@ -236,7 +337,11 @@ export function ProjectsOrderView({
         return;
       }
 
-      formatProjectsForLog(projects, 'BEFORE SWAP');
+      if (pendingUpdates.size === 0) {
+        projectsSnapshotRef.current = [...localProjects];
+      }
+
+      formatProjectsForLog(localProjects, 'BEFORE SWAP');
 
       if (dragState.project) {
         const { sectionIndex, positionInSection } = getSectionFromDisplayOrder(dragState.project.displayOrder || 0);
@@ -260,59 +365,65 @@ export function ProjectsOrderView({
         });
       }
 
-      setIsUpdating(true);
-      try {
-        if (targetSectionIndex !== undefined && targetPosition !== undefined && !targetProject) {
-          const newDisplayOrder = calculateDisplayOrder(targetSectionIndex, targetPosition);
-          const oldDisplayOrder = dragState.project.displayOrder || 0;
+      const updatedProjects = reorderProjectsOptimistically(
+        localProjects,
+        dragState.project,
+        targetProject,
+        targetSectionIndex,
+        targetPosition
+      );
 
-          if (oldDisplayOrder !== newDisplayOrder) {
-            const projectsAfterSwap = projects.map(p =>
-              p.slug === dragState.project!.slug ? { ...p, displayOrder: newDisplayOrder } : p
-            );
-            formatProjectsForLog(projectsAfterSwap, 'AFTER SWAP');
+      const projectsMap = new Map(localProjects.map(p => [p.slug, p]));
+      const hasChanges = updatedProjects.some(p => {
+        const original = projectsMap.get(p.slug);
+        return !original || p.displayOrder !== original.displayOrder;
+      });
 
-            const updatesLog = [
-              {
-                project: dragState.project.title,
-                oldOrder: oldDisplayOrder,
-                newOrder: newDisplayOrder,
-              },
-            ];
-
-            console.log('[UPDATES] Will update displayOrder for:', updatesLog);
-            console.table(updatesLog);
-
-            await updateProjectDisplayOrder(dragState.project.slug, newDisplayOrder);
-          } else {
-            console.log('[UPDATES] No updates needed');
-          }
-        }
-        // Swap với project khác
-        else if (targetProject && dragState.project.slug !== targetProject.slug) {
-          const draggedOrder = dragState.project.displayOrder || 0;
-          const targetOrder = targetProject.displayOrder || 0;
-
-          await Promise.all([
-            updateProjectDisplayOrder(dragState.project.slug, targetOrder),
-            updateProjectDisplayOrder(targetProject.slug, draggedOrder),
-          ]);
-        } else {
-          resetDragState();
-          setIsUpdating(false);
-          return;
-        }
-
-        onOrderUpdate();
-      } catch (error) {
-        console.error('[Drop] Error:', error);
-        alert('Failed to update order. Please try again.');
-      } finally {
-        setIsUpdating(false);
+      if (!hasChanges) {
         resetDragState();
+        return;
       }
+
+      setLocalProjects(updatedProjects);
+      formatProjectsForLog(updatedProjects, 'AFTER SWAP (OPTIMISTIC)');
+
+      const updatesToAdd = new Map(pendingUpdates);
+
+      if (targetSectionIndex !== undefined && targetPosition !== undefined && !targetProject) {
+        const newDisplayOrder = calculateDisplayOrder(targetSectionIndex, targetPosition);
+        const oldDisplayOrder = dragState.project.displayOrder || 0;
+
+        if (oldDisplayOrder !== newDisplayOrder) {
+          updatesToAdd.set(dragState.project.slug, {
+            slug: dragState.project.slug,
+            displayOrder: newDisplayOrder,
+          });
+        }
+      } else if (targetProject && dragState.project.slug !== targetProject.slug) {
+        const draggedOrder = dragState.project.displayOrder || 0;
+        const targetOrder = targetProject.displayOrder || 0;
+
+        updatesToAdd.set(dragState.project.slug, {
+          slug: dragState.project.slug,
+          displayOrder: targetOrder,
+        });
+        updatesToAdd.set(targetProject.slug, {
+          slug: targetProject.slug,
+          displayOrder: draggedOrder,
+        });
+      }
+
+      setPendingUpdates(updatesToAdd);
+
+      const updatesLog = Array.from(updatesToAdd.values()).map(u => ({
+        slug: u.slug,
+        newOrder: u.displayOrder,
+      }));
+      console.log('[UPDATES] Added to queue:', updatesLog);
+
+      resetDragState();
     },
-    [dragState.project, projects, onOrderUpdate, resetDragState]
+    [dragState.project, localProjects, pendingUpdates, resetDragState]
   );
 
   const handleDragEnd = useCallback(() => {
@@ -324,40 +435,63 @@ export function ProjectsOrderView({
       return;
     }
 
-    setIsUpdating(true);
+    setIsSyncing(true);
+    setSyncError(null);
+    
     try {
-      const sortedProjects = [...projects].sort((a, b) => {
+      const sortedProjects = [...localProjects].sort((a, b) => {
         if (a.displayOrder !== b.displayOrder) {
           return (a.displayOrder || 0) - (b.displayOrder || 0);
         }
         return (a.title || '').localeCompare(b.title || '');
       });
 
-      const updates = sortedProjects
+      const updates: PendingUpdate[] = sortedProjects
         .map((project, index) => {
           const sectionIndex = Math.floor(index / PROJECTS_PER_SECTION);
           const positionInSection = index % PROJECTS_PER_SECTION;
           const newDisplayOrder = calculateDisplayOrder(sectionIndex, positionInSection);
 
           if (project.displayOrder !== newDisplayOrder) {
-            return updateProjectDisplayOrder(project.slug, newDisplayOrder);
+            return {
+              slug: project.slug,
+              displayOrder: newDisplayOrder,
+            };
           }
           return null;
         })
-        .filter((update): update is Promise<Response> => update !== null);
+        .filter((update): update is PendingUpdate => update !== null);
 
       if (updates.length > 0) {
-        await Promise.all(updates);
-      }
+        const resetProjects = sortedProjects.map((project, index) => {
+          const sectionIndex = Math.floor(index / PROJECTS_PER_SECTION);
+          const positionInSection = index % PROJECTS_PER_SECTION;
+          const newDisplayOrder = calculateDisplayOrder(sectionIndex, positionInSection);
+          return { ...project, displayOrder: newDisplayOrder };
+        });
+        
+        projectsSnapshotRef.current = [...localProjects];
+        setLocalProjects(resetProjects);
+        setPendingUpdates(new Map(updates.map(u => [u.slug, u])));
+        
+        const response = await batchReorderProjects(updates);
+        
+        if (!response.ok) {
+          throw new Error('Failed to reset order');
+        }
 
-      onOrderUpdate();
+        setPendingUpdates(new Map());
+        projectsSnapshotRef.current = [...resetProjects];
+      }
     } catch (error) {
       console.error('[Reset] Error:', error);
+      setLocalProjects(projectsSnapshotRef.current);
+      setPendingUpdates(new Map());
       alert('Không thể reset vị trí. Vui lòng thử lại.');
     } finally {
-      setIsUpdating(false);
+      setIsSyncing(false);
     }
-  }, [projects, onOrderUpdate]);
+  }, [localProjects]);
 
   if (loading) {
     return (
@@ -384,13 +518,25 @@ export function ProjectsOrderView({
           </p>
           <button
             onClick={handleReset}
-            disabled={isUpdating || projects.length === 0}
+            disabled={isSyncing || localProjects.length === 0}
             className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium transition-colors"
           >
             Reset Vị Trí
           </button>
         </div>
-        {isUpdating && <p className="text-sm text-blue-600">Đang cập nhật thứ tự...</p>}
+        <div className="flex items-center gap-2">
+          {isSyncing && (
+            <p className="text-sm text-blue-600">Đang đồng bộ thứ tự...</p>
+          )}
+          {syncError && (
+            <p className="text-sm text-red-600">Lỗi: {syncError}</p>
+          )}
+          {pendingUpdates.size > 0 && !isSyncing && (
+            <p className="text-sm text-gray-500">
+              Đang chờ đồng bộ ({pendingUpdates.size} thay đổi)...
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-4">
@@ -423,10 +569,10 @@ export function ProjectsOrderView({
                 return (
                   <div
                     key={project?.slug || `empty-${sectionIndex}-${imageIndex}`}
-                    draggable={!isUpdating && !!project}
+                    draggable={!isSyncing && !!project}
                     data-empty-slot={isEmpty ? 'true' : undefined}
                     onDragStart={e => {
-                      if (!isUpdating && project) {
+                      if (!isSyncing && project) {
                         handleDragStart(project);
                         if (e.dataTransfer) {
                           e.dataTransfer.effectAllowed = 'move';
@@ -436,7 +582,7 @@ export function ProjectsOrderView({
                     onDragOver={e => {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (!isUpdating && dragState.project) {
+                      if (!isSyncing && dragState.project) {
                         if (project && project.slug !== dragState.project.slug) {
                           handleDragOver(e, project, sectionIndex, false);
                         } else if (canDropOnEmpty) {
@@ -448,7 +594,7 @@ export function ProjectsOrderView({
                     onDrop={e => {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (!isUpdating && dragState.project) {
+                      if (!isSyncing && dragState.project) {
                         if (project && project.slug !== dragState.project.slug) {
                           handleDrop(e, project, sectionIndex);
                         } else if (canDropOnEmpty) {
@@ -464,7 +610,7 @@ export function ProjectsOrderView({
                       ${isDragging ? 'opacity-50 scale-95 z-50' : ''}
                       ${isDragOver ? 'ring-2 ring-blue-500 ring-offset-2 z-40' : ''}
                       ${canDropOnEmpty && dragState.overSection === sectionIndex ? 'ring-2 ring-dashed ring-blue-300 bg-blue-100/50' : ''}
-                      ${isUpdating ? 'pointer-events-none' : ''}
+                      ${isSyncing ? 'pointer-events-none' : ''}
                       ${isEmpty ? 'border-2 border-dashed border-gray-300 bg-gray-50' : ''}
                       transition-all duration-200
                     `}
