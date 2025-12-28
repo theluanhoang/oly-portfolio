@@ -2,7 +2,7 @@
 
 # Docker Compose command (use 'docker compose' v2 or 'docker-compose' v1)
 # Set USE_SUDO=1 to use sudo, or USE_SUDO=0 to run without sudo
-USE_SUDO ?= 1
+USE_SUDO ?= 0
 
 # Try docker compose v2 first, fallback to docker-compose v1
 DOCKER_COMPOSE_V2 = $(if $(filter 1,$(USE_SUDO)),sudo docker compose,docker compose)

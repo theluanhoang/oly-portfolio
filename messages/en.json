@@ -213,6 +213,30 @@
                 "noProducts": "No products yet."
             },
             "error": "Error loading products"
+        },
+        "settings": {
+            "title": "Settings",
+            "subtitle": "Manage your account settings",
+            "accountInfo": {
+                "title": "Account Information",
+                "username": "Username",
+                "email": "Email",
+                "role": "Role"
+            },
+            "changePassword": {
+                "title": "Change Password",
+                "currentPassword": "Current Password",
+                "newPassword": "New Password",
+                "confirmPassword": "Confirm New Password",
+                "update": "Update Password",
+                "updating": "Updating...",
+                "success": "Password updated successfully!",
+                "error": "Failed to update password",
+                "passwordsNotMatch": "New passwords do not match",
+                "currentPasswordRequired": "Current password is required",
+                "newPasswordRequired": "New password is required",
+                "confirmPasswordRequired": "Please confirm your new password"
+            }
         }
     },
     "Footer": {

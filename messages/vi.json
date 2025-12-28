@@ -213,6 +213,30 @@
                 "noProducts": "Chưa có sản phẩm nào."
             },
             "error": "Lỗi khi tải sản phẩm"
+        },
+        "settings": {
+            "title": "Cài Đặt",
+            "subtitle": "Quản lý cài đặt tài khoản của bạn",
+            "accountInfo": {
+                "title": "Thông Tin Tài Khoản",
+                "username": "Tên đăng nhập",
+                "email": "Email",
+                "role": "Vai trò"
+            },
+            "changePassword": {
+                "title": "Đổi Mật Khẩu",
+                "currentPassword": "Mật khẩu hiện tại",
+                "newPassword": "Mật khẩu mới",
+                "confirmPassword": "Xác nhận mật khẩu mới",
+                "update": "Cập Nhật Mật Khẩu",
+                "updating": "Đang cập nhật...",
+                "success": "Mật khẩu đã được cập nhật thành công!",
+                "error": "Không thể cập nhật mật khẩu",
+                "passwordsNotMatch": "Mật khẩu mới không khớp",
+                "currentPasswordRequired": "Vui lòng nhập mật khẩu hiện tại",
+                "newPasswordRequired": "Vui lòng nhập mật khẩu mới",
+                "confirmPasswordRequired": "Vui lòng xác nhận mật khẩu mới"
+            }
         }
     },
     "Footer": {
