@@ -5,8 +5,8 @@ import { AdminToolbar } from '@/components/admin/AdminToolbar';
 interface ProjectsToolbarProps {
   search: string;
   onSearchChange: (value: string) => void;
-  viewMode: 'table' | 'grid';
-  onViewModeChange: (mode: 'table' | 'grid') => void;
+  viewMode: 'table' | 'grid' | 'order';
+  onViewModeChange: (mode: 'table' | 'grid' | 'order') => void;
   loading: boolean;
   onReload: () => void;
   onAdd: () => void;

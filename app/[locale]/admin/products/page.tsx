@@ -22,7 +22,7 @@ export default function AdminProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'order'>('table');
   const [search, setSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -38,6 +38,13 @@ export default function AdminProductsPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   const loadProducts = useCallback(async () => {
+    if (viewMode === 'order') {
+      setProducts([]);
+      setTotalItems(0);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -75,7 +82,7 @@ export default function AdminProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchQuery, categoryFilter, yearFilter, sortField, sortDirection]);
+  }, [currentPage, pageSize, searchQuery, categoryFilter, yearFilter, sortField, sortDirection, viewMode]);
 
   useEffect(() => {
     loadProducts();
@@ -169,7 +176,7 @@ export default function AdminProductsPage() {
             sortDirection={sortDirection}
             onSortChange={handleSortChange}
           />
-        ) : (
+        ) : viewMode === 'grid' ? (
           <ProductsGridView
             products={products}
             loading={loading}
@@ -183,6 +190,10 @@ export default function AdminProductsPage() {
             onDeleteClick={handleDeleteClick}
             onEditClick={(product) => alert(`Edit product: ${product.slug}`)}
           />
+        ) : (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-gray-500">Chức năng sắp xếp chỉ dành cho Projects.</p>
+          </div>
         )}
       </div>
       <DeleteProductDialog

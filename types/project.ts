@@ -8,6 +8,7 @@ export interface Project {
   area: string;
   year: string;
   heroImage: string;
+  displayOrder: number;
   createdAt: string;
 }
 

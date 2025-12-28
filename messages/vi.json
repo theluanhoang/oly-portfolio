@@ -126,6 +126,7 @@
                 "filter": "Lọc",
                 "tableView": "Bảng",
                 "grid": "Lưới",
+                "orderView": "Sắp xếp",
                 "reload": "Tải lại",
                 "addProject": "Thêm dự án",
                 "filterDialog": {
@@ -155,6 +156,7 @@
                 },
                 "table": {
                     "headers": {
+                        "order": "Thứ tự",
                         "title": "Tiêu đề",
                         "category": "Danh mục",
                         "location": "Địa điểm",

@@ -1,14 +1,14 @@
 'use client';
 
-import { Filter, LayoutGrid, List, Plus, RefreshCw, Search } from 'lucide-react';
+import { Filter, LayoutGrid, List, Plus, RefreshCw, Search, ArrowUpDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 
 interface AdminToolbarProps {
   search: string;
   onSearchChange: (value: string) => void;
-  viewMode: 'table' | 'grid';
-  onViewModeChange: (mode: 'table' | 'grid') => void;
+  viewMode: 'table' | 'grid' | 'order';
+  onViewModeChange: (mode: 'table' | 'grid' | 'order') => void;
   loading: boolean;
   onReload: () => void;
   onAdd: () => void;
@@ -82,6 +82,18 @@ export function AdminToolbar({
           >
             <LayoutGrid size={14} />
             <span className="hidden md:inline">{t('grid')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onViewModeChange('order')}
+            className={`px-2 sm:px-3 md:px-3 py-1.5 text-xs tracking-[1px] uppercase border-l border-[#e0e0e0] flex items-center gap-1 ${
+              viewMode === 'order'
+                ? 'bg-[#333] text-white'
+                : 'text-[#555] hover:bg-[#f5f5f5]'
+            }`}
+          >
+            <ArrowUpDown size={14} />
+            <span className="hidden md:inline">{t('orderView') || 'Sắp xếp'}</span>
           </button>
         </div>
         <div className="flex gap-2 sm:gap-2 md:gap-3">

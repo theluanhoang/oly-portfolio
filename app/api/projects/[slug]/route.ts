@@ -67,6 +67,7 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
         heroImage: projectData.heroImage || '',
         content: projectData.content || '',
         gallery: projectData.gallery || [],
+        displayOrder: projectData.displayOrder !== undefined ? Number(projectData.displayOrder) : existingProject.displayOrder,
       },
     });
 
@@ -76,6 +77,52 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return Response.json(
       { error: 'Failed to update project', details: errorMessage },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request, { params }: RouteParams): Promise<Response> {
+  try {
+    const { slug } = await params;
+    const updateData = await request.json();
+    
+    const existingProject = await prisma.project.findUnique({
+      where: { slug },
+    });
+
+    if (!existingProject) {
+      return Response.json(
+        { error: 'Project not found' },
+        { status: 404 }
+      );
+    }
+
+    if (updateData.displayOrder === undefined) {
+      return Response.json(
+        { error: 'Invalid update data. displayOrder is required for PATCH.' },
+        { status: 400 }
+      );
+    }
+    
+    const updated = await prisma.project.update({
+      where: { slug },
+      data: {
+        displayOrder: Number(updateData.displayOrder),
+      },
+    });
+    
+    console.log('[API PATCH] Updated project', {
+      slug: updated.slug,
+      displayOrder: updated.displayOrder,
+    });
+    
+    return Response.json(updated);
+  } catch (error) {
+    console.error('Error updating project order:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return Response.json(
+      { error: 'Failed to update project order', details: errorMessage },
       { status: 500 }
     );
   }

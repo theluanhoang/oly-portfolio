@@ -11,19 +11,20 @@ datasource db {
 }
 
 model Project {
-  id        String   @id @default(cuid())
-  slug      String   @unique
-  title     String
-  category  String
-  type      String?  @default("")
-  location  String
-  area      String
-  year      String
-  heroImage String
-  content   String   @default("")
-  gallery   String[] @default([])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  title        String
+  category     String
+  type         String?  @default("")
+  location     String
+  area         String
+  year         String
+  heroImage    String
+  content      String   @default("")
+  gallery      String[] @default([])
+  displayOrder   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@map("projects")
 }

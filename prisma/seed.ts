@@ -228,7 +228,11 @@ const projectData: Prisma.ProjectCreateInput[] = [
 export async function main() {
   console.log('Starting seed...');
 
-  for (const project of projectData) {
+  let currentProjectCount = await prisma.project.count();
+  const PROJECTS_PER_SECTION = 4;
+
+  for (let index = 0; index < projectData.length; index++) {
+    const project = projectData[index];
     try {
       const existing = await prisma.project.findUnique({
         where: { slug: project.slug },
@@ -239,11 +243,20 @@ export async function main() {
         continue;
       }
 
+      const sectionIndex = Math.floor(currentProjectCount / PROJECTS_PER_SECTION);
+      const positionInSection = currentProjectCount % PROJECTS_PER_SECTION;
+      const displayOrder = sectionIndex * PROJECTS_PER_SECTION + positionInSection;
+
       await prisma.project.create({
-        data: project,
+        data: {
+          ...project,
+          displayOrder,
+        },
       });
 
-      console.log(`✓ Created project: ${project.title}`);
+      console.log(`✓ Created project: ${project.title} (displayOrder: ${displayOrder})`);
+      
+      currentProjectCount++;
     } catch (error) {
       console.error(`✗ Error creating project ${project.slug}:`, error instanceof Error ? error.message : String(error));
     }

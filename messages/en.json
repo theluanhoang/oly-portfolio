@@ -126,6 +126,7 @@
                 "filter": "Filter",
                 "tableView": "Table",
                 "grid": "Grid",
+                "orderView": "Order",
                 "reload": "Reload",
                 "addProject": "Add Project",
                 "filterDialog": {
@@ -155,6 +156,7 @@
                 },
                 "table": {
                     "headers": {
+                        "order": "Order",
                         "title": "Title",
                         "category": "Category",
                         "location": "Location",

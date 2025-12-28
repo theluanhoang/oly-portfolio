@@ -10,7 +10,8 @@
     "lint": "eslint",
     "seed": "tsx prisma/seed.ts",
     "seed:products": "tsx prisma/seed-only-products.ts",
-    "seed:docker": "sudo docker compose exec app npm run seed"
+    "seed:docker": "sudo docker compose exec app npm run seed",
+    "fix:display-order": "tsx prisma/fix-display-order.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

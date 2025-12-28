@@ -7,7 +7,6 @@ import { LoadingSpinner } from '@/components/ui';
 import { useHorizontalScroll } from '@/hooks/useHorizontalScroll';
 import { useHeaderHeight } from '@/hooks/useHeaderHeight';
 import { useResponsive } from '@/hooks/useResponsive';
-import { groupArrayIntoChunks } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 
 interface ProjectImage {
@@ -30,7 +29,8 @@ export default function ProjectsPage() {
   useEffect(() => {
     async function loadProjects() {
       try {
-        const response = await fetch('/api/projects');
+        // Fetch projects sorted by displayOrder (ascending) to maintain the order set in admin
+        const response = await fetch('/api/projects?sortField=displayOrder&sortDirection=asc');
         if (!response.ok) throw new Error('Failed to fetch projects');
         
         const data = await response.json() as {
@@ -39,6 +39,7 @@ export default function ProjectsPage() {
             title: string;
             slug: string;
             category: string;
+            displayOrder: number;
           }>;
           total: number;
           page: number;
@@ -47,30 +48,53 @@ export default function ProjectsPage() {
         
         const projects = data.items || [];
         
-        const images: ProjectImage[] = projects.map((project) => ({
-          src: project.heroImage,
-          alt: project.title,
-          slug: project.slug,
-          title: project.title,
-          category: project.category,
-        }));
+        // Group projects theo displayOrder (giống logic trong ProjectsOrderView)
+        // displayOrder = sectionIndex * 4 + positionInSection
+        const PROJECTS_PER_SECTION = 4;
+        const groupedSections: ProjectImage[][] = [];
         
-        const groupedSections = groupArrayIntoChunks(images, 4);
+        if (projects.length === 0) {
+          setSections([]);
+          return;
+        }
         
-        if (groupedSections.length > 0) {
-          const lastSection = groupedSections[groupedSections.length - 1];
-          const remainingSlots = 4 - lastSection.length;
+        // Tìm section index lớn nhất
+        const maxDisplayOrder = Math.max(...projects.map(p => p.displayOrder || 0), 0);
+        const maxSectionIndex = Math.floor(maxDisplayOrder / PROJECTS_PER_SECTION);
+        
+        // Tạo sections từ 0 đến maxSectionIndex
+        for (let sectionIdx = 0; sectionIdx <= maxSectionIndex; sectionIdx++) {
+          const section: ProjectImage[] = Array(PROJECTS_PER_SECTION).fill(null).map(() => ({
+            src: null,
+            alt: t('comingSoon'),
+            slug: null,
+            isPlaceholder: true,
+          }));
           
-          if (remainingSlots > 0) {
-            for (let i = 0; i < remainingSlots; i++) {
-              lastSection.push({
-                src: null,
-                alt: t('comingSoon'),
-                slug: null,
-                isPlaceholder: true,
-              });
-            }
-          }
+          const sectionStartDisplayOrder = sectionIdx * PROJECTS_PER_SECTION;
+          const sectionEndDisplayOrder = sectionStartDisplayOrder + PROJECTS_PER_SECTION;
+          
+          // Lấy tất cả projects trong section này dựa trên displayOrder
+          projects
+            .filter(p => {
+              const displayOrder = p.displayOrder || 0;
+              return displayOrder >= sectionStartDisplayOrder && displayOrder < sectionEndDisplayOrder;
+            })
+            .forEach(project => {
+              const positionInSection = (project.displayOrder || 0) % PROJECTS_PER_SECTION;
+              if (positionInSection >= 0 && positionInSection < PROJECTS_PER_SECTION) {
+                section[positionInSection] = {
+                  src: project.heroImage,
+                  alt: project.title,
+                  slug: project.slug,
+                  title: project.title,
+                  category: project.category,
+                  isPlaceholder: false,
+                };
+              }
+            });
+          
+          groupedSections.push(section);
         }
         
         setSections(groupedSections);

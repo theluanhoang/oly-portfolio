@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from '@/i18n/routing';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useRouter, usePathname } from '@/i18n/routing';
 import { ProjectsToolbar } from '@/components/admin/projects/ProjectsToolbar';
 import { ProjectsTableView } from '@/components/admin/projects/ProjectsTableView';
 import { ProjectsGridView } from '@/components/admin/projects/ProjectsGridView';
+import { ProjectsOrderView } from '@/components/admin/projects/ProjectsOrderView';
 import { DeleteProjectDialog } from '@/components/admin/projects/DeleteProjectDialog';
 import { ProjectsFilterDialog } from '@/components/admin/projects/ProjectsFilterDialog';
 import type { Project } from '@/types/project';
@@ -19,12 +21,24 @@ interface ProjectsResponse {
 
 export default function AdminProjectsPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  
+  // Đọc viewMode từ URL, default là 'table'
+  const urlViewMode = useMemo(() => {
+    const mode = searchParams.get('view');
+    if (mode === 'table' || mode === 'grid' || mode === 'order') {
+      return mode;
+    }
+    return 'table';
+  }, [searchParams]);
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'order'>(urlViewMode);
   const [search, setSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -45,8 +59,15 @@ export default function AdminProjectsPage() {
       setLoading(true);
       setError(null);
       const params = new URLSearchParams();
-      params.set('page', String(currentPage));
-      params.set('pageSize', String(pageSize));
+      
+      if (viewMode === 'order') {
+        params.set('sortField', 'displayOrder');
+        params.set('sortDirection', 'asc');
+      } else {
+        params.set('page', String(currentPage));
+        params.set('pageSize', String(pageSize));
+      }
+      
       const trimmed = searchQuery.trim();
       if (trimmed.length > 0) {
         params.set('q', trimmed.toLowerCase());
@@ -63,7 +84,7 @@ export default function AdminProjectsPage() {
       if (locationTrimmed.length > 0) {
         params.set('location', locationTrimmed);
       }
-      if (sortField && sortDirection) {
+      if (viewMode !== 'order' && sortField && sortDirection) {
         params.set('sortField', sortField);
         params.set('sortDirection', sortDirection);
       }
@@ -82,7 +103,14 @@ export default function AdminProjectsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchQuery, categoryFilter, yearFilter, locationFilter, sortField, sortDirection]);
+  }, [currentPage, pageSize, searchQuery, categoryFilter, yearFilter, locationFilter, sortField, sortDirection, viewMode]);
+
+  // Sync viewMode với URL khi searchParams thay đổi
+  useEffect(() => {
+    if (urlViewMode !== viewMode) {
+      setViewMode(urlViewMode);
+    }
+  }, [urlViewMode, viewMode]);
 
   useEffect(() => {
     loadProjects();
@@ -156,6 +184,10 @@ export default function AdminProjectsPage() {
           onViewModeChange={(mode) => {
             setViewMode(mode);
             setCurrentPage(1);
+            // Cập nhật URL với viewMode mới
+            const params = new URLSearchParams(searchParams.toString());
+            params.set('view', mode);
+            router.replace(`${pathname}?${params.toString()}`);
           }}
           loading={loading}
           onReload={loadProjects}
@@ -176,9 +208,17 @@ export default function AdminProjectsPage() {
             onPageChange={handlePageChange}
             onDeleteClick={handleDeleteClick}
             onEditClick={handleEditClick}
+            onOrderUpdate={loadProjects}
             sortField={sortField}
             sortDirection={sortDirection}
             onSortChange={handleSortChange}
+          />
+        ) : viewMode === 'order' ? (
+          <ProjectsOrderView
+            projects={projects}
+            loading={loading}
+            error={error}
+            onOrderUpdate={loadProjects}
           />
         ) : (
           <ProjectsGridView

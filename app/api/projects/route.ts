@@ -17,8 +17,8 @@ export async function GET(request: Request): Promise<Response> {
     const pageSize = hasPagination 
       ? Math.min(Math.max(Number(pageSizeParam) || 12, 1), 100)
       : undefined;
-    const sortField = searchParams.get('sortField')?.trim() || 'createdAt';
-    const sortDirection = searchParams.get('sortDirection')?.trim() || 'desc';
+    const sortField = searchParams.get('sortField')?.trim() || 'displayOrder';
+    const sortDirection = searchParams.get('sortDirection')?.trim() || 'asc';
 
     const andConditions: Prisma.ProjectWhereInput[] = [];
 
@@ -107,18 +107,25 @@ export async function GET(request: Request): Promise<Response> {
       location: 'location',
       year: 'year',
       createdAt: 'createdAt',
+      displayOrder: 'displayOrder',
     };
 
-    const orderByField = validSortFields[sortField] || 'createdAt';
+    const orderByField = validSortFields[sortField] || 'displayOrder';
     const orderByDirection = sortDirection === 'asc' ? 'asc' : 'desc';
+
+    const orderBy: Prisma.ProjectOrderByWithRelationInput | Prisma.ProjectOrderByWithRelationInput[] = 
+      orderByField === 'displayOrder'
+        ? [
+            { displayOrder: orderByDirection },
+            { createdAt: 'desc' }
+          ]
+        : { [orderByField]: orderByDirection };
 
     const [total, items] = await Promise.all([
       prisma.project.count({ where }),
       prisma.project.findMany({
         where,
-        orderBy: {
-          [orderByField]: orderByDirection,
-        },
+        orderBy,
         ...(pageSize !== undefined && {
           skip: (page - 1) * pageSize,
           take: pageSize,
