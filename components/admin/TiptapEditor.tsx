@@ -22,7 +22,7 @@ import { Extension, type CommandProps, type Editor } from '@tiptap/core';
 import { DOMParser, type Node } from 'prosemirror-model';
 import { TextSelection } from 'prosemirror-state';
 import type { EditorView } from 'prosemirror-view';
-import { AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo2, Redo2, List, ListOrdered, Highlighter, X, Type, ChevronDown, Link as LinkIcon, Menu, Search } from 'lucide-react';
+import { AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo2, Redo2, List, ListOrdered, Highlighter, X, Type, ChevronDown, Link as LinkIcon, Menu, Search, Copy, Pencil, Unlink } from 'lucide-react';
 import { Iframe, type IframeAttributes } from './Iframe';
 
 const COLOR_PALETTE = [
@@ -618,6 +618,11 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkText, setLinkText] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+  const [showLinkPopover, setShowLinkPopover] = useState(false);
+  const [linkPopoverUrl, setLinkPopoverUrl] = useState('');
+  const [linkPopoverPosition, setLinkPopoverPosition] = useState({ top: 0, left: 0 });
+  const [linkDialogPosition, setLinkDialogPosition] = useState<{ top: number; left: number } | null>(null);
+  const [linkEditRange, setLinkEditRange] = useState<{ from: number; to: number } | null>(null);
   
   const editor = useEditor({
     immediatelyRender: false,
@@ -638,7 +643,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'text-blue-600 underline',
+          class: 'text-blue-600 underline cursor-pointer',
         },
       }),
       TextAlign.configure({
@@ -908,6 +913,66 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
 
   useEffect(() => {
     if (editor) {
+      const editorDom = editor.view.dom;
+      const clickHandler = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        
+        if (showLinkPopover && !target.closest('.link-popover') && !target.closest('a')) {
+          setShowLinkPopover(false);
+          return;
+        }
+        
+        const linkElement = target.closest('a');
+        
+        if (linkElement) {
+          event.preventDefault();
+          event.stopPropagation();
+          
+          const { state } = editor;
+          
+          const linkRect = linkElement.getBoundingClientRect();
+          const editorContentContainer = editorDom.closest('.ProseMirror')?.parentElement;
+          
+          if (editorContentContainer) {
+            const containerRect = editorContentContainer.getBoundingClientRect();
+            
+            const { selection } = state;
+            const { $from } = selection;
+            const linkMark = $from.marks().find(mark => mark.type.name === 'link') ||
+                            state.storedMarks?.find(mark => mark.type.name === 'link');
+            
+            const href = linkMark?.attrs.href || linkElement.getAttribute('href') || '';
+            
+            if (href) {
+              setLinkPopoverUrl(href);
+              
+              const popoverWidth = 320;
+              const spacing = 30;
+              const left = linkRect.left - containerRect.left;
+              const top = linkRect.bottom - containerRect.top + spacing;
+              
+              setLinkPopoverPosition({
+                top: Math.max(10, top),
+                left: Math.max(10, Math.min(left, containerRect.width - popoverWidth - 10)),
+              });
+              
+              setShowLinkPopover(true);
+            }
+          }
+        }
+      };
+
+      editorDom.addEventListener('click', clickHandler);
+      
+      const handleOutsideClick = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        if (showLinkPopover && !target.closest('.link-popover') && !target.closest('.ProseMirror')) {
+          setShowLinkPopover(false);
+        }
+      };
+      
+      document.addEventListener('click', handleOutsideClick);
+
       const updateHighlightColor = () => {
         const { state } = editor;
         const { selection } = state;
@@ -979,9 +1044,12 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         editor.off('selectionUpdate', updateTextColor);
         editor.off('update', updateTextColor);
         editor.off('transaction', updateTextColor);
+        
+        editorDom.removeEventListener('click', clickHandler);
+        document.removeEventListener('click', handleOutsideClick);
       };
     }
-  }, [editor]);
+  }, [editor, showLinkPopover]);
 
 
 
@@ -1175,9 +1243,29 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           onClick={() => {
             const { from, to } = editor.state.selection;
             const selectedText = editor.state.doc.textBetween(from, to, ' ');
-            setLinkText(selectedText);
             const linkAttrs = editor.getAttributes('link');
+            setLinkText(selectedText);
             setLinkUrl(linkAttrs.href || '');
+            
+            const { view } = editor;
+            const startCoords = view.coordsAtPos(from);
+            const endCoords = view.coordsAtPos(to);
+            
+            const editorDom = view.dom;
+            const editorContentContainer = editorDom.closest('.ProseMirror')?.parentElement;
+            
+            if (editorContentContainer) {
+              const containerRect = editorContentContainer.getBoundingClientRect();
+              const spacing = 30;
+              
+              const left = startCoords.left - containerRect.left;
+              const top = endCoords.bottom - containerRect.top + spacing;
+              
+              setLinkDialogPosition({ top, left });
+            } else {
+              setLinkDialogPosition(null);
+            }
+            
             setShowLinkDialog(true);
           }}
           className={`px-3 py-2 h-10 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
@@ -1188,67 +1276,76 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           <LinkIcon size={16} />
         </button>
 
-        {/* Link Dialog */}
-        {showLinkDialog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-9999" onClick={() => setShowLinkDialog(false)}>
-            <div className="bg-white rounded-lg shadow-xl p-6 w-[500px] mx-4" onClick={(e) => e.stopPropagation()}>
-              <div className="mb-4">
-                <div className="relative">
-                  <Menu size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={linkText}
-                    onChange={(e) => setLinkText(e.target.value)}
-                    placeholder="Text"
-                    className="w-full pl-10 pr-4 py-2 border-2 border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    autoFocus
-                  />
+        {showLinkDialog && !linkDialogPosition && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-9999" onClick={() => {
+              setShowLinkDialog(false);
+              setLinkText('');
+              setLinkUrl('');
+              setLinkDialogPosition(null);
+            }}>
+              <div className="bg-white rounded-lg shadow-xl p-6 w-[500px] mx-4" onClick={(e) => e.stopPropagation()}>
+                <div className="mb-4">
+                  <div className="relative">
+                    <Menu size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={linkText}
+                      onChange={(e) => setLinkText(e.target.value)}
+                      placeholder="Text"
+                      className="w-full pl-10 pr-4 py-2 border-2 border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      autoFocus
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="mb-4">
-                <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={linkUrl}
-                    onChange={(e) => setLinkUrl(e.target.value)}
-                    placeholder="URL"
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={linkUrl}
+                      onChange={(e) => setLinkUrl(e.target.value)}
+                      placeholder="URL"
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setShowLinkDialog(false);
-                    setLinkText('');
-                    setLinkUrl('');
-                  }}
-                  className="px-4 py-2 text-gray-600 rounded hover:bg-gray-100 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    if (linkUrl) {
-                      if (linkText) {
-                        editor.chain().focus().insertContent(`<a href="${linkUrl}">${linkText}</a>`).run();
-                      } else {
-                        editor.chain().focus().setLink({ href: linkUrl }).run();
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      setShowLinkDialog(false);
+                      setLinkText('');
+                      setLinkUrl('');
+                      setLinkDialogPosition(null);
+                      setLinkEditRange(null);
+                    }}
+                    className="px-4 py-2 text-gray-600 rounded hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (linkUrl) {
+                        if (linkText) {
+                          editor.chain().focus().insertContent(`<a href="${linkUrl}">${linkText}</a>`).run();
+                        } else {
+                          editor.chain().focus().setLink({ href: linkUrl }).run();
+                        }
                       }
-                    }
-                    setShowLinkDialog(false);
-                    setLinkText('');
-                    setLinkUrl('');
-                  }}
-                  className="px-4 py-2 text-blue-600 rounded hover:bg-blue-50 transition-colors"
-                >
-                  Apply
-                </button>
+                      setShowLinkDialog(false);
+                      setLinkText('');
+                      setLinkUrl('');
+                      setLinkDialogPosition(null);
+                      setLinkEditRange(null);
+                    }}
+                    className="px-4 py-2 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                  >
+                    Apply
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
         )}
+
 
         {/* Image */}
         <button
@@ -1477,8 +1574,192 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       </div>
 
       {/* Editor Content */}
-      <div className="bg-white min-h-[400px] p-6">
+      <div className="bg-white min-h-[400px] p-6 relative">
         <EditorContent editor={editor} />
+        
+        {/* Link Popover */}
+        {showLinkPopover && linkPopoverUrl && (
+          <div 
+            className="link-popover absolute bg-white rounded-lg shadow-lg z-50"
+            style={{
+              top: `${linkPopoverPosition.top}px`,
+              left: `${linkPopoverPosition.left}px`,
+              minWidth: '320px',
+            }}
+          >
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+              <div className="w-5 h-5 rounded-full bg-gray-200 shrink-0"></div>
+              <div className="flex-1 min-w-0">
+                <a
+                  href={linkPopoverUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 truncate hover:underline cursor-pointer block"
+                  title={linkPopoverUrl}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  {linkPopoverUrl.length > 35 ? `${linkPopoverUrl.substring(0, 35)}...` : linkPopoverUrl}
+                </a>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 px-2 py-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(linkPopoverUrl);
+                  setShowLinkPopover(false);
+                }}
+                className="p-2 hover:bg-gray-100 rounded transition-colors"
+                title="Copy link"
+              >
+                <Copy size={18} className="text-gray-600" />
+              </button>
+              <button
+                onClick={() => {
+                  const { state } = editor;
+                  const { selection } = state;
+                  
+                  const linkMark = selection.$from.marks().find(mark => mark.type.name === 'link') ||
+                                  state.storedMarks?.find(mark => mark.type.name === 'link');
+                  
+                  if (linkMark) {
+                    let linkFrom = selection.from;
+                    let linkTo = selection.to;
+                    
+                    let $pos = state.doc.resolve(selection.from);
+                    while ($pos.pos > 0) {
+                      const prevPos = $pos.pos - 1;
+                      const $prevPos = state.doc.resolve(prevPos);
+                      const prevMarks = $prevPos.marks();
+                      const hasSameLink = prevMarks.find(m => 
+                        m.type.name === 'link' && m.attrs.href === linkMark.attrs.href
+                      );
+                      if (!hasSameLink) break;
+                      linkFrom = prevPos;
+                      $pos = $prevPos;
+                    }
+                    
+                    $pos = state.doc.resolve(selection.to);
+                    while ($pos.pos < state.doc.content.size) {
+                      const nextPos = $pos.pos + 1;
+                      if (nextPos > state.doc.content.size) break;
+                      const $nextPos = state.doc.resolve(nextPos);
+                      const nextMarks = $nextPos.marks();
+                      const hasSameLink = nextMarks.find(m => 
+                        m.type.name === 'link' && m.attrs.href === linkMark.attrs.href
+                      );
+                      if (!hasSameLink) break;
+                      linkTo = nextPos;
+                      $pos = $nextPos;
+                    }
+                    
+                    const selectedText = editor.state.doc.textBetween(linkFrom, linkTo, ' ');
+                    setLinkText(selectedText);
+                    setLinkUrl(linkPopoverUrl);
+                    setLinkDialogPosition(linkPopoverPosition);
+                    setLinkEditRange({ from: linkFrom, to: linkTo });
+                    setShowLinkPopover(false);
+                    setShowLinkDialog(true);
+                  }
+                }}
+                className="p-2 hover:bg-gray-100 rounded transition-colors"
+                title="Edit link"
+              >
+                <Pencil size={18} className="text-gray-600" />
+              </button>
+              <button
+                onClick={() => {
+                  editor.chain().focus().unsetLink().run();
+                  setShowLinkPopover(false);
+                }}
+                className="p-2 hover:bg-gray-100 rounded transition-colors"
+                title="Remove link"
+              >
+                <Unlink size={18} className="text-gray-600" />
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {showLinkDialog && linkDialogPosition && (
+          <div 
+            className="absolute bg-white rounded-lg shadow-xl p-6 w-[500px] z-50"
+            style={{
+              top: `${linkDialogPosition.top}px`,
+              left: `${linkDialogPosition.left}px`,
+            }}
+          >
+            <div className="mb-4">
+              <div className="relative">
+                <Menu size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                  placeholder="Text"
+                  className="w-full pl-10 pr-4 py-2 border-2 border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="mb-4">
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="URL"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowLinkDialog(false);
+                  setLinkText('');
+                  setLinkUrl('');
+                  setLinkDialogPosition(null);
+                }}
+                className="px-4 py-2 text-gray-600 rounded hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (linkUrl) {
+                    if (linkEditRange) {
+                      // Edit existing link: replace the entire link with new text and URL
+                      const { from, to } = linkEditRange;
+                      
+                      // Replace the entire link range with new link
+                      editor.chain()
+                        .focus()
+                        .setTextSelection({ from, to })
+                        .deleteSelection()
+                        .insertContent(`<a href="${linkUrl}">${linkText || linkUrl}</a>`)
+                        .run();
+                    } else if (linkText) {
+                      editor.chain().focus().insertContent(`<a href="${linkUrl}">${linkText}</a>`).run();
+                    } else {
+                      editor.chain().focus().setLink({ href: linkUrl }).run();
+                    }
+                  }
+                  setShowLinkDialog(false);
+                  setLinkText('');
+                  setLinkUrl('');
+                  setLinkDialogPosition(null);
+                  setLinkEditRange(null);
+                }}
+                className="px-4 py-2 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
