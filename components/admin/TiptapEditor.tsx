@@ -22,7 +22,7 @@ import { Extension, type CommandProps, type Editor } from '@tiptap/core';
 import { DOMParser, type Node } from 'prosemirror-model';
 import { TextSelection } from 'prosemirror-state';
 import type { EditorView } from 'prosemirror-view';
-import { AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo2, Redo2, List, ListOrdered, Highlighter, X, Type, ChevronDown } from 'lucide-react';
+import { AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo2, Redo2, List, ListOrdered, Highlighter, X, Type, ChevronDown, Link as LinkIcon, Menu, Search } from 'lucide-react';
 import { Iframe, type IframeAttributes } from './Iframe';
 
 const COLOR_PALETTE = [
@@ -615,6 +615,9 @@ interface TiptapEditorProps {
 export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
   const [highlightColor, setHighlightColor] = useState('#ffffff');
   const [textColor, setTextColor] = useState('#000000');
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [linkText, setLinkText] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
   
   const editor = useEditor({
     immediatelyRender: false,
@@ -1170,18 +1173,82 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         {/* Link */}
         <button
           onClick={() => {
-            const url = window.prompt('Enter URL:');
-            if (url) {
-              editor.chain().focus().setLink({ href: url }).run();
-            }
+            const { from, to } = editor.state.selection;
+            const selectedText = editor.state.doc.textBetween(from, to, ' ');
+            setLinkText(selectedText);
+            const linkAttrs = editor.getAttributes('link');
+            setLinkUrl(linkAttrs.href || '');
+            setShowLinkDialog(true);
           }}
-          className={`px-4 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors ${
+          className={`px-3 py-2 h-10 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
             editor.isActive('link') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
           }`}
           title="Insert Link"
         >
-          Link
+          <LinkIcon size={16} />
         </button>
+
+        {/* Link Dialog */}
+        {showLinkDialog && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-9999" onClick={() => setShowLinkDialog(false)}>
+            <div className="bg-white rounded-lg shadow-xl p-6 w-[500px] mx-4" onClick={(e) => e.stopPropagation()}>
+              <div className="mb-4">
+                <div className="relative">
+                  <Menu size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={linkText}
+                    onChange={(e) => setLinkText(e.target.value)}
+                    placeholder="Text"
+                    className="w-full pl-10 pr-4 py-2 border-2 border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div className="mb-4">
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    placeholder="URL"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowLinkDialog(false);
+                    setLinkText('');
+                    setLinkUrl('');
+                  }}
+                  className="px-4 py-2 text-gray-600 rounded hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (linkUrl) {
+                      if (linkText) {
+                        editor.chain().focus().insertContent(`<a href="${linkUrl}">${linkText}</a>`).run();
+                      } else {
+                        editor.chain().focus().setLink({ href: linkUrl }).run();
+                      }
+                    }
+                    setShowLinkDialog(false);
+                    setLinkText('');
+                    setLinkUrl('');
+                  }}
+                  className="px-4 py-2 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Image */}
         <button
@@ -1251,31 +1318,36 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         </div>
 
         {/* Font Size */}
-        <select
-          onChange={(e) => {
-            const fontSize = e.target.value;
-            if (fontSize === 'default') {
-              editor.chain().focus().unsetFontSize().run();
-            } else {
-              editor.chain().focus().setFontSize(fontSize).run();
-            }
-          }}
-          className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase focus:outline-none focus:border-[#333] transition-colors"
-          title="Font Size"
-        >
-          <option value="default">Size</option>
-          <option value="10">10px</option>
-          <option value="12">12px</option>
-          <option value="14">14px</option>
-          <option value="16">16px</option>
-          <option value="18">18px</option>
-          <option value="20">20px</option>
-          <option value="24">24px</option>
-          <option value="28">28px</option>
-          <option value="32">32px</option>
-          <option value="36">36px</option>
-          <option value="48">48px</option>
-        </select>
+        <div className="relative">
+          <select
+            onChange={(e) => {
+              const fontSize = e.target.value;
+              if (fontSize === 'default') {
+                editor.chain().focus().unsetFontSize().run();
+              } else {
+                editor.chain().focus().setFontSize(fontSize).run();
+              }
+            }}
+            className="px-3 pr-10 py-2 h-10 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase focus:outline-none focus:border-[#333] transition-colors appearance-none cursor-pointer"
+            title="Font Size"
+          >
+            <option value="default">Size</option>
+            <option value="10">10px</option>
+            <option value="12">12px</option>
+            <option value="14">14px</option>
+            <option value="16">16px</option>
+            <option value="18">18px</option>
+            <option value="20">20px</option>
+            <option value="24">24px</option>
+            <option value="28">28px</option>
+            <option value="32">32px</option>
+            <option value="36">36px</option>
+            <option value="48">48px</option>
+          </select>
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+            <ChevronDown size={16} className="text-[#333]" />
+          </div>
+        </div>
 
         {/* Text Color */}
         <ColorPicker
