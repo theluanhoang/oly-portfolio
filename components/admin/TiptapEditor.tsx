@@ -22,7 +22,7 @@ import { Extension, type CommandProps, type Editor } from '@tiptap/core';
 import { DOMParser, type Node } from 'prosemirror-model';
 import { TextSelection } from 'prosemirror-state';
 import type { EditorView } from 'prosemirror-view';
-import { AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo2, Redo2, List, ListOrdered, Highlighter, X, Type } from 'lucide-react';
+import { AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo2, Redo2, List, ListOrdered, Highlighter, X, Type, ChevronDown } from 'lucide-react';
 import { Iframe, type IframeAttributes } from './Iframe';
 
 const COLOR_PALETTE = [
@@ -990,27 +990,40 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     <div className="border border-[#e0e0e0] overflow-hidden">
       {/* Toolbar */}
       <div className="border-b border-[#e0e0e0] bg-[#f5f5f5] p-3 flex flex-wrap gap-2">
-        {/* Heading */}
-        <select
-          onChange={(e) => {
-            const level = parseInt(e.target.value);
-            if (level === 0) {
-              editor.chain().focus().clearNodes().run();
-            } else {
-              editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 }).run();
+        {/* Paragraph & Heading */}
+        <div className="relative">
+          <select
+            onChange={(e) => {
+              const level = parseInt(e.target.value);
+              if (level === 0) {
+                editor.chain().focus().setParagraph().run();
+              } else {
+                editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 }).run();
+              }
+            }}
+            value={
+              editor.isActive('heading', { level: 1 }) ? '1' :
+              editor.isActive('heading', { level: 2 }) ? '2' :
+              editor.isActive('heading', { level: 3 }) ? '3' :
+              editor.isActive('heading', { level: 4 }) ? '4' :
+              editor.isActive('heading', { level: 5 }) ? '5' :
+              editor.isActive('heading', { level: 6 }) ? '6' : '0'
             }
-          }}
-          className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase focus:outline-none focus:border-[#333] transition-colors"
-          title="Heading"
-        >
-          <option value="0">Paragraph</option>
-          <option value="1">Heading 1</option>
-          <option value="2">Heading 2</option>
-          <option value="3">Heading 3</option>
-          <option value="4">Heading 4</option>
-          <option value="5">Heading 5</option>
-          <option value="6">Heading 6</option>
-        </select>
+            className="px-3 pr-10 py-2 h-10 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase focus:outline-none focus:border-[#333] transition-colors appearance-none cursor-pointer"
+            title="Paragraph & Heading"
+          >
+            <option value="0">Paragraph</option>
+            <option value="1">Heading 1</option>
+            <option value="2">Heading 2</option>
+            <option value="3">Heading 3</option>
+            <option value="4">Heading 4</option>
+            <option value="5">Heading 5</option>
+            <option value="6">Heading 6</option>
+          </select>
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+            <ChevronDown size={16} className="text-[#333]" />
+          </div>
+        </div>
 
         {/* Undo/Redo */}
         <button
@@ -1211,26 +1224,31 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         </button>
 
         {/* Font Family */}
-        <select
-          onChange={(e) => {
-            const fontFamily = e.target.value;
-            if (fontFamily === 'default') {
-              editor.chain().focus().unsetFontFamily().run();
-            } else {
-              editor.chain().focus().setFontFamily(fontFamily).run();
-            }
-          }}
-          className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase focus:outline-none focus:border-[#333] transition-colors"
-          title="Font Family"
-        >
-          <option value="default">Font</option>
-          <option value="Arial">Arial</option>
-          <option value="Helvetica">Helvetica</option>
-          <option value="Times New Roman">Times New Roman</option>
-          <option value="Courier New">Courier New</option>
-          <option value="Georgia">Georgia</option>
-          <option value="Verdana">Verdana</option>
-        </select>
+        <div className="relative">
+          <select
+            onChange={(e) => {
+              const fontFamily = e.target.value;
+              if (fontFamily === 'default') {
+                editor.chain().focus().unsetFontFamily().run();
+              } else {
+                editor.chain().focus().setFontFamily(fontFamily).run();
+              }
+            }}
+            className="px-3 pr-10 py-2 h-10 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase focus:outline-none focus:border-[#333] transition-colors appearance-none cursor-pointer"
+            title="Font Family"
+          >
+            <option value="default">Font</option>
+            <option value="Arial">Arial</option>
+            <option value="Helvetica">Helvetica</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Courier New">Courier New</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Verdana">Verdana</option>
+          </select>
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+            <ChevronDown size={16} className="text-[#333]" />
+          </div>
+        </div>
 
         {/* Font Size */}
         <select
