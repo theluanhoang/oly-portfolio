@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
@@ -7,11 +8,161 @@ import Link from '@tiptap/extension-link';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { FontFamily } from '@tiptap/extension-font-family';
+import TextAlign from '@tiptap/extension-text-align';
+import Underline from '@tiptap/extension-underline';
+import Subscript from '@tiptap/extension-subscript';
+import Superscript from '@tiptap/extension-superscript';
+import Highlight from '@tiptap/extension-highlight';
+import { Table } from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
+import Placeholder from '@tiptap/extension-placeholder';
 import { Extension, type CommandProps, type Editor } from '@tiptap/core';
 import { DOMParser, type Node } from 'prosemirror-model';
 import { TextSelection } from 'prosemirror-state';
 import type { EditorView } from 'prosemirror-view';
+import { AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo2, Redo2, List, ListOrdered, Highlighter, X, Type } from 'lucide-react';
 import { Iframe, type IframeAttributes } from './Iframe';
+
+const COLOR_PALETTE = [
+  '#000000', '#404040', '#808080', '#C0C0C0', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF',
+  '#800000', '#FF0000', '#FF8000', '#FFFF00', '#80FF00', '#00FFFF', '#0080FF', '#0000FF', '#8000FF', '#FF00FF',
+  '#FFE4E1', '#FFB6C1', '#FFA07A', '#FFE4B5', '#F0E68C', '#E0FFE0', '#E0FFFF', '#E0E0FF', '#E6E6FA', '#FFE4E6',
+  '#D2B48C', '#DEB887', '#F4A460', '#F5DEB3', '#D3D3D3', '#D8BFD8', '#DDA0DD', '#EE82EE', '#DA70D6', '#C0C0C0',
+  '#CD5C5C', '#A0522D', '#D2691E', '#B8860B', '#9ACD32', '#2E8B57', '#4682B4', '#6A5ACD', '#9370DB', '#C71585',
+  '#8B4513', '#A0522D', '#8B7355', '#8B6914', '#6B8E23', '#2F4F4F', '#191970', '#4B0082', '#8B008B', '#8B0000',
+  '#654321', '#5C4033', '#8B4513', '#556B2F', '#2F4F2F', '#1C1C1C', '#000080', '#4B0082', '#6A0DAD', '#800020',
+  '#3D2817', '#2F1B14', '#3D2817', '#2F4F2F', '#1C3A1C', '#0F1F1F', '#000050', '#2D1B4E', '#4B0D4B', '#4B0000',
+];
+
+interface ColorPickerProps {
+  icon: React.ReactNode;
+  currentColor: string;
+  onColorChange: (color: string) => void;
+  onRemove?: () => void;
+  isActive: boolean;
+  title: string;
+  defaultColor?: string;
+  showColorIndicator?: boolean;
+}
+
+function ColorPicker({ 
+  icon, 
+  currentColor, 
+  onColorChange, 
+  onRemove, 
+  isActive, 
+  title,
+  defaultColor = '#ffffff',
+  showColorIndicator = false
+}: ColorPickerProps) {
+  const [showPicker, setShowPicker] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showPicker && !target.closest('.color-picker-container')) {
+        setShowPicker(false);
+      }
+    };
+
+    if (showPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showPicker]);
+
+  const getButtonStyle = () => {
+    if (showColorIndicator) {
+      return {
+        backgroundColor: 'white',
+        borderColor: isActive ? currentColor : '#e0e0e0',
+      };
+    }
+    return {
+      backgroundColor: currentColor,
+      borderColor: isActive ? currentColor : '#e0e0e0',
+    };
+  };
+
+  const getIconStyle = () => {
+    if (showColorIndicator) {
+      return {};
+    }
+    return {
+      filter: currentColor === defaultColor ? 'none' : 'brightness(0) invert(1)',
+    };
+  };
+
+  const getIconClassName = () => {
+    if (showColorIndicator) {
+      return 'text-[#333]';
+    }
+    return currentColor === defaultColor ? 'text-[#333]' : 'text-white';
+  };
+
+  return (
+    <div className="relative color-picker-container">
+      <button
+        onClick={() => setShowPicker(!showPicker)}
+        className="px-3 py-2 h-10 border text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center relative"
+        title={title}
+        style={getButtonStyle()}
+      >
+        <span className={getIconClassName()} style={getIconStyle()}>
+          {icon}
+        </span>
+        {showColorIndicator && (
+          <div 
+            className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-4 h-1.5 rounded border border-gray-300"
+            style={{ backgroundColor: currentColor }}
+          />
+        )}
+      </button>
+      
+      {showPicker && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-[#e0e0e0] shadow-lg z-50 p-3" style={{ width: '320px' }}>
+          {onRemove && (
+            <button
+              onClick={() => {
+                onRemove();
+                setShowPicker(false);
+              }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded mb-2"
+            >
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                !isActive ? 'border-black' : 'border-gray-300'
+              }`}>
+                {!isActive && <X size={12} className="text-black" />}
+              </div>
+              <span className="text-sm">None</span>
+            </button>
+          )}
+          
+          <div className="grid grid-cols-10 gap-1 mb-3">
+            {COLOR_PALETTE.map((color, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  onColorChange(color);
+                  setShowPicker(false);
+                }}
+                className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 ${
+                  currentColor === color ? 'border-black scale-110' : 'border-gray-200'
+                }`}
+                style={{ backgroundColor: color }}
+                title={color}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Font Size Extension
 const FontSize = Extension.create({
@@ -61,6 +212,120 @@ const FontSize = Extension.create({
         ({ chain }: CommandProps) => {
           return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run();
         },
+    };
+  },
+});
+
+const Indent = Extension.create({
+  name: 'indent',
+
+  addOptions() {
+    return {
+      types: ['paragraph', 'heading'],
+      minLevel: 0,
+      maxLevel: 8,
+    };
+  },
+
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          indent: {
+            default: 0,
+            parseHTML: (element: HTMLElement) => {
+              const indent = parseInt(element.style.paddingLeft || '0', 10);
+              return indent / 30;
+            },
+            renderHTML: (attributes: { indent?: number }) => {
+              if (!attributes.indent || attributes.indent === 0) {
+                return {};
+              }
+              return {
+                style: `padding-left: ${attributes.indent * 30}px`,
+              };
+            },
+          },
+        },
+      },
+    ];
+  },
+
+  // @ts-expect-error - Custom commands not in type definitions
+  addCommands() {
+    return {
+      indent:
+        () =>
+        ({ tr, state, dispatch }: CommandProps) => {
+          const { selection } = state;
+          const { from, to } = selection;
+
+          let updated = false;
+          const newTr = tr;
+
+          state.doc.nodesBetween(from, to, (node, pos) => {
+            if (this.options.types.includes(node.type.name)) {
+              const currentIndent = node.attrs.indent || 0;
+              const newIndent = Math.min(currentIndent + 1, this.options.maxLevel);
+              if (newIndent !== currentIndent) {
+                newTr.setNodeMarkup(pos, undefined, {
+                  ...node.attrs,
+                  indent: newIndent,
+                });
+                updated = true;
+              }
+            }
+          });
+
+          if (updated && dispatch) {
+            dispatch(newTr);
+            return true;
+          }
+          return false;
+        },
+      outdent:
+        () =>
+        ({ tr, state, dispatch }: CommandProps) => {
+          const { selection } = state;
+          const { from, to } = selection;
+
+          let updated = false;
+          const newTr = tr;
+
+          state.doc.nodesBetween(from, to, (node, pos) => {
+            if (this.options.types.includes(node.type.name)) {
+              const currentIndent = node.attrs.indent || 0;
+              const newIndent = Math.max(currentIndent - 1, this.options.minLevel);
+              if (newIndent !== currentIndent) {
+                newTr.setNodeMarkup(pos, undefined, {
+                  ...node.attrs,
+                  indent: newIndent,
+                });
+                updated = true;
+              }
+            }
+          });
+
+          if (updated && dispatch) {
+            dispatch(newTr);
+            return true;
+          }
+          return false;
+        },
+    };
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      Tab: () => {
+        // @ts-expect-error - Custom command not in type definitions
+        return this.editor.commands.indent();
+      },
+      'Shift-Tab': () => {
+        // @ts-expect-error - Custom command not in type definitions
+        return this.editor.commands.outdent();
+      },
     };
   },
 });
@@ -226,7 +491,7 @@ const parseIframeInput = (input: string): IframeAttributes | null => {
       const tempContainer = document.createElement('div');
       tempContainer.innerHTML = trimmed;
       iframeEl = tempContainer.querySelector('iframe');
-    } catch (e) {
+    } catch {
       // If HTML parsing fails, try regex extraction as fallback
       const iframeMatch = trimmed.match(/<iframe[^>]*>/i);
       if (iframeMatch) {
@@ -252,7 +517,7 @@ const parseIframeInput = (input: string): IframeAttributes | null => {
             if (attrs.src) {
               return attrs as IframeAttributes;
             }
-          } catch (e) {
+          } catch {
             return null;
           }
         }
@@ -273,7 +538,7 @@ const parseIframeInput = (input: string): IframeAttributes | null => {
     let validSrc;
     try {
       validSrc = new URL(src);
-    } catch (e) {
+    } catch {
       return null;
     }
 
@@ -319,7 +584,7 @@ const parseIframeInput = (input: string): IframeAttributes | null => {
   // Validate URL format
   try {
     new URL(trimmed);
-  } catch (e) {
+  } catch {
     return null;
   }
 
@@ -346,7 +611,11 @@ interface TiptapEditorProps {
   onChange?: (html: string) => void;
 }
 
+
 export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
+  const [highlightColor, setHighlightColor] = useState('#ffffff');
+  const [textColor, setTextColor] = useState('#000000');
+  
   const editor = useEditor({
     immediatelyRender: false,
     parseOptions: {
@@ -357,7 +626,6 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         heading: {
           levels: [1, 2, 3, 4, 5, 6],
         },
-        // Disable Link extension in StarterKit to avoid duplicate with Link extension below
         link: false,
       }),
       Image.configure({
@@ -370,10 +638,33 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           class: 'text-blue-600 underline',
         },
       }),
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        defaultAlignment: 'left',
+      }),
       TextStyle,
       Color,
       FontFamily,
       FontSize,
+      Underline,
+      Subscript,
+      Superscript,
+      Highlight.configure({
+        multicolor: true,
+      }),
+      Table.configure({
+        resizable: true,
+        HTMLAttributes: {
+          class: 'tiptap-table',
+        },
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      Placeholder.configure({
+        placeholder: 'Start typing...',
+      }),
+      Indent,
       Iframe,
     ],
     content: content || '',
@@ -612,6 +903,85 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     },
   });
 
+  useEffect(() => {
+    if (editor) {
+      const updateHighlightColor = () => {
+        const { state } = editor;
+        const { selection } = state;
+        const { $from } = selection;
+        
+        let foundColor = '#ffffff';
+        
+        const marksAtCursor = $from.marks();
+        marksAtCursor.forEach((mark) => {
+          if (mark.type.name === 'highlight' && mark.attrs.color) {
+            foundColor = mark.attrs.color;
+          }
+        });
+        
+        if (foundColor === '#ffffff') {
+          const marksInSelection = state.storedMarks || selection.$from.marks();
+          marksInSelection.forEach((mark) => {
+            if (mark.type.name === 'highlight' && mark.attrs.color) {
+              foundColor = mark.attrs.color;
+            }
+          });
+        }
+        
+        setHighlightColor(foundColor);
+      };
+
+      const updateTextColor = () => {
+        const { state } = editor;
+        const { selection } = state;
+        const { $from } = selection;
+        
+        let foundColor = '#000000';
+        
+        const marksAtCursor = $from.marks();
+        marksAtCursor.forEach((mark) => {
+          if (mark.type.name === 'textStyle' && mark.attrs.color) {
+            foundColor = mark.attrs.color;
+          }
+        });
+        
+        if (foundColor === '#000000') {
+          const marksInSelection = state.storedMarks || selection.$from.marks();
+          marksInSelection.forEach((mark) => {
+            if (mark.type.name === 'textStyle' && mark.attrs.color) {
+              foundColor = mark.attrs.color;
+            }
+          });
+        }
+        
+        setTextColor(foundColor);
+      };
+
+      editor.on('selectionUpdate', updateHighlightColor);
+      editor.on('update', updateHighlightColor);
+      editor.on('transaction', updateHighlightColor);
+      
+      editor.on('selectionUpdate', updateTextColor);
+      editor.on('update', updateTextColor);
+      editor.on('transaction', updateTextColor);
+      
+      updateHighlightColor();
+      updateTextColor();
+      
+      return () => {
+        editor.off('selectionUpdate', updateHighlightColor);
+        editor.off('update', updateHighlightColor);
+        editor.off('transaction', updateHighlightColor);
+        
+        editor.off('selectionUpdate', updateTextColor);
+        editor.off('update', updateTextColor);
+        editor.off('transaction', updateTextColor);
+      };
+    }
+  }, [editor]);
+
+
+
   if (!editor) {
     return null;
   }
@@ -631,6 +1001,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             }
           }}
           className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase focus:outline-none focus:border-[#333] transition-colors"
+          title="Heading"
         >
           <option value="0">Paragraph</option>
           <option value="1">Heading 1</option>
@@ -641,12 +1012,33 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           <option value="6">Heading 6</option>
         </select>
 
-        {/* Bold, Italic, Strike */}
+        {/* Undo/Redo */}
+        <button
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+          className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+          title="Undo"
+        >
+          <Undo2 size={16} />
+        </button>
+        <button
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+          className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+          title="Redo"
+        >
+          <Redo2 size={16} />
+        </button>
+
+        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
+
+        {/* Bold, Italic, Strike, Underline */}
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={`px-4 py-2 border border-[#e0e0e0] text-xs font-bold tracking-[1px] uppercase transition-colors ${
             editor.isActive('bold') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
           }`}
+          title="Bold"
         >
           B
         </button>
@@ -655,35 +1047,112 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           className={`px-4 py-2 border border-[#e0e0e0] text-xs italic tracking-[1px] uppercase transition-colors ${
             editor.isActive('italic') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
           }`}
+          title="Italic"
         >
           I
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          className={`px-4 py-2 border border-[#e0e0e0] text-xs underline tracking-[1px] uppercase transition-colors ${
+            editor.isActive('underline') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
+          }`}
+          title="Underline"
+        >
+          U
         </button>
         <button
           onClick={() => editor.chain().focus().toggleStrike().run()}
           className={`px-4 py-2 border border-[#e0e0e0] text-xs line-through tracking-[1px] uppercase transition-colors ${
             editor.isActive('strike') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
           }`}
+          title="Strikethrough"
         >
           S
+        </button>
+
+        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
+
+        {/* Subscript/Superscript */}
+        <button
+          onClick={() => editor.chain().focus().toggleSubscript().run()}
+          className={`px-4 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors ${
+            editor.isActive('subscript') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
+          }`}
+          title="Subscript"
+        >
+          x₂
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleSuperscript().run()}
+          className={`px-4 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors ${
+            editor.isActive('superscript') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
+          }`}
+          title="Superscript"
+        >
+          x²
+        </button>
+
+        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
+
+        {/* Text Alignment */}
+        <button
+          onClick={() => editor.chain().focus().setTextAlign('left').run()}
+          className={`px-3 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
+            editor.isActive({ textAlign: 'left' }) ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
+          }`}
+          title="Align Left"
+        >
+          <AlignLeft size={16} />
+        </button>
+        <button
+          onClick={() => editor.chain().focus().setTextAlign('center').run()}
+          className={`px-3 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
+            editor.isActive({ textAlign: 'center' }) ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
+          }`}
+          title="Align Center"
+        >
+          <AlignCenter size={16} />
+        </button>
+        <button
+          onClick={() => editor.chain().focus().setTextAlign('right').run()}
+          className={`px-3 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
+            editor.isActive({ textAlign: 'right' }) ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
+          }`}
+          title="Align Right"
+        >
+          <AlignRight size={16} />
+        </button>
+        <button
+          onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+          className={`px-3 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
+            editor.isActive({ textAlign: 'justify' }) ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
+          }`}
+          title="Justify"
+        >
+          <AlignJustify size={16} />
         </button>
 
         {/* Lists */}
         <button
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={`px-4 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors ${
+          className={`px-3 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
             editor.isActive('bulletList') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
           }`}
+          title="Bullet List"
         >
-          •
+          <List size={16} />
         </button>
         <button
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={`px-4 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors ${
+          className={`px-3 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
             editor.isActive('orderedList') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
           }`}
+          title="Numbered List"
         >
-          1.
+          <ListOrdered size={16} />
         </button>
+
+        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
 
         {/* Link */}
         <button
@@ -696,6 +1165,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           className={`px-4 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors ${
             editor.isActive('link') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
           }`}
+          title="Insert Link"
         >
           Link
         </button>
@@ -709,6 +1179,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             }
           }}
           className="px-4 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
+          title="Insert Image"
         >
           Image
         </button>
@@ -734,6 +1205,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             editor.chain().focus().setIframe(nodeAttrs).run();
           }}
           className="px-4 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
+          title="Insert YouTube Video"
         >
           YouTube
         </button>
@@ -749,6 +1221,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             }
           }}
           className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase focus:outline-none focus:border-[#333] transition-colors"
+          title="Font Family"
         >
           <option value="default">Font</option>
           <option value="Arial">Arial</option>
@@ -770,6 +1243,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             }
           }}
           className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase focus:outline-none focus:border-[#333] transition-colors"
+          title="Font Size"
         >
           <option value="default">Size</option>
           <option value="10">10px</option>
@@ -786,12 +1260,130 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         </select>
 
         {/* Text Color */}
+        <ColorPicker
+          icon={<Type size={16} />}
+          currentColor={textColor}
+          onColorChange={(color) => {
+            setTextColor(color);
+            editor.chain().focus().setColor(color).run();
+          }}
+          isActive={editor.isActive('textStyle')}
+          title="Text Color"
+          defaultColor="#000000"
+          showColorIndicator={true}
+        />
+
+        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
+
+        {/* Highlight */}
+        <ColorPicker
+          icon={<Highlighter size={16} />}
+          currentColor={highlightColor}
+          onColorChange={(color) => {
+            setHighlightColor(color);
+            editor.chain().focus().toggleHighlight({ color }).run();
+          }}
+          onRemove={() => {
+            editor.chain().focus().unsetHighlight().run();
+            setHighlightColor('#ffffff');
+          }}
+          isActive={editor.isActive('highlight')}
+          title="Highlight"
+          defaultColor="#ffffff"
+          showColorIndicator={true}
+        />
+
+
+        {/* Background Color */}
         <input
           type="color"
-          onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+          onChange={(e) => {
+            editor.chain().focus().setHighlight({ color: e.target.value }).run();
+          }}
           className="w-12 h-10 border border-[#e0e0e0] cursor-pointer"
-          title="Text Color"
+          title="Background Color"
         />
+
+        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
+
+        {/* Table */}
+        <button
+          onClick={() => {
+            const rows = parseInt(window.prompt('Number of rows:', '3') || '3', 10);
+            const cols = parseInt(window.prompt('Number of columns:', '3') || '3', 10);
+            if (rows > 0 && cols > 0) {
+              editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
+            }
+          }}
+          className="px-4 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
+          title="Insert Table"
+        >
+          Table
+        </button>
+        {editor.isActive('table') && (
+          <>
+            <button
+              onClick={() => editor.chain().focus().addColumnBefore().run()}
+              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
+              title="Add Column Before"
+            >
+              +Col
+            </button>
+            <button
+              onClick={() => editor.chain().focus().addColumnAfter().run()}
+              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
+              title="Add Column After"
+            >
+              Col+
+            </button>
+            <button
+              onClick={() => editor.chain().focus().deleteColumn().run()}
+              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
+              title="Delete Column"
+            >
+              -Col
+            </button>
+            <button
+              onClick={() => editor.chain().focus().addRowBefore().run()}
+              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
+              title="Add Row Before"
+            >
+              +Row
+            </button>
+            <button
+              onClick={() => editor.chain().focus().addRowAfter().run()}
+              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
+              title="Add Row After"
+            >
+              Row+
+            </button>
+            <button
+              onClick={() => editor.chain().focus().deleteRow().run()}
+              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
+              title="Delete Row"
+            >
+              -Row
+            </button>
+            <button
+              onClick={() => editor.chain().focus().deleteTable().run()}
+              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
+              title="Delete Table"
+            >
+              ×Table
+            </button>
+          </>
+        )}
+
+        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
+
+        {/* Clear Formatting */}
+        <button
+          onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}
+          className="px-4 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
+          title="Clear Formatting"
+        >
+          Clear
+        </button>
       </div>
 
       {/* Editor Content */}
