@@ -14,9 +14,19 @@ interface ProductsToolbarProps {
 }
 
 export function ProductsToolbar(props: ProductsToolbarProps) {
+  const { onViewModeChange, ...restProps } = props;
+  
+  const handleViewModeChange = (mode: 'table' | 'grid' | 'order') => {
+    if (mode !== 'order') {
+      onViewModeChange(mode);
+    }
+  };
+
   return (
     <AdminToolbar
-      {...props}
+      {...restProps}
+      viewMode={props.viewMode}
+      onViewModeChange={handleViewModeChange}
       translationNamespace="Admin.products"
       addButtonKey="addProduct"
       showOrderView={false}

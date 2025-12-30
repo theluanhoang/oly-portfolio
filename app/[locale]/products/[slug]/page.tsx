@@ -75,7 +75,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         <div className="flex flex-col lg:flex-col">
           {productData.thumbnail && (
             <section className="bg-background lg:order-2 order-1 lg:mt-[60px] mt-0">
-              <div className="relative w-full aspect-4/3 sm:aspect-16/10 lg:aspect-1399/695 overflow-hidden">
+              <div className="relative w-full aspect-1416/528 overflow-hidden">
                 <img
                   src={productData.thumbnail}
                   alt={productData.slug}
