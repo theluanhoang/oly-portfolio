@@ -15,6 +15,7 @@ interface AdminToolbarProps {
   onOpenFilter: () => void;
   translationNamespace: string;
   addButtonKey?: string;
+  showOrderView?: boolean;
 }
 
 export function AdminToolbar({
@@ -28,6 +29,7 @@ export function AdminToolbar({
   onOpenFilter,
   translationNamespace,
   addButtonKey = 'addProduct',
+  showOrderView = true,
 }: AdminToolbarProps) {
   const t = useTranslations(translationNamespace);
   
@@ -83,18 +85,20 @@ export function AdminToolbar({
             <LayoutGrid size={14} />
             <span className="hidden md:inline">{t('grid')}</span>
           </button>
-          <button
-            type="button"
-            onClick={() => onViewModeChange('order')}
-            className={`px-2 sm:px-3 md:px-3 py-1.5 text-xs tracking-[1px] uppercase border-l border-[#e0e0e0] flex items-center gap-1 ${
-              viewMode === 'order'
-                ? 'bg-[#333] text-white'
-                : 'text-[#555] hover:bg-[#f5f5f5]'
-            }`}
-          >
-            <ArrowUpDown size={14} />
-            <span className="hidden md:inline">{t('orderView') || 'Sắp xếp'}</span>
-          </button>
+          {showOrderView && (
+            <button
+              type="button"
+              onClick={() => onViewModeChange('order')}
+              className={`px-2 sm:px-3 md:px-3 py-1.5 text-xs tracking-[1px] uppercase border-l border-[#e0e0e0] flex items-center gap-1 ${
+                viewMode === 'order'
+                  ? 'bg-[#333] text-white'
+                  : 'text-[#555] hover:bg-[#f5f5f5]'
+              }`}
+            >
+              <ArrowUpDown size={14} />
+              <span className="hidden md:inline">{t('orderView') || 'Sắp xếp'}</span>
+            </button>
+          )}
         </div>
         <div className="flex gap-2 sm:gap-2 md:gap-3">
           <Button

@@ -24,7 +24,7 @@ export default function AdminProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'order'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [search, setSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -40,13 +40,6 @@ export default function AdminProductsPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   const loadProducts = useCallback(async () => {
-    if (viewMode === 'order') {
-      setProducts([]);
-      setTotalItems(0);
-      setLoading(false);
-      return;
-    }
-
     try {
       setLoading(true);
       setError(null);
@@ -84,7 +77,7 @@ export default function AdminProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchQuery, categoryFilter, yearFilter, sortField, sortDirection, viewMode]);
+  }, [currentPage, pageSize, searchQuery, categoryFilter, yearFilter, sortField, sortDirection]);
 
   useEffect(() => {
     loadProducts();
@@ -145,8 +138,8 @@ export default function AdminProductsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pt-4 sm:pt-6 md:pt-10 pb-8 sm:pb-12 md:pb-16 px-3 sm:px-4 md:px-6">
-      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-5 md:space-y-6">
+    <div className="bg-background text-foreground">
+      <div className="space-y-4 sm:space-y-5 md:space-y-6 mt-4 sm:mt-6 md:mt-8 lg:mt-12 xl:mt-16 mb-4 sm:mb-6 md:mb-8 lg:mb-12 xl:mb-16">
         <ProductsToolbar
           search={search}
           onSearchChange={setSearch}
@@ -178,7 +171,7 @@ export default function AdminProductsPage() {
             sortDirection={sortDirection}
             onSortChange={handleSortChange}
           />
-        ) : viewMode === 'grid' ? (
+        ) : (
           <ProductsGridView
             products={products}
             loading={loading}
@@ -192,10 +185,6 @@ export default function AdminProductsPage() {
             onDeleteClick={handleDeleteClick}
             onEditClick={(product) => alert(`Edit product: ${product.slug}`)}
           />
-        ) : (
-          <div className="flex items-center justify-center py-12">
-            <p className="text-gray-500">Chức năng sắp xếp chỉ dành cho Projects.</p>
-          </div>
         )}
       </div>
       <DeleteProductDialog

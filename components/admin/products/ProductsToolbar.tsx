@@ -5,8 +5,8 @@ import { AdminToolbar } from '@/components/admin/AdminToolbar';
 interface ProductsToolbarProps {
   search: string;
   onSearchChange: (value: string) => void;
-  viewMode: 'table' | 'grid' | 'order';
-  onViewModeChange: (mode: 'table' | 'grid' | 'order') => void;
+  viewMode: 'table' | 'grid';
+  onViewModeChange: (mode: 'table' | 'grid') => void;
   loading: boolean;
   onReload: () => void;
   onAdd: () => void;
@@ -19,6 +19,7 @@ export function ProductsToolbar(props: ProductsToolbarProps) {
       {...props}
       translationNamespace="Admin.products"
       addButtonKey="addProduct"
+      showOrderView={false}
     />
   );
 }

@@ -175,8 +175,8 @@ export default function AdminProjectsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pt-4 sm:pt-6 md:pt-10 pb-8 sm:pb-12 md:pb-16 px-3 sm:px-4 md:px-6">
-      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-5 md:space-y-6">
+    <div className="bg-background text-foreground">
+      <div className="space-y-4 sm:space-y-5 md:space-y-6 mt-4 sm:mt-6 md:mt-8 lg:mt-12 xl:mt-16 mb-4 sm:mb-6 md:mb-8 lg:mb-12 xl:mb-16">
         <ProjectsToolbar
           search={search}
           onSearchChange={setSearch}
