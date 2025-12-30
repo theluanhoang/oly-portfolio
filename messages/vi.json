@@ -75,10 +75,50 @@
             "password": "Mật khẩu",
             "submit": "Đăng Nhập",
             "submitting": "Đang đăng nhập...",
+            "forgotPassword": "Quên mật khẩu?",
             "error": {
                 "invalid": "Tên đăng nhập hoặc mật khẩu không đúng",
                 "tooManyAttempts": "Quá nhiều lần thử",
                 "general": "Đã xảy ra lỗi. Vui lòng thử lại."
+            }
+        },
+        "forgotPassword": {
+            "title": "Quên Mật Khẩu",
+            "subtitle": "Nhập email của bạn để nhận link đặt lại mật khẩu",
+            "email": "Email",
+            "submit": "Gửi Link Đặt Lại",
+            "submitting": "Đang gửi...",
+            "backToLogin": "Quay lại đăng nhập",
+            "success": "Đã gửi email đặt lại mật khẩu. Vui lòng kiểm tra hộp thư của bạn.",
+            "error": {
+                "emailRequired": "Vui lòng nhập email",
+                "emailInvalid": "Email không hợp lệ",
+                "emailNotFound": "Email không tồn tại trong hệ thống",
+                "general": "Đã xảy ra lỗi. Vui lòng thử lại sau."
+            }
+        },
+        "resetPassword": {
+            "title": "Đặt Lại Mật Khẩu",
+            "subtitle": "Nhập mật khẩu mới của bạn",
+            "newPassword": "Mật khẩu mới",
+            "confirmPassword": "Xác nhận mật khẩu mới",
+            "submit": "Đặt Lại Mật Khẩu",
+            "submitting": "Đang đặt lại...",
+            "backToLogin": "Quay lại đăng nhập",
+            "success": "Mật khẩu đã được đặt lại thành công!",
+            "passwordRequirementsTitle": "Yêu Cầu Mật Khẩu:",
+            "requirementMinLength": "Ít nhất 8 ký tự",
+            "requirementUppercase": "Một chữ hoa",
+            "requirementLowercase": "Một chữ thường",
+            "requirementNumber": "Một số",
+            "requirementSpecialChar": "Một ký tự đặc biệt",
+            "error": {
+                "tokenInvalid": "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn",
+                "passwordRequired": "Vui lòng nhập mật khẩu mới",
+                "confirmPasswordRequired": "Vui lòng xác nhận mật khẩu mới",
+                "passwordsNotMatch": "Mật khẩu không khớp",
+                "passwordTooWeak": "Mật khẩu không đáp ứng yêu cầu",
+                "general": "Đã xảy ra lỗi. Vui lòng thử lại sau."
             }
         },
         "projects": {

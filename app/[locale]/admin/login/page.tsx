@@ -107,6 +107,15 @@ export default function LoginPage() {
             >
               {isLoading ? t('submitting') : t('submit')}
             </Button>
+
+            <div className="text-center">
+              <Link
+                href="/admin/forgot-password"
+                className="text-sm text-[#333] hover:underline"
+              >
+                {t('forgotPassword')}
+              </Link>
+            </div>
           </form>
         </div>
       </div>
