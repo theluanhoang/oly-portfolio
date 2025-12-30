@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from '@/i18n/routing';
 import { ProductsToolbar } from '@/components/admin/products/ProductsToolbar';
 import { ProductsTableView } from '@/components/admin/products/ProductsTableView';
 import { ProductsGridView } from '@/components/admin/products/ProductsGridView';
@@ -17,6 +18,7 @@ interface ProductsResponse {
 }
 
 export default function AdminProductsPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -155,7 +157,7 @@ export default function AdminProductsPage() {
           }}
           loading={loading}
           onReload={loadProducts}
-          onAdd={() => alert('Chức năng thêm sản phẩm sẽ được bổ sung.')}
+          onAdd={() => router.push('/admin/products/new')}
           onOpenFilter={() => setIsFilterOpen(true)}
         />
 

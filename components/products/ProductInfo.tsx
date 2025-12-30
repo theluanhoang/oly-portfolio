@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Product {
   slug: string;
+  title?: string;
   category: string;
   material: string;
   year: string;
@@ -72,13 +74,13 @@ export default function ProductInfo({
               <div className="relative overflow-hidden flex-1 flex items-start">
                 <div
                   key={descriptionIndex}
-                  className={`text-black text-xs sm:text-sm leading-relaxed font-light transition-all duration-500 ease-in-out w-full ${
+                  className={`text-black text-xs sm:text-sm leading-relaxed font-light transition-all duration-500 ease-in-out w-full max-w-[443px] ${
                     slideDirection === "left"
                       ? "animate-slide-in-left"
                       : "animate-slide-in-right"
                   }`}
                 >
-                  <p>{descriptions[descriptionIndex]}</p>
+                  <p className="text-justify">{descriptions[descriptionIndex]}</p>
                 </div>
               </div>
             </div>
@@ -89,43 +91,49 @@ export default function ProductInfo({
             {hasPrev ? (
               <button
                 onClick={handlePrev}
-                className="text-black text-xs sm:text-sm tracking-wide underline hover:no-underline cursor-pointer"
+                className="text-black text-xs sm:text-sm tracking-wide underline hover:no-underline cursor-pointer flex items-center gap-1"
               >
-                Prev &gt;&gt;
+                <ChevronLeft className="w-4 h-4" />
+                Prev
               </button>
             ) : (
-              <span className="text-gray-400 text-xs sm:text-sm">Prev &gt;&gt;</span>
+              <span className="text-gray-400 text-xs sm:text-sm flex items-center gap-1">
+                <ChevronLeft className="w-4 h-4" />
+                Prev
+              </span>
             )}
             {hasNext ? (
               <button
                 onClick={handleNext}
-                className="text-black text-xs sm:text-sm tracking-wide underline hover:no-underline cursor-pointer"
+                className="text-black text-xs sm:text-sm tracking-wide underline hover:no-underline cursor-pointer flex items-center gap-1"
               >
-                Next &gt;&gt;
+                Next
+                <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
-              <span className="text-gray-400 text-xs sm:text-sm">Next &gt;&gt;</span>
+              <span className="text-gray-400 text-xs sm:text-sm flex items-center gap-1">
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </span>
             )}
           </div>
         </div>
 
         {/* Right Column */}
-        <div className="flex flex-col justify-between lg:mt-0 mt-5">
-          <div className="flex flex-col sm:flex-row lg:flex-col justify-between gap-6 sm:gap-8 lg:gap-0 mb-8 lg:mb-12">
+        <div className="flex flex-col justify-between lg:mt-8 sm:mt-8 mt-5">
+          <div className="flex flex-row items-start justify-between gap-0 md:gap-[108px] mb-8 lg:mb-12">
             {/* Related Product */}
-            {relatedProduct && (
               <div className="">
                 <h3 className="text-black font-gayathri text-[18px] sm:text-[20px] lg:text-[22px] font-bold tracking-[2.52px] sm:tracking-[2.8px] lg:tracking-[3.08px] uppercase">
-                  {getDisplayName(relatedProduct.slug)}
+                  {product.title || getDisplayName(product.slug)}
                 </h3>
                 <p className="text-black text-xs sm:text-sm font-light tracking-wide mt-1">
-                  {relatedProduct.category}
+                  {product.category}
                 </p>
               </div>
-            )}
 
             {/* Attributes */}
-            <div className="space-y-2 text-black text-xs sm:text-sm font-light tracking-wide mt-4">
+            <div className="space-y-2 text-black text-xs sm:text-sm font-light tracking-wide">
               <p>Category// {category}</p>
               <p>Material// {material}</p>
               <p>{year}</p>

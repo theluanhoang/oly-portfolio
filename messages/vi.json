@@ -180,6 +180,50 @@
             "grid": "Lưới",
             "reload": "Tải lại",
             "addProduct": "Thêm sản phẩm",
+            "new": {
+                "title": "Tạo Sản Phẩm Mới",
+                "step": "Bước",
+                "of": "/",
+                "productInfo": "Thông Tin Sản Phẩm",
+                "content": "Nội Dung Bài Viết",
+                "next": "Tiếp Theo →",
+                "back": "← Quay Lại",
+                "save": "Lưu Sản Phẩm",
+                "saving": "Đang lưu...",
+                "success": "Sản phẩm đã được lưu thành công!",
+                "error": "Không thể lưu sản phẩm",
+                "thumbnail": "Ảnh Đại Diện"
+            },
+            "fields": {
+                "title": "Tên sản phẩm",
+                "slug": "Slug",
+                "category": "Danh mục",
+                "material": "Vật liệu",
+                "year": "Năm",
+                "descriptions": "Mô tả",
+                "descriptionPlaceholder": "Nhập mô tả...",
+                "addDescription": "Thêm Mô Tả",
+                "selectCategory": "Chọn danh mục",
+                "selectMaterial": "Chọn vật liệu"
+            },
+            "categories": {
+                "furniture": "Đồ Gỗ",
+                "architecture": "Kiến Trúc",
+                "interior": "Nội Thất",
+                "construction": "Xây Dựng"
+            },
+            "materials": {
+                "wood": "Gỗ",
+                "metal": "Kim Loại",
+                "glass": "Thủy Tinh",
+                "plastic": "Nhựa",
+                "fabric": "Vải",
+                "concrete": "Bê Tông",
+                "stone": "Đá",
+                "ceramic": "Gốm",
+                "composite": "Composite",
+                "other": "Khác"
+            },
             "filterDialog": {
                 "title": "Bộ lọc",
                 "category": "Category",

@@ -49,10 +49,6 @@ export async function POST(request: Request): Promise<Response> {
 
     const updated = await prisma.$transaction(updatePromises);
 
-    console.log('[API REORDER] Updated projects:', {
-      count: updated.length,
-      updates: body.updates.map(u => ({ slug: u.slug, displayOrder: u.displayOrder })),
-    });
 
     return Response.json({
       success: true,
@@ -68,6 +64,7 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 }
+
 
 
 

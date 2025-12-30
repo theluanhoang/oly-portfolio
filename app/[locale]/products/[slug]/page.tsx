@@ -37,6 +37,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   const allProducts = await getProducts();
   const productData = product as {
     slug: string;
+    title?: string;
     category: string;
     material: string;
     year: string;

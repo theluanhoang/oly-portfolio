@@ -180,6 +180,50 @@
             "grid": "Grid",
             "reload": "Reload",
             "addProduct": "Add Product",
+            "new": {
+                "title": "Create New Product",
+                "step": "Step",
+                "of": "of",
+                "productInfo": "Product Information",
+                "content": "Article Content",
+                "next": "Next →",
+                "back": "← Back",
+                "save": "Save Product",
+                "saving": "Saving...",
+                "success": "Product saved successfully!",
+                "error": "Failed to save product",
+                "thumbnail": "Thumbnail Image"
+            },
+            "fields": {
+                "title": "Product Name",
+                "slug": "Slug",
+                "category": "Category",
+                "material": "Material",
+                "year": "Year",
+                "descriptions": "Descriptions",
+                "descriptionPlaceholder": "Enter description...",
+                "addDescription": "Add Description",
+                "selectCategory": "Select category",
+                "selectMaterial": "Select material"
+            },
+            "categories": {
+                "furniture": "Furniture",
+                "architecture": "Architecture",
+                "interior": "Interior",
+                "construction": "Construction"
+            },
+            "materials": {
+                "wood": "Wood",
+                "metal": "Metal",
+                "glass": "Glass",
+                "plastic": "Plastic",
+                "fabric": "Fabric",
+                "concrete": "Concrete",
+                "stone": "Stone",
+                "ceramic": "Ceramic",
+                "composite": "Composite",
+                "other": "Other"
+            },
             "filterDialog": {
                 "title": "Filters",
                 "category": "Category",
