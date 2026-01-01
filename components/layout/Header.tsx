@@ -92,6 +92,9 @@ export default function Header({ isFixed = false }: HeaderProps) {
               <Link href="/admin/users" className="text-[12px] font-normal leading-normal text-black">
                 {tNav('users')}
               </Link>
+              <Link href="/admin/translations" className="text-[12px] font-normal leading-normal text-black">
+                {tNav('translations')}
+              </Link>
             </nav>
 
             <div className="flex items-center gap-4">

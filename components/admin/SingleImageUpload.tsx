@@ -231,5 +231,3 @@ export default function SingleImageUpload({
     </div>
   );
 }
-
-

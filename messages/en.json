@@ -10,6 +10,7 @@
         "product": "Product",
         "products": "Products",
         "users": "Users",
+        "translations": "Translations",
         "about": "About",
         "contact": "Contact",
         "search": "Search"
@@ -342,6 +343,34 @@
                 "validationLowercase": "Password must contain at least one lowercase letter",
                 "validationNumber": "Password must contain at least one number",
                 "validationSpecialChar": "Password must contain at least one special character"
+            }
+        },
+        "translations": {
+            "title": "Manage Translations",
+            "subtitle": "Manage and edit multilingual translations",
+            "searchPlaceholder": "Search translations...",
+            "allLocales": "All languages",
+            "allNamespaces": "All namespaces",
+            "syncFromJson": "Sync from JSON",
+            "syncing": "Syncing...",
+            "importJson": "Import JSON",
+            "importing": "Importing...",
+            "exportJson": "Export JSON",
+            "exporting": "Exporting...",
+            "loading": "Loading...",
+            "noTranslations": "No translations found",
+            "save": "Save",
+            "saving": "Saving...",
+            "cancel": "Cancel",
+            "edit": "Edit",
+            "otherNamespace": "Other",
+            "error": {
+                "fetchFailed": "Failed to fetch translations",
+                "updateFailed": "Failed to update translation",
+                "saveFailed": "Failed to save",
+                "importFailed": "Failed to import",
+                "exportFailed": "Failed to export",
+                "syncFailed": "Failed to sync"
             }
         }
     },

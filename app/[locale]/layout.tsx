@@ -28,17 +28,47 @@ const mulish = localFont({
   display: "swap",
 });
 
+const DEFAULT_TITLE = 'OLY Studio - Portfolio';
+const DEFAULT_DESCRIPTION = 'OLY Studio portfolio showcasing architectural projects and design works';
 
-export const metadata: Metadata = {
-  title: "OLY Studio - Portfolio",
-  description: "OLY Studio portfolio showcasing architectural projects and design works",
-};
-
-export const dynamic = 'force-dynamic';
 interface LocaleLayoutProps {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ locale: string }> }
+): Promise<Metadata> {
+  try {
+    const { locale } = await params;
+    const messages = await getMessages({ locale });
+    
+    let siteTitle: string | undefined;
+    let siteDescription: string | undefined;
+    
+    if (messages.Common && typeof messages.Common === 'object' && !Array.isArray(messages.Common)) {
+      const common = messages.Common as Record<string, unknown>;
+      if ('siteTitle' in common && typeof common.siteTitle === 'string') {
+        siteTitle = common.siteTitle;
+      }
+      if ('siteDescription' in common && typeof common.siteDescription === 'string') {
+        siteDescription = common.siteDescription;
+      }
+    }
+    
+    return {
+      title: siteTitle || DEFAULT_TITLE,
+      description: siteDescription || DEFAULT_DESCRIPTION,
+    };
+  } catch {
+    return {
+      title: DEFAULT_TITLE,
+      description: DEFAULT_DESCRIPTION,
+    };
+  }
+}
+
+export const dynamic = 'force-dynamic';
 
 export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
   const { locale } = await params;
@@ -48,14 +78,11 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   }
 
   await initAdmin();
-
   const messages = await getMessages();
 
   return (
     <html lang={locale}>
-      <body
-        className={`${montserrat.variable} antialiased`}
-      >
+      <body className={`${montserrat.variable} antialiased`}>
         <MapPreconnect />
         <SessionProvider>
           <NextIntlClientProvider messages={messages}>
@@ -68,4 +95,3 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
     </html>
   );
 }
-

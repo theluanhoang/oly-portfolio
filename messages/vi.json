@@ -10,6 +10,7 @@
         "product": "Sản phẩm",
         "products": "Sản phẩm",
         "users": "Người dùng",
+        "translations": "Bản dịch",
         "about": "Giới thiệu",
         "contact": "Liên hệ",
         "search": "Tìm kiếm"
@@ -342,6 +343,34 @@
                 "validationLowercase": "Mật khẩu phải chứa ít nhất một chữ thường",
                 "validationNumber": "Mật khẩu phải chứa ít nhất một số",
                 "validationSpecialChar": "Mật khẩu phải chứa ít nhất một ký tự đặc biệt"
+            }
+        },
+        "translations": {
+            "title": "Quản Lý Translations",
+            "subtitle": "Quản lý và chỉnh sửa các bản dịch đa ngôn ngữ",
+            "searchPlaceholder": "Tìm kiếm translations...",
+            "allLocales": "Tất cả ngôn ngữ",
+            "allNamespaces": "Tất cả namespace",
+            "syncFromJson": "Đồng bộ từ JSON",
+            "syncing": "Đang đồng bộ...",
+            "importJson": "Import JSON",
+            "importing": "Đang import...",
+            "exportJson": "Export JSON",
+            "exporting": "Đang export...",
+            "loading": "Đang tải...",
+            "noTranslations": "Không có translations nào",
+            "save": "Lưu",
+            "saving": "Đang lưu...",
+            "cancel": "Hủy",
+            "edit": "Chỉnh sửa",
+            "otherNamespace": "Other",
+            "error": {
+                "fetchFailed": "Không thể tải translations",
+                "updateFailed": "Không thể cập nhật translation",
+                "saveFailed": "Không thể lưu",
+                "importFailed": "Không thể import",
+                "exportFailed": "Không thể export",
+                "syncFailed": "Không thể đồng bộ"
             }
         }
     },
