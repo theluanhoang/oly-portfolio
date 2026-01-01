@@ -235,6 +235,14 @@
                 "error": "Không thể lưu sản phẩm",
                 "thumbnail": "Ảnh Đại Diện"
             },
+            "edit": {
+                "title": "Chỉnh Sửa Sản Phẩm",
+                "loading": "Đang tải sản phẩm...",
+                "updating": "Đang cập nhật...",
+                "update": "Cập Nhật Sản Phẩm",
+                "success": "Sản phẩm đã được cập nhật thành công!",
+                "error": "Không thể cập nhật sản phẩm"
+            },
             "fields": {
                 "title": "Tên sản phẩm",
                 "slug": "Slug",

@@ -166,7 +166,7 @@ export default function AdminProductsPage() {
             endItem={endItem}
             onPageChange={handlePageChange}
             onDeleteClick={handleDeleteClick}
-            onEditClick={(product) => alert(`Edit product: ${product.slug}`)}
+            onEditClick={(product) => router.push(`/admin/products/${encodeURIComponent(product.slug)}/edit`)}
             sortField={sortField}
             sortDirection={sortDirection}
             onSortChange={handleSortChange}
@@ -183,7 +183,7 @@ export default function AdminProductsPage() {
             endItem={endItem}
             onPageChange={handlePageChange}
             onDeleteClick={handleDeleteClick}
-            onEditClick={(product) => alert(`Edit product: ${product.slug}`)}
+            onEditClick={(product) => router.push(`/admin/products/${encodeURIComponent(product.slug)}/edit`)}
           />
         )}
       </div>

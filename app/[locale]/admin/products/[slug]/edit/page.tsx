@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useParams } from 'next/navigation';
 import { useForm, FormProvider, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
@@ -16,10 +17,13 @@ import { generateSlug } from '@/lib/utils';
 import { PRODUCT_CATEGORIES, PRODUCT_MATERIALS } from '@/lib/constants/productConstants';
 import { Plus, X } from 'lucide-react';
 
-export default function NewProductPage() {
-  const t = useTranslations('Admin.products');
+export default function EditProductPage() {
+  const params = useParams();
   const router = useRouter();
+  const slug = typeof params.slug === 'string' ? params.slug : '';
+  const t = useTranslations('Admin.products');
   const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -39,7 +43,7 @@ export default function NewProductPage() {
     mode: 'onBlur',
   });
 
-  const { handleSubmit, trigger, setValue, watch, formState: { errors }, control } = methods;
+  const { handleSubmit, trigger, setValue, watch, formState: { errors }, control, reset } = methods;
   const content = watch('content');
   const title = watch('title');
   const thumbnail = watch('thumbnail');
@@ -50,6 +54,41 @@ export default function NewProductPage() {
     control: control as any,
     name: 'descriptions',
   });
+
+  useEffect(() => {
+    async function loadProduct() {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/products/${encodeURIComponent(slug)}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch product');
+        }
+        const product = await response.json();
+        
+        reset({
+          title: product.title || '',
+          slug: product.slug || '',
+          category: product.category || '',
+          material: product.material || '',
+          year: product.year || '',
+          thumbnail: product.thumbnail || '',
+          descriptions: product.descriptions || [],
+          content: product.content || '',
+        });
+
+        previousTitleRef.current = product.title || '';
+      } catch (error) {
+        console.error('Error loading product:', error);
+        setSaveMessage({ type: 'error', text: t('edit.error') });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (slug) {
+      loadProduct();
+    }
+  }, [slug, reset, t]);
 
   useEffect(() => {
     if (title && title !== previousTitleRef.current) {
@@ -103,8 +142,8 @@ export default function NewProductPage() {
         content: data.content || '',
       };
       
-      const response = await fetch('/api/products/save', {
-        method: 'POST',
+      const response = await fetch(`/api/products/${encodeURIComponent(slug)}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -122,38 +161,35 @@ export default function NewProductPage() {
       }
       
       if (!response.ok) {
-        const errorMessage = result.error || t('new.error');
+        const errorMessage = result.error || t('edit.error');
         const errorDetails = result.details ? `\nDetails: ${JSON.stringify(result.details, null, 2)}` : '';
         throw new Error(`${errorMessage}${errorDetails}`);
       }
       
-      setSaveMessage({ type: 'success', text: t('new.success') });
-      
-      methods.reset({
-        title: '',
-        slug: '',
-        category: '',
-        material: '',
-        year: '',
-        thumbnail: '',
-        descriptions: [],
-        content: '',
-      });
-      setCurrentStep(1);
+      setSaveMessage({ type: 'success', text: t('edit.success') });
       
       setTimeout(() => {
-        setSaveMessage(null);
         router.push('/admin/products');
-      }, 2000);
+      }, 1500);
       
     } catch (error) {
-      console.error('Error saving product:', error);
-      const errorMessage = error instanceof Error ? error.message : t('new.error');
+      console.error('Error updating product:', error);
+      const errorMessage = error instanceof Error ? error.message : t('edit.error');
       setSaveMessage({ type: 'error', text: errorMessage });
     } finally {
       setIsSaving(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-[#666]">{t('edit.loading')}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -161,7 +197,7 @@ export default function NewProductPage() {
 
       <div className="max-w-5xl mx-auto py-12 px-8 md:px-4">
         <PageHeader
-          title={t('new.title')}
+          title={t('edit.title')}
           subtitle={`${t('new.step')} ${currentStep} ${t('new.of')} 2`}
         />
 
@@ -311,7 +347,7 @@ export default function NewProductPage() {
                     {t('new.back')}
                   </Button>
                   <Button type="submit" disabled={isSaving}>
-                    {isSaving ? t('new.saving') : t('new.save')}
+                    {isSaving ? t('edit.updating') : t('edit.update')}
                   </Button>
                 </div>
               </div>

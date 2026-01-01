@@ -235,6 +235,14 @@
                 "error": "Failed to save product",
                 "thumbnail": "Thumbnail Image"
             },
+            "edit": {
+                "title": "Edit Product",
+                "loading": "Loading product...",
+                "updating": "Updating...",
+                "update": "Update Product",
+                "success": "Product updated successfully!",
+                "error": "Failed to update product"
+            },
             "fields": {
                 "title": "Product Name",
                 "slug": "Slug",
