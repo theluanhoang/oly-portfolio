@@ -1,9 +1,9 @@
-name: Deploy to Production (EC2)
+name: Deploy to Hostinger
 
 on:
   push:
     branches:
-      - prod-test
+      - prod
   workflow_dispatch:
 
 env:
@@ -12,7 +12,7 @@ env:
 
 jobs:
   build-and-deploy:
-    name: Build and Deploy to EC2
+    name: Build and Deploy to Hostinger
     runs-on: ubuntu-latest
     environment: production
 
@@ -79,25 +79,23 @@ jobs:
           ENVEOF
 
       # =====================
-      # Copy minimal deploy files to EC2
+      # Copy minimal deploy files to Hostinger
       # =====================
-      - name: Copy docker files to EC2
-        env:
-          RSYNC_RSH: ssh -i /tmp/rsync_key -o StrictHostKeyChecking=no -p ${{ secrets.EC2_SSH_PORT || 22 }}
+      - name: Copy docker files to Hostinger
         run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" > /tmp/rsync_key
-          chmod 600 /tmp/rsync_key
-          rsync -az --info=progress2 \
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          sshpass -p "${{ secrets.HOSTINGER_SSH_PASSWORD }}" rsync -az --info=progress2 \
+            -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.HOSTINGER_SSH_PORT || 22 }}" \
             docker-compose.prod.yml \
             docker \
             deploy \
             .env \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/app/
-          rm -f /tmp/rsync_key
+            root@${{ secrets.HOSTINGER_HOST }}:/root/app/
 
 
       # =====================
-      # Deploy on EC2
+      # Deploy on Hostinger
       # =====================
       - name: Validate deploy image tag
         run: |
@@ -108,18 +106,18 @@ jobs:
           fi
           echo "Using image: ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }}"
 
-      - name: Deploy to EC2
+      - name: Deploy to Hostinger
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: root
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
           command_timeout: 45m
           script: |
             set -e
 
-            APP_DIR="/home/${{ secrets.EC2_USER }}/app"
+            APP_DIR="/root/app"
             APP_IMAGE="${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }}"
             export APP_IMAGE
 
@@ -136,7 +134,7 @@ jobs:
               echo "Docker Compose (v2) not found. Please install it before deploying."
               exit 1
             fi
-            sudo systemctl start docker || true
+            systemctl start docker || true
 
             echo "Loading environment variables..."
             if [ ! -f .env ]; then
@@ -149,7 +147,7 @@ jobs:
               mkdir -p public/uploads
             fi
             if [ -d "public/uploads" ]; then
-              chmod 777 public/uploads 2>/dev/null || sudo chmod 777 public/uploads 2>/dev/null || true
+              chmod 777 public/uploads 2>/dev/null || chmod 777 public/uploads 2>/dev/null || true
               echo "Uploads directory ready"
             fi
 
@@ -166,10 +164,10 @@ jobs:
       - name: Health Check
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: root
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
           script: |
             max_attempts=20
             attempt=0
@@ -190,13 +188,13 @@ jobs:
         if: success()
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: root
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
           script: |
             set -e
-            APP_DIR="/home/${{ secrets.EC2_USER }}/app"
+            APP_DIR="/root/app"
             cd "$APP_DIR"
             
             # Make cleanup script executable
@@ -237,3 +235,4 @@ jobs:
           else
             echo "❌ Deployment failed!"
           fi
+
