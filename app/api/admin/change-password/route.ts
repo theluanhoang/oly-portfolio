@@ -11,7 +11,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const session = await getServerSession(authOptions);
     
-    const userId = (session?.user as { id?: string })?.id;
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please log in to change your password.' },
+        { status: 401 }
+      );
+    }
+    
+    const userId = (session.user as { id?: string })?.id;
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized. Please log in to change your password.' },

@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, checkAdminAuth } from '@/lib/auth';
 import { invalidateCache } from '@/i18n/request';
 import { revalidatePath } from 'next/cache';
 
@@ -59,8 +59,12 @@ function detectMultiLocale(messages: Record<string, unknown>): boolean {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const adminCheck = await checkAdminAuth(session);
+    if (adminCheck) {
+      return NextResponse.json(
+        { error: adminCheck.error },
+        { status: adminCheck.status }
+      );
     }
 
     const formData = await request.formData();

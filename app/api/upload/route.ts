@@ -2,9 +2,20 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions, checkAdminAuth } from '@/lib/auth';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    const session = await getServerSession(authOptions);
+    const adminCheck = await checkAdminAuth(session);
+    if (adminCheck) {
+      return NextResponse.json(
+        { error: adminCheck.error },
+        { status: adminCheck.status }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file');
 

@@ -1,9 +1,20 @@
 import { prisma } from '@/lib/prisma';
 import { projectSchema } from '@/lib/validations/projectSchema';
 import type { NextRequest } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions, checkAdminAuth } from '@/lib/auth';
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
+    const session = await getServerSession(authOptions);
+    const adminCheck = await checkAdminAuth(session);
+    if (adminCheck) {
+      return Response.json(
+        { error: adminCheck.error },
+        { status: adminCheck.status }
+      );
+    }
+
     const projectData = await request.json();
     
     if (!projectData.slug || !projectData.title) {

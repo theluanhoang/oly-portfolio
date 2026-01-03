@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions, checkAdminAuth } from '@/lib/auth';
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -28,6 +30,15 @@ export async function GET(request: Request, { params }: RouteParams): Promise<Re
 
 export async function PUT(request: Request, { params }: RouteParams): Promise<Response> {
   try {
+    const session = await getServerSession(authOptions);
+    const adminCheck = await checkAdminAuth(session);
+    if (adminCheck) {
+      return Response.json(
+        { error: adminCheck.error },
+        { status: adminCheck.status }
+      );
+    }
+
     const { slug } = await params;
     const projectData = await request.json();
     
@@ -84,6 +95,15 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
 
 export async function PATCH(request: Request, { params }: RouteParams): Promise<Response> {
   try {
+    const session = await getServerSession(authOptions);
+    const adminCheck = await checkAdminAuth(session);
+    if (adminCheck) {
+      return Response.json(
+        { error: adminCheck.error },
+        { status: adminCheck.status }
+      );
+    }
+
     const { slug } = await params;
     const updateData = await request.json();
     
@@ -130,6 +150,15 @@ export async function PATCH(request: Request, { params }: RouteParams): Promise<
 
 export async function DELETE(request: Request, { params }: RouteParams): Promise<Response> {
   try {
+    const session = await getServerSession(authOptions);
+    const adminCheck = await checkAdminAuth(session);
+    if (adminCheck) {
+      return Response.json(
+        { error: adminCheck.error },
+        { status: adminCheck.status }
+      );
+    }
+
     const { slug } = await params;
     const deleted = await prisma.project.delete({
       where: { slug },

@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, checkAdminAuth } from '@/lib/auth';
 import { createWriteStream } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -68,8 +68,12 @@ function createZipArchive(messages: Record<string, Record<string, unknown>>): Pr
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const adminCheck = await checkAdminAuth(session);
+    if (adminCheck) {
+      return NextResponse.json(
+        { error: adminCheck.error },
+        { status: adminCheck.status }
+      );
     }
 
     const { searchParams } = new URL(request.url);

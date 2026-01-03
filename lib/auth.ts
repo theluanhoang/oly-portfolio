@@ -88,3 +88,27 @@ export const authOptions = {
 
 export default NextAuth(authOptions);
 
+/**
+ * Kiểm tra xem người dùng đã đăng nhập và có role admin hay không
+ * @param session - Session từ getServerSession
+ * @returns Object chứa thông tin lỗi nếu không phải admin, null nếu là admin
+ */
+export async function checkAdminAuth(session: Session | null): Promise<{ error: string; status: number } | null> {
+  if (!session) {
+    return {
+      error: 'Unauthorized. Please log in to access this resource.',
+      status: 401,
+    };
+  }
+
+  const userRole = (session.user as { role?: string })?.role;
+  if (userRole !== 'admin') {
+    return {
+      error: 'Forbidden. Admin role required to access this resource.',
+      status: 403,
+    };
+  }
+
+  return null;
+}
+

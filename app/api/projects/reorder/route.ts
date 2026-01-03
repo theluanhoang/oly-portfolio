@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions, checkAdminAuth } from '@/lib/auth';
 
 interface ReorderRequest {
   updates: Array<{
@@ -9,6 +11,15 @@ interface ReorderRequest {
 
 export async function POST(request: Request): Promise<Response> {
   try {
+    const session = await getServerSession(authOptions);
+    const adminCheck = await checkAdminAuth(session);
+    if (adminCheck) {
+      return Response.json(
+        { error: adminCheck.error },
+        { status: adminCheck.status }
+      );
+    }
+
     const body: ReorderRequest = await request.json();
     
     if (!body.updates || !Array.isArray(body.updates) || body.updates.length === 0) {
