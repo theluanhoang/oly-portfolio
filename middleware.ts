@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { applySecurityHeaders } from '@/lib/securityHeaders';
+import { checkApiRateLimit } from '@/lib/rateLimit';
 import { routing } from './i18n/routing';
 
 const intlMiddleware = createMiddleware(routing);
@@ -10,9 +11,51 @@ const intlMiddleware = createMiddleware(routing);
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Handle API routes (no locale prefix)
   if (pathname.startsWith('/api')) {
+    if (pathname === '/api/health') {
+      const response = NextResponse.next();
+      return applySecurityHeaders(response);
+    }
+
+    const method = request.method.toUpperCase();
+    const isGet = method === 'GET';
+    const isAuth = pathname.startsWith('/api/auth');
+    const rateLimitResult = checkApiRateLimit(request);
+    
+    let maxLimit: string;
+    if (isAuth) {
+      maxLimit = '30';
+    } else if (isGet) {
+      maxLimit = '300';
+    } else {
+      maxLimit = '100';
+    }
+    
+    if (!rateLimitResult.allowed) {
+      const response = NextResponse.json(
+        {
+          error: 'Too many requests',
+          message: rateLimitResult.message || 'Rate limit exceeded. Please try again later.',
+          retryAfter: rateLimitResult.retryAfter,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': rateLimitResult.retryAfter?.toString() || '900',
+            'X-RateLimit-Limit': maxLimit,
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': rateLimitResult.retryAfter
+              ? new Date(Date.now() + rateLimitResult.retryAfter * 1000).toISOString()
+              : new Date().toISOString(),
+          },
+        }
+      );
+      return applySecurityHeaders(response);
+    }
+
     const response = NextResponse.next();
+    response.headers.set('X-RateLimit-Limit', maxLimit);
+    response.headers.set('X-RateLimit-Remaining', rateLimitResult.remainingAttempts.toString());
     return applySecurityHeaders(response);
   }
 
@@ -37,18 +80,14 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Handle locale-based routing (includes admin routes)
   const response = intlMiddleware(request);
   return applySecurityHeaders(response);
 }
 
 export const config = {
   matcher: [
-    // Match all pathnames except for
-    // - … if they start with `/api`, `/_next` or `/_vercel`
-    // - … the ones containing a dot (e.g. `favicon.ico`)
-    '/((?!api|_next|_vercel|.*\\..*).*)',
-    // Also match the root path
+    '/api/:path*',
+    '/((?!_next|_vercel|.*\\..*).*)',
     '/',
   ],
 };
