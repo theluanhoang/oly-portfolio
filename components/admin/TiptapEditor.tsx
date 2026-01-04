@@ -19,12 +19,13 @@ import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Extension, type CommandProps, type Editor } from '@tiptap/core';
-import { DOMParser, Fragment, type Node as PMNode } from 'prosemirror-model';
+import { Fragment, type Node as PMNode } from 'prosemirror-model';
 import { TextSelection } from 'prosemirror-state';
 import type { EditorView, NodeView } from 'prosemirror-view';
 import { AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo2, Redo2, List, ListOrdered, Highlighter, X, Type, ChevronDown, Link as LinkIcon, Menu, Search, Copy, Pencil, Unlink, Image as ImageIcon, Upload, Globe, Grid3x3, LayoutGrid, Columns } from 'lucide-react';
 import { Iframe, type IframeAttributes } from './Iframe';
 import { ImageGallery } from './ImageGallery';
+import { ImageToolbar } from './ImageToolbar';
 
 const COLOR_PALETTE = [
   '#000000', '#404040', '#808080', '#C0C0C0', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF',
@@ -36,6 +37,10 @@ const COLOR_PALETTE = [
   '#654321', '#5C4033', '#8B4513', '#556B2F', '#2F4F2F', '#1C1C1C', '#000080', '#4B0082', '#6A0DAD', '#800020',
   '#3D2817', '#2F1B14', '#3D2817', '#2F4F2F', '#1C3A1C', '#0F1F1F', '#000050', '#2D1B4E', '#4B0D4B', '#4B0000',
 ];
+
+const generateImageId = (): string => {
+  return `img-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+};
 
 interface ColorPickerProps {
   icon: React.ReactNode;
@@ -362,23 +367,179 @@ const ResizableImage = Image.extend({
           };
         },
       },
+      align: {
+        default: null,
+        parseHTML: (element) => {
+          const parent = element.parentElement;
+          if (!parent) return null;
+          const textAlign = parent.style.textAlign || parent.getAttribute('data-align');
+          if (textAlign) return textAlign;
+          // Check for float
+          const float = parent.style.float || window.getComputedStyle(parent).float;
+          if (float === 'left') return 'float-left';
+          if (float === 'right') return 'float-right';
+          return null;
+        },
+        renderHTML: (attributes) => {
+          if (!attributes.align) {
+            return {};
+          }
+          return {};
+        },
+      },
+      alt: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('alt'),
+        renderHTML: (attributes) => {
+          if (!attributes.alt) {
+            return {};
+          }
+          return {
+            alt: attributes.alt,
+          };
+        },
+      },
+      caption: {
+        default: null,
+        parseHTML: (element) => {
+          const parent = element.parentElement;
+          if (parent) {
+            if (parent.classList.contains('resizable-image-wrapper')) {
+              const captionEl = parent.querySelector('.image-caption');
+              if (captionEl) return captionEl.textContent;
+            }
+            const nextSibling = parent.nextElementSibling;
+            if (nextSibling && nextSibling.classList.contains('image-caption')) {
+              return nextSibling.textContent;
+            }
+          }
+          return null;
+        },
+        renderHTML: () => {
+          return {};
+        },
+      },
+      href: {
+        default: null,
+        parseHTML: (element) => {
+          const parent = element.parentElement;
+          if (parent && parent.tagName === 'A') {
+            return parent.getAttribute('href');
+          }
+          if (parent && parent.classList.contains('resizable-image-wrapper')) {
+            const linkEl = parent.querySelector('a');
+            if (linkEl) return linkEl.getAttribute('href');
+          }
+          return null;
+        },
+        renderHTML: () => {
+          return {};
+        },
+      },
+      id: {
+        default: null,
+        parseHTML: (element) => {
+          const existingId = element.getAttribute('data-image-id') || element.getAttribute('id');
+          if (existingId) {
+            return existingId;
+          }
+          return generateImageId();
+        },
+        renderHTML: (attributes) => {
+          if (!attributes.id) {
+            return {};
+          }
+          return {
+            'data-image-id': attributes.id,
+          };
+        },
+      },
     };
   },
 
-  renderHTML({ HTMLAttributes }) {
+  renderHTML({ HTMLAttributes, node }) {
+    const align = node.attrs.align;
+    const caption = node.attrs.caption;
+    const href = node.attrs.href;
+    const imageId = node.attrs.id;
+    
+    let wrapperStyle = 'position: relative; display: inline-block; max-width: 100%;';
+    let wrapperClass = 'resizable-image-wrapper';
+    
+    // Handle alignment
+    if (align === 'full') {
+      wrapperStyle += ' width: 100%; display: block;';
+      wrapperClass += ' image-align-full';
+    } else if (align === 'center') {
+      wrapperStyle += ' display: block; margin: 0 auto;';
+      wrapperClass += ' image-align-center';
+    } else if (align === 'left') {
+      wrapperStyle += ' display: block;';
+      wrapperClass += ' image-align-left';
+    } else if (align === 'right') {
+      wrapperStyle += ' display: block; margin-left: auto;';
+      wrapperClass += ' image-align-right';
+    } else if (align === 'float-left') {
+      wrapperStyle += ' float: left; margin-right: 1em;';
+      wrapperClass += ' image-align-float-left';
+    } else if (align === 'float-right') {
+      wrapperStyle += ' float: right; margin-left: 1em;';
+      wrapperClass += ' image-align-float-right';
+    }
+    
+    // Build img attributes, ensuring id is included
+    const imgAttrs: Record<string, unknown> = {
+      ...HTMLAttributes,
+      style: `display: block; max-width: 100%; height: auto; ${HTMLAttributes.width ? `width: ${HTMLAttributes.width}px;` : ''} ${HTMLAttributes.height ? `height: ${HTMLAttributes.height}px;` : ''}`,
+    };
+    
+    if (imageId) {
+      imgAttrs['data-image-id'] = imageId;
+    }
+    
+    const imgElement: [string, Record<string, unknown>] = [
+      'img',
+      imgAttrs,
+    ];
+    
+    // Build content array properly
+    const content: unknown[] = [];
+    
+    // Wrap in link if href exists
+    if (href) {
+      content.push([
+        'a',
+        {
+          href: href,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        },
+        imgElement,
+      ]);
+    } else {
+      content.push(imgElement);
+    }
+    
+    // Add caption if exists
+    if (caption) {
+      content.push([
+        'div',
+        {
+          class: 'image-caption',
+          style: 'text-align: center; font-style: italic; color: #666; margin-top: 0.5em; font-size: 0.9em;',
+        },
+        caption,
+      ]);
+    }
+    
     return [
       'span',
       {
-        class: 'resizable-image-wrapper',
-        style: 'position: relative; display: inline-block; max-width: 100%;',
+        class: wrapperClass,
+        style: wrapperStyle,
+        'data-align': align || null,
       },
-      [
-        'img',
-        {
-          ...HTMLAttributes,
-          style: `display: block; max-width: 100%; height: auto; ${HTMLAttributes.width ? `width: ${HTMLAttributes.width}px;` : ''} ${HTMLAttributes.height ? `height: ${HTMLAttributes.height}px;` : ''}`,
-        },
-      ],
+      ...content,
     ];
   },
 
@@ -392,23 +553,59 @@ const ResizableImage = Image.extend({
       dom.style.height = 'fit-content';
       dom.style.alignSelf = 'start';
 
+      let imageId = node.attrs.id;
+      
+      if (!imageId) {
+        const newId = generateImageId();
+        imageId = newId;
+        setTimeout(() => {
+          const pos = getPos();
+          if (typeof pos === 'number') {
+            const { tr, doc } = view.state;
+            const nodeAtPos = doc.nodeAt(pos);
+            if (nodeAtPos && nodeAtPos.type.name === 'image' && !nodeAtPos.attrs.id) {
+              tr.setNodeMarkup(pos, undefined, {
+                ...nodeAtPos.attrs,
+                id: newId,
+              });
+              view.dispatch(tr);
+            }
+          }
+        }, 0);
+      }
+      
       const img = document.createElement('img');
       img.src = node.attrs.src;
       img.alt = node.attrs.alt || '';
+      if (imageId) {
+        img.setAttribute('data-image-id', imageId);
+      }
       img.style.display = 'block';
       img.style.maxWidth = '100%';
       img.style.height = 'auto';
       img.draggable = true;
+      
+      const imgWrapper = document.createElement('div');
+      imgWrapper.style.position = 'relative';
+      imgWrapper.style.display = 'inline-block';
+      imgWrapper.appendChild(img);
       
       let originalWidth = 0;
       let originalHeight = 0;
       let aspectRatio = 1;
       
       const updateImageSize = () => {
+        const currentAlign = node.attrs.align;
+        const shouldPreserveAlignmentWidth = currentAlign === 'left' || currentAlign === 'center' || currentAlign === 'right' || currentAlign === 'full';
+        
         if (node.attrs.width) {
           const width = typeof node.attrs.width === 'number' ? node.attrs.width : parseInt(node.attrs.width);
           img.style.width = `${width}px`;
-          dom.style.width = `${width}px`;
+          imgWrapper.style.width = `${width}px`;
+          // Only set dom width if alignment doesn't require 100% width
+          if (!shouldPreserveAlignmentWidth) {
+            dom.style.width = `${width}px`;
+          }
           originalWidth = width;
         }
         if (node.attrs.height) {
@@ -428,7 +625,11 @@ const ResizableImage = Image.extend({
             originalHeight = img.naturalHeight;
             aspectRatio = originalWidth / originalHeight;
             if (img.style.width) {
-              dom.style.width = img.style.width;
+              imgWrapper.style.width = img.style.width;
+              // Only set dom width if alignment doesn't require 100% width
+              if (!shouldPreserveAlignmentWidth) {
+                dom.style.width = img.style.width;
+              }
             }
             dom.style.height = 'fit-content';
             setTimeout(() => {
@@ -440,7 +641,56 @@ const ResizableImage = Image.extend({
       
       updateImageSize();
 
-      dom.appendChild(img);
+      // Handle alignment - initial setup will be updated by updateCaptionAndAlignment
+      // But we set basic styles here for immediate display
+      const align = node.attrs.align;
+      if (align === 'full') {
+        dom.style.width = '100%';
+        dom.style.display = 'block';
+      } else if (align === 'center' || align === 'left' || align === 'right') {
+        dom.style.width = '100%';
+        dom.style.display = 'block';
+        dom.style.textAlign = align;
+      } else if (align === 'float-left') {
+        dom.style.float = 'left';
+        dom.style.marginRight = '1em';
+        dom.style.display = 'inline-block';
+      } else if (align === 'float-right') {
+        dom.style.float = 'right';
+        dom.style.marginLeft = '1em';
+        dom.style.display = 'inline-block';
+      }
+
+      // Handle link wrapper
+      let imageContainer: HTMLElement = imgWrapper;
+      const href = node.attrs.href;
+      if (href) {
+        const link = document.createElement('a');
+        link.href = href as string;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.style.display = 'inline-block';
+        link.appendChild(imgWrapper);
+        imageContainer = link;
+      } else {
+        imageContainer = imgWrapper;
+      }
+
+      dom.appendChild(imageContainer);
+
+      // Handle caption
+      const caption = node.attrs.caption;
+      if (caption) {
+        const captionEl = document.createElement('div');
+        captionEl.className = 'image-caption';
+        captionEl.style.textAlign = 'center';
+        captionEl.style.fontStyle = 'italic';
+        captionEl.style.color = '#666';
+        captionEl.style.marginTop = '0.5em';
+        captionEl.style.fontSize = '0.9em';
+        captionEl.textContent = caption as string;
+        dom.appendChild(captionEl);
+      }
 
       let isResizing = false;
       let isDragging = false;
@@ -450,6 +700,14 @@ const ResizableImage = Image.extend({
       let startWidth = 0;
       let startHeight = 0;
       let dragStartPos: number | undefined = undefined;
+      let lastMovedToPos: number | null = null; 
+      let mouseDownPos: { x: number; y: number } | null = null;
+      let pendingInsertPos: number | null = null;
+      let dragPreviewNode: PMNode | null = null;
+      let dragPreviewElement: HTMLElement | null = null;
+      let lastMouseEvent: MouseEvent | null = null;
+      let wasCtrlClick: boolean = false; // Track if the last click was with Ctrl/Cmd
+      const DRAG_THRESHOLD = 5;
 
       const getCursorForPosition = (position: string): string => {
         const cursors: Record<string, string> = {
@@ -498,7 +756,7 @@ const ResizableImage = Image.extend({
           resizeHandle = position;
           startX = e.clientX;
           startY = e.clientY;
-          const rect = dom.getBoundingClientRect();
+          const rect = img.getBoundingClientRect();
           startWidth = rect.width;
           startHeight = rect.height;
           document.addEventListener('mousemove', handleMouseMove);
@@ -554,7 +812,15 @@ const ResizableImage = Image.extend({
 
         img.style.width = `${newWidth}px`;
         img.style.height = `${newHeight}px`;
-        dom.style.width = `${newWidth}px`;
+        imgWrapper.style.width = `${newWidth}px`;
+        
+        // Preserve alignment during resize - only set dom width if alignment is not left/center/right/full
+        // For left/center/right/full alignment, we need dom to keep width: 100% for alignment to work
+        const currentAlign = node.attrs.align;
+        if (currentAlign !== 'left' && currentAlign !== 'center' && currentAlign !== 'right' && currentAlign !== 'full') {
+          dom.style.width = `${newWidth}px`;
+        }
+        // Don't set dom.style.width for left/center/right/full to preserve alignment
         dom.style.height = 'fit-content';
         
         if (img.style.outline) {
@@ -572,7 +838,15 @@ const ResizableImage = Image.extend({
           const width = parseInt(img.style.width);
           const height = parseInt(img.style.height);
 
-          dom.style.width = `${width}px`;
+          imgWrapper.style.width = `${width}px`;
+          
+          // Preserve alignment - only set dom width if alignment doesn't require 100% width
+          const currentAlign = node.attrs.align;
+          const shouldPreserveAlignmentWidth = currentAlign === 'left' || currentAlign === 'center' || currentAlign === 'right' || currentAlign === 'full';
+          if (!shouldPreserveAlignmentWidth) {
+            dom.style.width = `${width}px`;
+          }
+          // For left/center/right/full alignment, dom width should remain 100% (set by updateCaptionAndAlignment)
           dom.style.height = 'fit-content';
 
           const { tr } = view.state;
@@ -583,9 +857,12 @@ const ResizableImage = Image.extend({
           });
           view.dispatch(tr);
           
+          // After dispatch, updateCaptionAndAlignment will be called automatically via node view update()
+          // But we also call it here to ensure alignment is preserved immediately
           setTimeout(() => {
             updateSelectionStyle();
             updateHandlesPosition();
+            updateCaptionAndAlignment(); // Restore alignment styles after resize
           }, 10);
         }
 
@@ -602,7 +879,7 @@ const ResizableImage = Image.extend({
         const handle = createResizeHandle(pos);
         handle.style.display = 'none';
         handles.push(handle);
-        dom.appendChild(handle);
+        imgWrapper.appendChild(handle);
       });
 
       const updateHandlesPosition = () => {
@@ -661,16 +938,34 @@ const ResizableImage = Image.extend({
             view.dispatch(tr);
             showHandles();
             
-            if (e.ctrlKey || e.metaKey) {
+            wasCtrlClick = e.ctrlKey || e.metaKey;
+            
+            if (wasCtrlClick) {
+              // Multi-select: toggle this image in/out of selection
               const event = new CustomEvent('toggleImageSelection', { detail: { pos, mouseX: e.clientX, mouseY: e.clientY } });
               document.dispatchEvent(event);
             } else {
-              const event = new CustomEvent('selectImage', { detail: { pos, mouseX: e.clientX, mouseY: e.clientY } });
+              // Single select: replace current selection with this image only
+              const event = new CustomEvent('selectImage', { detail: { pos, mouseX: e.clientX, mouseY: e.clientY, isMultiSelect: false } });
               document.dispatchEvent(event);
             }
             
             dragStartPos = pos;
-            isDragging = true;
+            lastMovedToPos = null;
+            pendingInsertPos = null;
+            mouseDownPos = { x: e.clientX, y: e.clientY };
+            isDragging = false;
+            // Capture the node with all its attributes at mousedown
+            // This ensures we preserve alignment and other attributes during drag
+            dragPreviewNode = nodeAtPos;
+            
+            console.log('[DragReorder] MouseDown:', {
+              pos,
+              imageId: nodeAtPos?.attrs?.id,
+              imageSrc: nodeAtPos?.attrs?.src?.substring(0, 50),
+              mousePos: { x: e.clientX, y: e.clientY },
+              wasCtrlClick,
+            });
           }
         }
       };
@@ -682,6 +977,7 @@ const ResizableImage = Image.extend({
           const pos = getPos();
           if (typeof pos === 'number') {
             dragStartPos = pos;
+            lastMovedToPos = null; // Reset when starting new drag
             isDragging = true;
             if (e.dataTransfer) {
               e.dataTransfer.effectAllowed = 'move';
@@ -717,27 +1013,737 @@ const ResizableImage = Image.extend({
         }
       };
 
+      let lastMoveTime = 0;
+      const MOVE_THROTTLE = 16;
+
+      const createDragPreview = (): HTMLElement => {
+        if (dragPreviewElement) {
+          dragPreviewElement.remove();
+        }
+
+        const preview = img.cloneNode(true) as HTMLImageElement;
+        
+        const imgWidth = img.naturalWidth || img.offsetWidth || 200;
+        const imgHeight = img.naturalHeight || img.offsetHeight || 200;
+        
+        const maxPreviewSize = 300;
+        let previewWidth = imgWidth;
+        let previewHeight = imgHeight;
+        
+        if (previewWidth > maxPreviewSize || previewHeight > maxPreviewSize) {
+          const ratio = Math.min(maxPreviewSize / previewWidth, maxPreviewSize / previewHeight);
+          previewWidth = previewWidth * ratio;
+          previewHeight = previewHeight * ratio;
+        }
+        
+        preview.style.position = 'fixed';
+        preview.style.pointerEvents = 'none';
+        preview.style.zIndex = '10000';
+        preview.style.opacity = '0.8';
+        preview.style.transform = 'rotate(5deg)';
+        preview.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
+        preview.style.border = '2px dashed #3b82f6';
+        preview.style.borderRadius = '4px';
+        preview.style.width = `${previewWidth}px`;
+        preview.style.height = `${previewHeight}px`;
+        preview.style.objectFit = 'contain';
+        preview.style.backgroundColor = 'white';
+        preview.style.padding = '4px';
+        
+        document.body.appendChild(preview);
+        dragPreviewElement = preview;
+        return preview;
+      };
+
+      const updateDragPreviewPosition = (e: MouseEvent) => {
+        if (dragPreviewElement) {
+          const offsetX = 10;
+          const offsetY = 10;
+          dragPreviewElement.style.left = `${e.clientX + offsetX}px`;
+          dragPreviewElement.style.top = `${e.clientY + offsetY}px`;
+        }
+      };
+
+      const removeDragPreview = () => {
+        if (dragPreviewElement) {
+          dragPreviewElement.remove();
+          dragPreviewElement = null;
+        }
+      };
+
       const handleDocumentMouseMove = (e: MouseEvent) => {
-        if (isDragging && dragStartPos !== undefined && !isResizing) {
-          const pos = view.posAtCoords({ left: e.clientX, top: e.clientY });
-          if (pos && pos.pos !== dragStartPos) {
-            const { tr } = view.state;
-            const node = view.state.doc.nodeAt(dragStartPos);
-            if (node) {
-              tr.delete(dragStartPos, dragStartPos + node.nodeSize);
-              const newPos = pos.pos > dragStartPos ? pos.pos - node.nodeSize : pos.pos;
-              tr.insert(newPos, node);
-              view.dispatch(tr);
-              dragStartPos = newPos;
+        if (!isDragging && dragStartPos !== undefined && mouseDownPos !== null && !isResizing) {
+          const deltaX = Math.abs(e.clientX - mouseDownPos.x);
+          const deltaY = Math.abs(e.clientY - mouseDownPos.y);
+          const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+          
+          if (distance >= DRAG_THRESHOLD) {
+            isDragging = true;
+            pendingInsertPos = null;
+            if (img) {
+              img.style.cursor = 'grabbing';
+              img.style.opacity = '0.5';
             }
+            createDragPreview();
+            updateDragPreviewPosition(e);
+            console.log('[DragReorder] Drag started:', {
+              dragStartPos,
+              distance,
+              threshold: DRAG_THRESHOLD,
+            });
+          } else {
+            return;
+          }
+        }
+        
+        if (isDragging && dragStartPos !== undefined && !isResizing) {
+          lastMouseEvent = e;
+          updateDragPreviewPosition(e);
+          
+          const now = Date.now();
+          if (now - lastMoveTime < MOVE_THROTTLE) {
+            return;
+          }
+          lastMoveTime = now;
+
+          const coords = view.posAtCoords({ left: e.clientX, top: e.clientY });
+          if (!coords) return;
+          
+          const { doc } = view.state;
+          const node = doc.nodeAt(dragStartPos);
+          if (!node || node.type.name !== 'image') {
+            return;
+          }
+
+          const targetPos = coords.pos;
+          const nodeSize = node.nodeSize;
+          const nodeStart = dragStartPos;
+          const nodeEnd = dragStartPos + nodeSize;
+          
+          // Skip if targetPos is strictly inside the node being dragged (not at boundaries)
+          // Allow drag when targetPos is exactly at nodeStart or nodeEnd (boundaries)
+          if (targetPos > nodeStart && targetPos < nodeEnd) {
+            console.log('[DragReorder] TargetPos inside dragged node, skipping:', {
+              targetPos,
+              nodeStart,
+              nodeEnd,
+            });
+            return;
+          }
+          
+          // If targetPos is exactly at nodeStart or nodeEnd, we still allow drag
+          // This handles edge cases where mouse is at the boundary
+          
+          console.log('[DragReorder] MouseMove:', {
+            targetPos,
+            nodeStart,
+            nodeEnd,
+            nodeSize,
+            docSize: doc.content.size,
+          });
+          
+          /**
+           * Improved logic for finding valid insert position:
+           * 1. First, try to find a valid position directly from targetPos
+           * 2. If targetPos is at an image, insert before/after based on direction
+           * 3. Otherwise, find the nearest valid position that can contain an image
+           */
+          const findValidInsertPosition = (pos: number): number | null => {
+            try {
+              // Clamp position to valid range
+              const clampedPos = Math.max(0, Math.min(pos, doc.content.size));
+              
+              console.log('[DragReorder] findValidInsertPosition called:', {
+                pos,
+                clampedPos,
+                nodeStart,
+                nodeEnd,
+                docSize: doc.content.size,
+              });
+              
+              // Try to resolve the position
+              const $pos = doc.resolve(clampedPos);
+              const nodeAtPos = doc.nodeAt(clampedPos);
+              
+              // If we're directly at an image node
+              if (nodeAtPos && nodeAtPos.type.name === 'image') {
+                // Check if this is the node being dragged (by comparing position ranges)
+                const isDraggedNode = clampedPos >= nodeStart && clampedPos < nodeEnd;
+                
+                if (isDraggedNode) {
+                  // This is the node being dragged, find the nearest valid position
+                  // We need to find a position outside the dragged node
+                  
+                  // Try to find position before the dragged node
+                  if (clampedPos > 0) {
+                    // Search backward to find a valid position before this node
+                    for (let p = clampedPos - 1; p >= Math.max(0, clampedPos - 50); p--) {
+                      try {
+                        const $testPos = doc.resolve(p);
+                        const testNode = doc.nodeAt(p);
+                        // If we find another image or valid position, use it
+                        if (testNode && testNode.type.name === 'image') {
+                          const result = p;
+                          console.log('[DragReorder] At dragged node, found image before:', result);
+                          return result;
+                        }
+                        // Check if we can insert at this position
+                        const testParent = $testPos.node($testPos.depth);
+                        const testIndex = $testPos.index($testPos.depth);
+                        if (testParent.canReplace(testIndex, testIndex, Fragment.from(node))) {
+                          const result = p;
+                          console.log('[DragReorder] At dragged node, found valid position before:', result);
+                          return result;
+                        }
+                      } catch {
+                        continue;
+                      }
+                    }
+                    // Fallback: use position before dragged node
+                    const beforePos = clampedPos;
+                    console.log('[DragReorder] At dragged node, using position before:', beforePos);
+                    return beforePos;
+                  } else {
+                    // At start of document, find position after
+                    const afterPos = clampedPos + nodeAtPos.nodeSize;
+                    console.log('[DragReorder] At dragged node (start of doc), trying to insert after:', afterPos);
+                    return afterPos;
+                  }
+                }
+                
+                // This is a different image node
+                // Determine direction: are we dragging forward or backward?
+                // Logic: 
+                // - When dragging backward (pos > nodeStart): user wants dragged image to appear AFTER target image
+                //   So we insert AFTER target image (clampedPos + nodeSize)
+                // - When dragging forward (pos < nodeStart): user wants dragged image to appear BEFORE target image
+                //   So we insert BEFORE target image (clampedPos)
+                const direction = pos < nodeStart ? 'forward' : 'backward';
+                // CORRECTED: When dragging backward, insert AFTER target image
+                // When dragging forward, insert BEFORE target image
+                const result = pos < nodeStart ? clampedPos : clampedPos + nodeAtPos.nodeSize;
+                
+                console.log('[DragReorder] Found image node at position:', {
+                  clampedPos,
+                  nodeType: nodeAtPos.type.name,
+                  isDraggedNode: false,
+                  direction,
+                  result,
+                  explanation: pos < nodeStart 
+                    ? 'dragging forward: insert BEFORE target image (so dragged appears before target)' 
+                    : 'dragging backward: insert AFTER target image (so dragged appears after target)',
+                });
+                
+                return result;
+              }
+              
+              // If we're inside a text node or other content, find the best insertion point
+              // Try to find a position where we can insert an image node
+              
+              // Special case: if targetPos is at or near the end of document, find the last image
+              if (clampedPos >= doc.content.size - 1) {
+                // Find the last image node in the document
+                for (let p = doc.content.size - 1; p >= 0; p--) {
+                  const testNode = doc.nodeAt(p);
+                  if (testNode && testNode.type.name === 'image') {
+                    // Insert after the last image
+                    const result = p + testNode.nodeSize;
+                    console.log('[DragReorder] At end of document, found last image, inserting after:', {
+                      lastImagePos: p,
+                      result,
+                    });
+                    return result;
+                  }
+                }
+                // If no image found, use document end
+                console.log('[DragReorder] At end of document, no images found, using doc end');
+                return doc.content.size;
+              }
+              
+              const depth = $pos.depth;
+              
+              console.log('[DragReorder] Not at image node, searching for valid position:', {
+                nodeAtPosType: nodeAtPos?.type?.name,
+                depth,
+                clampedPos,
+                docSize: doc.content.size,
+              });
+              
+              // Walk up the tree to find a container that can hold an image
+              try {
+                for (let d = depth; d >= 0; d--) {
+                  const parent = $pos.node(d);
+                  const index = $pos.index(d);
+                  
+                  // Check if we can insert an image at this level
+                  if (parent.canReplace(index, index, Fragment.from(node))) {
+                    const result = $pos.start(d) + parent.child(index).nodeSize;
+                    console.log('[DragReorder] Found valid position walking up tree:', {
+                      depth: d,
+                      parentType: parent.type.name,
+                      index,
+                      result,
+                    });
+                    return result;
+                  }
+                }
+                
+                // Fallback: try to find position at the start of current parent
+                const parentStart = $pos.start($pos.depth);
+                const parent = $pos.node($pos.depth);
+                const index = $pos.index($pos.depth);
+                
+                // Try inserting at the start of current position's parent
+                if (parent.canReplace(index, index, Fragment.from(node))) {
+                  console.log('[DragReorder] Found valid position at parent start:', parentStart);
+                  return parentStart;
+                }
+              } catch (error) {
+                console.warn('[DragReorder] Error walking up tree, trying fallback search:', {
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              }
+              
+              console.log('[DragReorder] Searching nearby positions (fallback)');
+              
+              // Last resort: try to find any valid position near the target
+              // Search backward first
+              for (let p = Math.max(0, clampedPos - 100); p < clampedPos; p++) {
+                try {
+                  const $testPos = doc.resolve(p);
+                  const testParent = $testPos.node($testPos.depth);
+                  const testIndex = $testPos.index($testPos.depth);
+                  if (testParent.canReplace(testIndex, testIndex, Fragment.from(node))) {
+                    console.log('[DragReorder] Found valid position searching backward:', p);
+                    return p;
+                  }
+                } catch {
+                  continue;
+                }
+              }
+              
+              // Search forward
+              for (let p = clampedPos + 1; p <= Math.min(doc.content.size, clampedPos + 100); p++) {
+                try {
+                  const $testPos = doc.resolve(p);
+                  const testParent = $testPos.node($testPos.depth);
+                  const testIndex = $testPos.index($testPos.depth);
+                  if (testParent.canReplace(testIndex, testIndex, Fragment.from(node))) {
+                    console.log('[DragReorder] Found valid position searching forward:', p);
+                    return p;
+                  }
+                } catch {
+                  continue;
+                }
+              }
+              
+              console.warn('[DragReorder] Could not find valid insert position');
+              return null;
+            } catch (error) {
+              console.error('[DragReorder] Error in findValidInsertPosition:', {
+                error: error instanceof Error ? error.message : String(error),
+                pos,
+              });
+              return null;
+            }
+          };
+          
+          // Find the insert position before deletion
+          const insertPosBeforeDelete = findValidInsertPosition(targetPos);
+          
+          if (insertPosBeforeDelete === null) {
+            console.warn('[DragReorder] Could not find valid insert position for targetPos:', targetPos);
+            return;
+          }
+          
+          console.log('[DragReorder] Found insert position:', {
+            targetPos,
+            insertPosBeforeDelete,
+            nodeStart,
+            nodeEnd,
+          });
+          
+          // Calculate the final insert position after deletion
+          // After deleting [nodeStart, nodeEnd), positions shift:
+          // - Positions < nodeStart: unchanged
+          // - Positions >= nodeEnd: subtract nodeSize
+          let finalInsertPos: number;
+          
+          if (insertPosBeforeDelete < nodeStart) {
+            // Inserting before the dragged node: position unchanged
+            finalInsertPos = insertPosBeforeDelete;
+          } else if (insertPosBeforeDelete > nodeEnd) {
+            // Inserting after the dragged node: adjust for deletion
+            finalInsertPos = insertPosBeforeDelete - nodeSize;
+          } else {
+            // Edge case: insertPos is at nodeStart or nodeEnd (boundaries)
+            // This can happen when targetPos is at the boundary of the dragged node
+            if (insertPosBeforeDelete === nodeStart) {
+              // Inserting at nodeStart: this means we want to insert before the dragged node
+              // After deletion, the position becomes the start position
+              finalInsertPos = nodeStart;
+            } else if (insertPosBeforeDelete === nodeEnd) {
+              // Inserting at nodeEnd: this means we want to insert after the dragged node
+              // After deletion, positions shift, so this becomes nodeStart
+              finalInsertPos = nodeStart;
+            } else {
+              // insertPos is strictly inside the dragged node
+              // This shouldn't happen with our improved logic, but handle it anyway
+              console.warn('[DragReorder] insertPosBeforeDelete is inside dragged node:', {
+                insertPosBeforeDelete,
+                nodeStart,
+                nodeEnd,
+              });
+              // Skip this update
+              return;
+            }
+          }
+          
+          // Validate finalInsertPos is within document bounds
+          if (finalInsertPos < 0) {
+            finalInsertPos = 0;
+          }
+          
+          // Skip if same as last position (avoid unnecessary updates)
+          if (lastMovedToPos !== null && finalInsertPos === lastMovedToPos) {
+            return;
+          }
+          
+          console.log('[DragReorder] Calculated final insert position:', {
+            insertPosBeforeDelete,
+            finalInsertPos,
+            nodeStart,
+            nodeEnd,
+            nodeSize,
+            calculation: insertPosBeforeDelete < nodeStart ? 'before (unchanged)' : 
+                        insertPosBeforeDelete > nodeEnd ? 'after (adjusted)' : 'edge case',
+          });
+          
+          // Test if we can actually insert at this position after deletion
+          try {
+            const testTr = view.state.tr;
+            testTr.delete(nodeStart, nodeEnd);
+            const testDoc = testTr.doc;
+            
+            // Clamp to document size after deletion
+            if (finalInsertPos > testDoc.content.size) {
+              console.warn('[DragReorder] FinalInsertPos exceeds doc size, clamping:', {
+                finalInsertPos,
+                docSize: testDoc.content.size,
+              });
+              finalInsertPos = testDoc.content.size;
+            }
+            
+            // Try to resolve and validate the position
+            const $insertPos = testDoc.resolve(finalInsertPos);
+            
+            // Check if we can replace at this position
+            const canReplace = $insertPos.parent.canReplace($insertPos.index(), $insertPos.index(), Fragment.from(node));
+            
+            console.log('[DragReorder] Validation result:', {
+              finalInsertPos,
+              canReplace,
+              parentType: $insertPos.parent.type.name,
+              index: $insertPos.index(),
+            });
+            
+            if (canReplace) {
+              pendingInsertPos = finalInsertPos;
+              lastMovedToPos = finalInsertPos;
+            } else {
+              console.warn('[DragReorder] Cannot replace at position:', {
+                finalInsertPos,
+                parentType: $insertPos.parent.type.name,
+                index: $insertPos.index(),
+              });
+            }
+          } catch (error) {
+            // Position is invalid, skip this update
+            console.error('[DragReorder] Error validating position:', {
+              finalInsertPos,
+              error: error instanceof Error ? error.message : String(error),
+            });
           }
         }
       };
 
+      const handleDocumentScroll = () => {
+        if (isDragging && dragPreviewElement && lastMouseEvent) {
+          updateDragPreviewPosition(lastMouseEvent);
+        }
+      };
+
       const handleDocumentMouseUp = () => {
-        if (isDragging) {
+        removeDragPreview();
+        
+        lastMouseEvent = null;
+        
+        if (img) {
+          img.style.opacity = '';
+          img.style.cursor = '';
+        }
+        
+        if (isDragging || mouseDownPos !== null) {
+          if (isDragging && dragStartPos !== undefined && pendingInsertPos !== null && dragPreviewNode) {
+            console.log('[DragReorder] MouseUp - Starting insert:', {
+              dragStartPos,
+              pendingInsertPos,
+              isDragging,
+              hasDragPreviewNode: !!dragPreviewNode,
+            });
+            
+            // Use dragPreviewNode to preserve all attributes (including alignment)
+            const nodeToMove = dragPreviewNode;
+            
+            if (!nodeToMove || nodeToMove.type.name !== 'image') {
+              console.warn('[DragReorder] Invalid nodeToMove:', {
+                nodeType: nodeToMove?.type?.name,
+              });
+              return;
+            }
+            
+            const nodeSize = nodeToMove.nodeSize;
+            const nodeStart = dragStartPos;
+            const nodeEnd = dragStartPos + nodeSize;
+            const nodeToMoveId = nodeToMove.attrs.id;
+            
+            if (!nodeToMoveId) {
+              console.warn('[DragReorder] Node missing ID:', {
+                attrs: nodeToMove.attrs,
+              });
+              return;
+            }
+            
+            console.log('[DragReorder] Node to move:', {
+              id: nodeToMoveId,
+              nodeSize,
+              nodeStart,
+              nodeEnd,
+              attrs: {
+                src: nodeToMove.attrs.src?.substring(0, 50),
+                align: nodeToMove.attrs.align,
+                width: nodeToMove.attrs.width,
+                height: nodeToMove.attrs.height,
+              },
+            });
+            
+            try {
+              const newTr = view.state.tr;
+              
+              console.log('[DragReorder] Before delete:', {
+                docSize: view.state.doc.content.size,
+                nodeStart,
+                nodeEnd,
+              });
+              
+              // Delete the node at original position
+              newTr.delete(nodeStart, nodeEnd);
+              const newDoc = newTr.doc;
+              
+              console.log('[DragReorder] After delete:', {
+                docSize: newDoc.content.size,
+                deletedSize: nodeEnd - nodeStart,
+              });
+              
+              // pendingInsertPos was already calculated after deletion in handleDocumentMouseMove
+              // Validate and clamp it with the actual newDoc
+              let finalInsertPos = Math.max(0, Math.min(pendingInsertPos, newDoc.content.size));
+              
+              console.log('[DragReorder] Insert position:', {
+                pendingInsertPos,
+                finalInsertPos,
+                docSize: newDoc.content.size,
+              });
+              
+              // Try to resolve the position and find a valid insertion point
+              let $insertPos;
+              try {
+                $insertPos = newDoc.resolve(finalInsertPos);
+              } catch {
+                // If resolution fails, try to find a valid position near the target
+                // Search in a small range around the target position
+                const searchRange = 50;
+                const startSearch = Math.max(0, finalInsertPos - searchRange);
+                const endSearch = Math.min(newDoc.content.size, finalInsertPos + searchRange);
+                
+                for (let pos = startSearch; pos <= endSearch; pos++) {
+                  try {
+                    const $testPos = newDoc.resolve(pos);
+                    if ($testPos.parent.canReplace($testPos.index(), $testPos.index(), Fragment.from(nodeToMove))) {
+                      finalInsertPos = pos;
+                      $insertPos = $testPos;
+                      break;
+                    }
+                  } catch {
+                    continue;
+                  }
+                }
+                
+                // If still not found, search entire document (fallback)
+                if (!$insertPos) {
+                  for (let pos = 0; pos <= newDoc.content.size; pos++) {
+                    try {
+                      const $testPos = newDoc.resolve(pos);
+                      if ($testPos.parent.canReplace($testPos.index(), $testPos.index(), Fragment.from(nodeToMove))) {
+                        finalInsertPos = pos;
+                        $insertPos = $testPos;
+                        break;
+                      }
+                    } catch {
+                      continue;
+                    }
+                  }
+                }
+                
+                if (!$insertPos) {
+                  return;
+                }
+              }
+              
+              // Try to insert at the resolved position
+              const insertIndex = $insertPos.index();
+              const insertParent = $insertPos.parent;
+              
+              // Check if we can replace at this index
+              const canReplace = insertParent.canReplace(insertIndex, insertIndex, Fragment.from(nodeToMove));
+              
+              console.log('[DragReorder] Can replace check:', {
+                canReplace,
+                insertIndex,
+                parentType: insertParent.type.name,
+                finalInsertPos,
+              });
+              
+              if (canReplace) {
+                // Create new node with all attributes preserved
+                const newNode = nodeToMove.type.create(nodeToMove.attrs, nodeToMove.content);
+                newTr.insert(finalInsertPos, newNode);
+                
+                console.log('[DragReorder] Inserted node at position:', finalInsertPos);
+                
+                if (newTr.docChanged) {
+                  view.dispatch(newTr);
+                  
+                  console.log('[DragReorder] Transaction dispatched successfully');
+                  
+                  // Find and select the moved node using the known insert position
+                  // The node should be at finalInsertPos after insertion
+                  const newState = view.state;
+                  const newDoc = newState.doc;
+                  
+                  // First try the exact insert position
+                  let foundPos: number | null = null;
+                  const nodeAtInsertPos = newDoc.nodeAt(finalInsertPos);
+                  if (nodeAtInsertPos && nodeAtInsertPos.type.name === 'image' && nodeAtInsertPos.attrs.id === nodeToMoveId) {
+                    foundPos = finalInsertPos;
+                  } else {
+                    // Search near the insert position (should be very close)
+                    const searchRange = Math.min(100, newDoc.content.size);
+                    const startSearch = Math.max(0, finalInsertPos - searchRange);
+                    const endSearch = Math.min(newDoc.content.size, finalInsertPos + searchRange);
+                    
+                    for (let pos = startSearch; pos < endSearch; pos++) {
+                      const nodeAtPos = newDoc.nodeAt(pos);
+                      if (nodeAtPos && nodeAtPos.type.name === 'image' && nodeAtPos.attrs.id === nodeToMoveId) {
+                        foundPos = pos;
+                        break;
+                      }
+                    }
+                    
+                    // If still not found, search entire document (should rarely happen)
+                    if (foundPos === null) {
+                      for (let pos = 0; pos < newDoc.content.size; pos++) {
+                        const nodeAtPos = newDoc.nodeAt(pos);
+                        if (nodeAtPos && nodeAtPos.type.name === 'image' && nodeAtPos.attrs.id === nodeToMoveId) {
+                          foundPos = pos;
+                          break;
+                        }
+                      }
+                    }
+                  }
+                  
+                  // Select the moved node
+                  if (foundPos !== null) {
+                    console.log('[DragReorder] Found moved node at position:', foundPos);
+                    const { tr: selectTr, doc: selectDoc } = view.state;
+                    const movedNode = selectDoc.nodeAt(foundPos);
+                    if (movedNode && movedNode.type.name === 'image') {
+                      selectTr.setSelection(TextSelection.create(selectDoc, foundPos, foundPos + movedNode.nodeSize));
+                      view.dispatch(selectTr);
+                      
+                      const event = new CustomEvent('selectImage', { 
+                        detail: { pos: foundPos } 
+                      });
+                      document.dispatchEvent(event);
+                      
+                      console.log('[DragReorder] Successfully selected moved node:', {
+                        foundPos,
+                        expectedPos: finalInsertPos,
+                        match: foundPos === finalInsertPos,
+                      });
+                    }
+                  } else {
+                    console.warn('[DragReorder] Could not find moved node after insert:', {
+                      finalInsertPos,
+                      docSize: newDoc.content.size,
+                    });
+                  }
+                } else {
+                  console.warn('[DragReorder] Transaction did not change document');
+                }
+              } else {
+                console.warn('[DragReorder] Cannot replace at insert position:', {
+                  insertIndex,
+                  parentType: insertParent.type.name,
+                });
+              }
+            } catch (error) {
+              // Log error for debugging but don't break the UI
+              console.error('[DragReorder] Error during drag to reorder:', {
+                error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined,
+                dragStartPos,
+                pendingInsertPos,
+              });
+            }
+          } else if (dragStartPos !== undefined) {
+            console.log('[DragReorder] MouseUp - Click only (no drag):', {
+              dragStartPos,
+              isDragging,
+              wasCtrlClick,
+            });
+            
+            // Only dispatch selectImage if we're not in multi-select mode
+            // If the click was with Ctrl/Cmd, don't dispatch selectImage to avoid resetting multi-select
+            const { doc, tr } = view.state;
+            const node = doc.nodeAt(dragStartPos);
+            
+            if (node && node.type.name === 'image') {
+              tr.setSelection(TextSelection.create(doc, dragStartPos, dragStartPos + node.nodeSize));
+              view.dispatch(tr);
+              
+              // Only dispatch selectImage if it was a single click (not Ctrl/Cmd)
+              // This prevents resetting multi-select when clicking with Ctrl/Cmd
+              if (!wasCtrlClick) {
+                const event = new CustomEvent('selectImage', { 
+                  detail: { 
+                    pos: dragStartPos
+                  } 
+                });
+                document.dispatchEvent(event);
+              }
+            }
+          }
+          
+          console.log('[DragReorder] MouseUp - Cleanup state');
+          
           isDragging = false;
           dragStartPos = undefined;
+          lastMovedToPos = null;
+          pendingInsertPos = null;
+          mouseDownPos = null;
+          dragPreviewNode = null;
+          wasCtrlClick = false;
         }
       };
 
@@ -766,6 +1772,7 @@ const ResizableImage = Image.extend({
       document.addEventListener('click', handleDocumentClick);
       document.addEventListener('mousemove', handleDocumentMouseMove);
       document.addEventListener('mouseup', handleDocumentMouseUp);
+      document.addEventListener('scroll', handleDocumentScroll, true); // Use capture phase to catch all scroll events
       
       const handleSelectionUpdate = () => {
         updateSelectionStyle();
@@ -774,18 +1781,244 @@ const ResizableImage = Image.extend({
       document.addEventListener('imageSelectionChanged', handleSelectionUpdate);
       const intervalId = setInterval(updateSelectionStyle, 100);
 
+      // Function to update caption and alignment when node changes
+      const updateCaptionAndAlignment = () => {
+        console.log('[NodeView] updateCaptionAndAlignment() called');
+        const currentCaption = node.attrs.caption;
+        const currentAlign = node.attrs.align;
+        const currentHref = node.attrs.href;
+        console.log('[NodeView] currentAlign:', currentAlign);
+        
+        // Get the image container (either link or imgWrapper) from DOM
+        // First try to find link, then imgWrapper (the div containing the img)
+        const linkEl = dom.querySelector('a');
+        let currentImageContainer: HTMLElement | null = null;
+        if (linkEl) {
+          currentImageContainer = linkEl as HTMLElement;
+        } else {
+          // Find the div that directly contains the img
+          const img = dom.querySelector('img');
+          if (img && img.parentElement) {
+            currentImageContainer = img.parentElement as HTMLElement;
+          }
+        }
+
+        // Update caption
+        let captionEl = dom.querySelector('.image-caption') as HTMLElement;
+        if (currentCaption) {
+          if (!captionEl) {
+            captionEl = document.createElement('div');
+            captionEl.className = 'image-caption';
+            captionEl.style.textAlign = 'center';
+            captionEl.style.fontStyle = 'italic';
+            captionEl.style.color = '#666';
+            captionEl.style.marginTop = '0.5em';
+            captionEl.style.fontSize = '0.9em';
+            dom.appendChild(captionEl);
+          }
+          captionEl.textContent = currentCaption as string;
+        } else if (captionEl) {
+          captionEl.remove();
+        }
+
+        // Update alignment - reset all styles first
+        console.log('[NodeView] Resetting alignment styles');
+        // Reset alignment-related styles but keep position and maxWidth
+        dom.style.width = '';
+        dom.style.margin = '';
+        dom.style.marginLeft = '';
+        dom.style.marginRight = '';
+        dom.style.float = '';
+        dom.style.textAlign = '';
+        dom.style.display = '';
+        // Don't reset display here - let alignment logic set it
+
+        console.log('[NodeView] Applying alignment:', currentAlign);
+        if (currentAlign === 'full') {
+          dom.style.width = '100%';
+          dom.style.display = 'block';
+          dom.style.margin = '0';
+          dom.style.marginLeft = '0';
+          dom.style.marginRight = '0';
+          console.log('[NodeView] Applied full alignment');
+        } else if (currentAlign === 'center') {
+          dom.style.width = '100%';
+          dom.style.display = 'block';
+          dom.style.margin = '0';
+          dom.style.marginLeft = '0';
+          dom.style.marginRight = '0';
+          dom.style.textAlign = 'center';
+          // Center the image content within the wrapper using text-align
+          if (currentImageContainer) {
+            (currentImageContainer as HTMLElement).style.display = 'inline-block';
+            (currentImageContainer as HTMLElement).style.margin = '0';
+            (currentImageContainer as HTMLElement).style.maxWidth = '100%';
+          }
+          console.log('[NodeView] Applied center alignment');
+        } else if (currentAlign === 'left') {
+          dom.style.width = '100%';
+          dom.style.display = 'block';
+          dom.style.margin = '0';
+          dom.style.marginLeft = '0';
+          dom.style.marginRight = '0';
+          dom.style.textAlign = 'left';
+          // Align image content to the left within the wrapper using text-align
+          if (currentImageContainer) {
+            (currentImageContainer as HTMLElement).style.display = 'inline-block';
+            (currentImageContainer as HTMLElement).style.margin = '0';
+            (currentImageContainer as HTMLElement).style.maxWidth = '100%';
+          }
+          console.log('[NodeView] Applied left alignment');
+        } else if (currentAlign === 'right') {
+          dom.style.width = '100%';
+          dom.style.display = 'block';
+          dom.style.margin = '0';
+          dom.style.marginLeft = '0';
+          dom.style.marginRight = '0';
+          dom.style.textAlign = 'right';
+          // Align image content to the right within the wrapper using text-align
+          if (currentImageContainer) {
+            (currentImageContainer as HTMLElement).style.display = 'inline-block';
+            (currentImageContainer as HTMLElement).style.margin = '0';
+            (currentImageContainer as HTMLElement).style.maxWidth = '100%';
+          }
+          console.log('[NodeView] Applied right alignment');
+        } else if (currentAlign === 'float-left') {
+          dom.style.display = 'inline-block'; // Float needs inline-block
+          dom.style.float = 'left';
+          dom.style.margin = '0';
+          dom.style.marginRight = '1em';
+          dom.style.marginLeft = '0';
+          dom.style.width = '';
+          dom.style.textAlign = '';
+          // Reset image container styles for float
+          if (currentImageContainer) {
+            (currentImageContainer as HTMLElement).style.display = '';
+            (currentImageContainer as HTMLElement).style.margin = '';
+            (currentImageContainer as HTMLElement).style.marginLeft = '';
+            (currentImageContainer as HTMLElement).style.marginRight = '';
+            (currentImageContainer as HTMLElement).style.width = '';
+            (currentImageContainer as HTMLElement).style.maxWidth = '';
+          }
+          console.log('[NodeView] Applied float-left alignment');
+        } else if (currentAlign === 'float-right') {
+          dom.style.display = 'inline-block'; // Float needs inline-block
+          dom.style.float = 'right';
+          dom.style.margin = '0';
+          dom.style.marginLeft = '1em';
+          dom.style.marginRight = '0';
+          dom.style.width = '';
+          dom.style.textAlign = '';
+          // Reset image container styles for float
+          if (currentImageContainer) {
+            (currentImageContainer as HTMLElement).style.display = '';
+            (currentImageContainer as HTMLElement).style.margin = '';
+            (currentImageContainer as HTMLElement).style.marginLeft = '';
+            (currentImageContainer as HTMLElement).style.marginRight = '';
+            (currentImageContainer as HTMLElement).style.width = '';
+            (currentImageContainer as HTMLElement).style.maxWidth = '';
+          }
+          console.log('[NodeView] Applied float-right alignment');
+        } else {
+          // Default: no alignment, use inline-block
+          dom.style.display = 'inline-block';
+          dom.style.margin = '0';
+          dom.style.width = '';
+          dom.style.textAlign = '';
+          // Reset image container styles
+          if (currentImageContainer) {
+            (currentImageContainer as HTMLElement).style.display = '';
+            (currentImageContainer as HTMLElement).style.margin = '';
+            (currentImageContainer as HTMLElement).style.marginLeft = '';
+            (currentImageContainer as HTMLElement).style.marginRight = '';
+            (currentImageContainer as HTMLElement).style.width = '';
+            (currentImageContainer as HTMLElement).style.maxWidth = '';
+          }
+          console.log('[NodeView] No alignment applied (currentAlign is null or unknown)');
+        }
+        
+        // Force a reflow to ensure styles are applied
+        void dom.offsetHeight;
+        
+        console.log('[NodeView] Final DOM styles:', {
+          width: dom.style.width,
+          display: dom.style.display,
+          margin: dom.style.margin,
+          marginLeft: dom.style.marginLeft,
+          marginRight: dom.style.marginRight,
+          float: dom.style.float,
+          computedDisplay: window.getComputedStyle(dom).display,
+          computedMarginLeft: window.getComputedStyle(dom).marginLeft,
+          computedMarginRight: window.getComputedStyle(dom).marginRight,
+        });
+
+        // Update link - img is already in dom, check if it's wrapped in link
+        const existingLink = dom.querySelector('a');
+        if (currentHref) {
+          if (!existingLink) {
+            // Wrap img in link
+            const link = document.createElement('a');
+            link.href = currentHref as string;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            // Replace img with link containing img
+            if (img.parentNode) {
+              img.parentNode.insertBefore(link, img);
+              link.appendChild(img);
+            }
+          } else {
+            existingLink.href = currentHref as string;
+          }
+        } else if (existingLink && existingLink.contains(img)) {
+          // Remove link, keep img
+          if (existingLink.parentNode) {
+            existingLink.parentNode.insertBefore(img, existingLink);
+            existingLink.remove();
+          }
+        }
+      };
+
+      // Initial update
+      updateCaptionAndAlignment();
+
       return {
         dom,
         contentDOM: null,
         ignoreMutation: () => true,
+        update: (updatedNode: PMNode) => {
+          console.log('[NodeView] update() called', updatedNode.attrs);
+          if (updatedNode.type.name !== 'image') {
+            console.log('[NodeView] Not an image node, returning false');
+            return false;
+          }
+          node = updatedNode;
+          console.log('[NodeView] Node updated, calling updateImageSize and updateCaptionAndAlignment');
+          updateImageSize();
+          updateCaptionAndAlignment();
+          return true;
+        },
         destroy: () => {
           document.removeEventListener('click', handleDocumentClick);
           document.removeEventListener('mousemove', handleDocumentMouseMove);
           document.removeEventListener('mouseup', handleDocumentMouseUp);
+          document.removeEventListener('scroll', handleDocumentScroll, true);
           document.removeEventListener('imageSelectionChanged', handleSelectionUpdate);
           clearInterval(intervalId);
+          // Clean up drag preview if still exists
+          removeDragPreview();
         },
       };
+    };
+  },
+
+  addCommands() {
+    return {
+      ...this.parent?.(),
+      setAlignImage:
+        (align: 'left' | 'center' | 'right' | 'full' | null) =>
+        ({ commands }: CommandProps) => {
+          return commands.updateAttributes(this.name, { align });
+        },
     };
   },
 });
@@ -862,6 +2095,7 @@ interface ExtractIframesResult {
 }
 
 // Extract all iframes from HTML and return them along with the remaining HTML
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const extractIframesFromHTML = (html: string): ExtractIframesResult => {
   if (!html) return { iframes: [], remainingHTML: html };
 
@@ -1085,12 +2319,24 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
   const [linkEditRange, setLinkEditRange] = useState<{ from: number; to: number } | null>(null);
   const [showImageDropdown, setShowImageDropdown] = useState(false);
   const [showImageLayoutDialog, setShowImageLayoutDialog] = useState(false);
-  const [imageLayoutButtonRef, setImageLayoutButtonRef] = useState<HTMLElement | null>(null);
+  const [, setImageLayoutButtonRef] = useState<HTMLElement | null>(null);
   const [imageLayoutDropdownPosition, setImageLayoutDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectedImagePositions, setSelectedImagePositions] = useState<number[]>([]);
   const [lastMousePosition, setLastMousePosition] = useState<{ x: number; y: number } | null>(null);
   const [gridRows, setGridRows] = useState(2);
   const [gridColumns, setGridColumns] = useState(2);
+  const [showImageToolbar, setShowImageToolbar] = useState(false);
+  const [imageToolbarPos, setImageToolbarPos] = useState<{ top: number; left: number } | null>(null);
+  const [selectedImagePos, setSelectedImagePos] = useState<number | null>(null);
+  const [selectedImageNode, setSelectedImageNode] = useState<{ attrs: Record<string, unknown> } | null>(null);
+  const [showImageAltDialog, setShowImageAltDialog] = useState(false);
+  const [showImageCaptionDialog, setShowImageCaptionDialog] = useState(false);
+  const [showImageLinkDialog, setShowImageLinkDialog] = useState(false);
+  const [showImageReplaceDialog, setShowImageReplaceDialog] = useState(false);
+  const [imageAltDialogPosition, setImageAltDialogPosition] = useState<{ top: number; left: number } | null>(null);
+  const [imageCaptionDialogPosition, setImageCaptionDialogPosition] = useState<{ top: number; left: number } | null>(null);
+  const [imageLinkDialogPosition, setImageLinkDialogPosition] = useState<{ top: number; left: number } | null>(null);
+  const [imageReplaceDialogPosition, setImageReplaceDialogPosition] = useState<{ top: number; left: number } | null>(null);
   
   const editor = useEditor({
     immediatelyRender: false,
@@ -1205,13 +2451,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       }
     },
     editorProps: {
-      handlePaste(view: EditorView, event: ClipboardEvent) {
-        const html = event.clipboardData?.getData('text/html') ?? '';
-        const text = event.clipboardData?.getData('text/plain') ?? '';
-
-        // ... existing paste handling logic unchanged ...
-        // (keeping full function body as in your current file)
-
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      handlePaste(_view: EditorView, _event: ClipboardEvent) {
+        // Paste handling logic can be added here if needed
         return false;
       },
     },
@@ -1220,6 +2462,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
   useEffect(() => {
     if (!editor) return;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const updateFloatingLayoutButton = (_positions: number[], _mouseX?: number, _mouseY?: number) => {
       // Floating layout button removed
     };
@@ -1229,6 +2472,90 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       const { pos, mouseX, mouseY } = customEvent.detail;
       const newPositions = [pos];
       setSelectedImagePositions(newPositions);
+      
+      // Show ImageToolbar
+      if (editor) {
+        const { doc } = editor.state;
+        const node = doc.nodeAt(pos);
+        if (node && node.type.name === 'image') {
+          setSelectedImagePos(pos);
+          setSelectedImageNode(node);
+          
+          // Calculate toolbar position from the clicked image element
+          setTimeout(() => {
+            const { view } = editor;
+            const editorDom = view.dom;
+            const editorContentContainer = editorDom.closest('.ProseMirror')?.parentElement;
+            
+            if (editorContentContainer) {
+              const containerRect = editorContentContainer.getBoundingClientRect();
+              
+              // Try to find the image DOM element by matching id
+              const imageId = node.attrs.id;
+              
+              // All images should have id now
+              if (!imageId) {
+                console.warn('Image node missing id, cannot find DOM element');
+                // Fallback to coordsAtPos
+                const coords = view.coordsAtPos(pos);
+                if (coords) {
+                  setImageToolbarPos({
+                    top: coords.bottom - containerRect.top + 10,
+                    left: coords.left - containerRect.left,
+                  });
+                  setShowImageToolbar(true);
+                }
+                return;
+              }
+              
+              const imageWrappers = editorContentContainer.querySelectorAll('.resizable-image-wrapper');
+              let foundWrapper: HTMLElement | null = null;
+              
+              // Find the wrapper that contains the image with matching id
+              for (let i = 0; i < imageWrappers.length; i++) {
+                const wrapper = imageWrappers[i];
+                const img = wrapper.querySelector('img');
+                if (img) {
+                  // Use id matching exclusively for accuracy
+                  const imgId = img.getAttribute('data-image-id') || img.getAttribute('id');
+                  if (imgId === imageId) {
+                    foundWrapper = wrapper as HTMLElement;
+                    break;
+                  }
+                }
+              }
+              
+              if (foundWrapper) {
+                // Use the wrapper's bounding rect to position toolbar
+                const wrapperRect = foundWrapper.getBoundingClientRect();
+                setImageToolbarPos({
+                  top: wrapperRect.bottom - containerRect.top + 10,
+                  left: wrapperRect.left - containerRect.left,
+                });
+                setShowImageToolbar(true);
+              } else if (mouseX !== undefined && mouseY !== undefined) {
+                // Fallback to mouse position
+                setImageToolbarPos({
+                  top: mouseY - containerRect.top + 10,
+                  left: mouseX - containerRect.left,
+                });
+                setShowImageToolbar(true);
+              } else {
+                // Last fallback: use coordsAtPos
+                const coords = view.coordsAtPos(pos);
+                if (coords) {
+                  setImageToolbarPos({
+                    top: coords.bottom - containerRect.top + 10,
+                    left: coords.left - containerRect.left,
+                  });
+                  setShowImageToolbar(true);
+                }
+              }
+            }
+          }, 10);
+        }
+      }
+      
       if (mouseX !== undefined && mouseY !== undefined) {
         setLastMousePosition({ x: mouseX, y: mouseY });
       }
@@ -1267,6 +2594,22 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     document.addEventListener('toggleImageSelection', handleToggleImageSelection);
     document.addEventListener('checkImageSelection', handleCheckImageSelection);
     
+    // Update selectedImageNode when editor state changes (e.g., alignment changes)
+    const updateSelectedNode = () => {
+      if (selectedImagePos !== null && editor) {
+        const { doc } = editor.state;
+        const node = doc.nodeAt(selectedImagePos);
+        if (node && node.type.name === 'image') {
+          setSelectedImageNode(node);
+        }
+      }
+    };
+    
+    if (editor) {
+      editor.on('update', updateSelectedNode);
+      editor.on('transaction', updateSelectedNode);
+    }
+    
     const updateEvent = new CustomEvent('imageSelectionChanged');
     document.dispatchEvent(updateEvent);
     
@@ -1274,8 +2617,12 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       document.removeEventListener('selectImage', handleSelectImage);
       document.removeEventListener('toggleImageSelection', handleToggleImageSelection);
       document.removeEventListener('checkImageSelection', handleCheckImageSelection);
+      if (editor) {
+        editor.off('update', updateSelectedNode);
+        editor.off('transaction', updateSelectedNode);
+      }
     };
-  }, [editor, selectedImagePositions, lastMousePosition]);
+  }, [editor, selectedImagePositions, lastMousePosition, selectedImagePos]);
 
   useEffect(() => {
     let clickTimeout: NodeJS.Timeout | null = null;
@@ -1287,7 +2634,12 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         target.closest('.resizable-image-wrapper') || 
         target.closest('[title*="Image Layout"]') ||
         target.closest('.image-layout-dialog-container') ||
-        target.closest('.image-layout-dropdown')
+        target.closest('.image-layout-dropdown') ||
+        target.closest('.image-toolbar') ||
+        target.closest('.image-alt-dialog') ||
+        target.closest('.image-caption-dialog') ||
+        target.closest('.image-link-dialog') ||
+        target.closest('.image-replace-dialog')
       ) {
         if (clickTimeout) {
           clearTimeout(clickTimeout);
@@ -1302,6 +2654,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       
       clickTimeout = setTimeout(() => {
         setSelectedImagePositions([]);
+        setShowImageToolbar(false);
+        setSelectedImagePos(null);
+        setSelectedImageNode(null);
         clickTimeout = null;
       }, 200);
     };
@@ -1759,8 +3114,18 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                     type="button"
                     onClick={() => {
                       if (linkUrl) {
+                        const { state } = editor;
+                        const { selection } = state;
+                        const { $from } = selection;
+                        const node = $from.parent;
+                        const currentAlign = node.attrs.textAlign || 'left';
+                        
                         if (linkText) {
-                          editor.chain().focus().insertContent(`<a href="${linkUrl}">${linkText}</a>`).run();
+                          editor.chain()
+                            .focus()
+                            .insertContent(`<a href="${linkUrl}">${linkText}</a>`)
+                            .setTextAlign(currentAlign)
+                            .run();
                         } else {
                           editor.chain().focus().setLink({ href: linkUrl }).run();
                         }
@@ -1807,7 +3172,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                     
                     setShowImageDropdown(false);
                     
-                    const uploadPromises = Array.from(files).map(async (file) => {
+                    // Upload files sequentially to avoid potential issues with concurrent uploads
+                    const uploadedUrls: string[] = [];
+                    for (const file of Array.from(files)) {
                       const formData = new FormData();
                       formData.append('file', file);
                       
@@ -1820,24 +3187,47 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                         const data = await response.json();
                         
                         if (data.success && data.url) {
-                          return data.url;
+                          uploadedUrls.push(data.url);
                         } else {
                           console.error('Failed to upload:', file.name, data.error);
-                          return null;
                         }
                       } catch (error) {
                         console.error('Error uploading image:', file.name, error);
-                        return null;
                       }
-                    });
+                    }
                     
-                    const uploadedUrls = await Promise.all(uploadPromises);
-                    const validUrls = uploadedUrls.filter((url): url is string => url !== null);
-                    
-                    if (validUrls.length > 0) {
-                      validUrls.forEach((url) => {
-                        editor.chain().focus().setImage({ src: url }).run();
-                      });
+                    if (uploadedUrls.length > 0) {
+                      // Insert all images sequentially
+                      // Insert each image one by one to ensure proper insertion
+                      for (let i = 0; i < uploadedUrls.length; i++) {
+                        const url = uploadedUrls[i];
+                        const imageId = generateImageId();
+                        
+                        // Use transaction to insert image node directly with all attributes
+                        // This ensures ID is properly set and preserved
+                        editor.chain().focus().run();
+                        
+                        const { state, view } = editor;
+                        const { schema } = state;
+                        const { tr } = state;
+                        const { from } = state.selection;
+                        
+                        // Create image node with all attributes including ID
+                        const imageNode = schema.nodes.image.create({
+                          src: url,
+                          alt: '',
+                          id: imageId,
+                        });
+                        
+                        // Insert the node
+                        tr.insert(from, imageNode);
+                        view.dispatch(tr);
+                        
+                        // Small delay to ensure each image is processed
+                        if (i < uploadedUrls.length - 1) {
+                          await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                      }
                     } else {
                       alert('Failed to upload images');
                     }
@@ -1854,7 +3244,27 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                 onClick={() => {
                   const url = window.prompt('Enter image URL:');
                   if (url) {
-                    editor.chain().focus().setImage({ src: url }).run();
+                    const imageId = generateImageId();
+                    
+                    // Use transaction to insert image node directly with all attributes
+                    // This ensures ID is properly set and preserved
+                    editor.chain().focus().run();
+                    
+                    const { state, view } = editor;
+                    const { schema } = state;
+                    const { tr } = state;
+                    const { from } = state.selection;
+                    
+                    // Create image node with all attributes including ID
+                    const imageNode = schema.nodes.image.create({
+                      src: url,
+                      alt: '',
+                      id: imageId,
+                    });
+                    
+                    // Insert the node
+                    tr.insert(from, imageNode);
+                    view.dispatch(tr);
                   }
                   setShowImageDropdown(false);
                 }}
@@ -2126,6 +3536,337 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       <div className="bg-white min-h-[400px] max-h-[600px] p-6 relative overflow-y-auto">
         <EditorContent editor={editor} />
         
+        {/* Image Toolbar */}
+        {showImageToolbar && selectedImagePos !== null && selectedImageNode && imageToolbarPos && (
+          <ImageToolbar
+            editor={editor}
+            imagePos={selectedImagePos}
+            imageNode={selectedImageNode}
+            position={imageToolbarPos}
+            onClose={() => {
+              setShowImageToolbar(false);
+              setSelectedImagePos(null);
+              setSelectedImageNode(null);
+            }}
+            onEditAltText={() => {
+              // Calculate position based on image position
+              if (selectedImagePos !== null && imageToolbarPos) {
+                // Position dialog below the toolbar
+                setImageAltDialogPosition({
+                  top: imageToolbarPos.top + 50,
+                  left: imageToolbarPos.left,
+                });
+              }
+              setShowImageAltDialog(true);
+              setShowImageToolbar(false);
+            }}
+            onEditCaption={() => {
+              // Calculate position based on image position
+              if (selectedImagePos !== null && imageToolbarPos) {
+                // Position dialog below the toolbar
+                setImageCaptionDialogPosition({
+                  top: imageToolbarPos.top + 50,
+                  left: imageToolbarPos.left,
+                });
+              }
+              setShowImageCaptionDialog(true);
+              setShowImageToolbar(false);
+            }}
+            onEditLink={() => {
+              // Calculate position based on image position
+              if (selectedImagePos !== null && imageToolbarPos) {
+                // Position dialog below the toolbar
+                setImageLinkDialogPosition({
+                  top: imageToolbarPos.top + 50,
+                  left: imageToolbarPos.left,
+                });
+              }
+              setShowImageLinkDialog(true);
+              setShowImageToolbar(false);
+            }}
+            onReplace={() => {
+              // Calculate position based on image position
+              if (selectedImagePos !== null && imageToolbarPos) {
+                // Position dialog below the toolbar
+                setImageReplaceDialogPosition({
+                  top: imageToolbarPos.top + 50,
+                  left: imageToolbarPos.left,
+                });
+              }
+              setShowImageReplaceDialog(true);
+              setShowImageToolbar(false);
+            }}
+          />
+        )}
+
+        {/* Image Alt Text Dialog */}
+        {showImageAltDialog && selectedImagePos !== null && selectedImageNode && imageAltDialogPosition && (
+          <div 
+            className="absolute bg-white rounded-lg shadow-xl p-6 w-[500px] z-50 image-alt-dialog"
+            style={{
+              top: `${imageAltDialogPosition.top}px`,
+              left: `${imageAltDialogPosition.left}px`,
+            }}
+          >
+              <h3 className="text-lg font-semibold mb-4">Edit Alt Text</h3>
+              <input
+                type="text"
+                defaultValue={(selectedImageNode.attrs.alt as string) || ''}
+                placeholder="Enter alt text for accessibility"
+                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const { tr } = editor.state;
+                    const attrs = { ...selectedImageNode.attrs, alt: (e.target as HTMLInputElement).value };
+                    tr.setNodeMarkup(selectedImagePos, undefined, attrs);
+                    editor.view.dispatch(tr);
+                    setShowImageAltDialog(false);
+                  } else if (e.key === 'Escape') {
+                    setShowImageAltDialog(false);
+                    setImageAltDialogPosition(null);
+                  }
+                }}
+              />
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImageAltDialog(false);
+                    setImageAltDialogPosition(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 rounded hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const input = document.querySelector('.image-alt-dialog input') as HTMLInputElement;
+                    if (input) {
+                      const { tr } = editor.state;
+                      const attrs = { ...selectedImageNode.attrs, alt: input.value };
+                      tr.setNodeMarkup(selectedImagePos, undefined, attrs);
+                      editor.view.dispatch(tr);
+                    }
+                    setShowImageAltDialog(false);
+                    setImageAltDialogPosition(null);
+                  }}
+                  className="px-4 py-2 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+          </div>
+        )}
+
+        {/* Image Caption Dialog */}
+        {showImageCaptionDialog && selectedImagePos !== null && selectedImageNode && imageCaptionDialogPosition && (
+          <div 
+            className="absolute bg-white rounded-lg shadow-xl p-6 w-[500px] z-50 image-caption-dialog"
+            style={{
+              top: `${imageCaptionDialogPosition.top}px`,
+              left: `${imageCaptionDialogPosition.left}px`,
+            }}
+          >
+              <h3 className="text-lg font-semibold mb-4">Edit Caption</h3>
+              <textarea
+                defaultValue={(selectedImageNode.attrs.caption as string) || ''}
+                placeholder="Enter caption for the image"
+                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px]"
+                autoFocus
+              />
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImageCaptionDialog(false);
+                    setImageCaptionDialogPosition(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 rounded hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const textarea = document.querySelector('.image-caption-dialog textarea') as HTMLTextAreaElement;
+                    if (textarea) {
+                      const { tr } = editor.state;
+                      const attrs = { ...selectedImageNode.attrs, caption: textarea.value };
+                      tr.setNodeMarkup(selectedImagePos, undefined, attrs);
+                      editor.view.dispatch(tr);
+                    }
+                    setShowImageCaptionDialog(false);
+                    setImageCaptionDialogPosition(null);
+                  }}
+                  className="px-4 py-2 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+          </div>
+        )}
+
+        {/* Image Link Dialog */}
+        {showImageLinkDialog && selectedImagePos !== null && selectedImageNode && imageLinkDialogPosition && (
+          <div 
+            className="absolute bg-white rounded-lg shadow-xl p-6 w-[500px] z-50 image-link-dialog"
+            style={{
+              top: `${imageLinkDialogPosition.top}px`,
+              left: `${imageLinkDialogPosition.left}px`,
+            }}
+          >
+              <h3 className="text-lg font-semibold mb-4">Edit Image Link</h3>
+              <input
+                type="text"
+                defaultValue={(selectedImageNode.attrs.href as string) || ''}
+                placeholder="Enter URL (leave empty to remove link)"
+                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const { tr } = editor.state;
+                    const href = (e.target as HTMLInputElement).value.trim() || null;
+                    const attrs = { ...selectedImageNode.attrs, href };
+                    tr.setNodeMarkup(selectedImagePos, undefined, attrs);
+                    editor.view.dispatch(tr);
+                    setShowImageLinkDialog(false);
+                  } else if (e.key === 'Escape') {
+                    setShowImageLinkDialog(false);
+                    setImageLinkDialogPosition(null);
+                  }
+                }}
+              />
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImageLinkDialog(false);
+                    setImageLinkDialogPosition(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 rounded hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const input = document.querySelector('.image-link-dialog input') as HTMLInputElement;
+                    if (input) {
+                      const { tr } = editor.state;
+                      const href = input.value.trim() || null;
+                      const attrs = { ...selectedImageNode.attrs, href };
+                      tr.setNodeMarkup(selectedImagePos, undefined, attrs);
+                      editor.view.dispatch(tr);
+                    }
+                    setShowImageLinkDialog(false);
+                    setImageLinkDialogPosition(null);
+                  }}
+                  className="px-4 py-2 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+          </div>
+        )}
+
+        {/* Image Replace Dialog */}
+        {showImageReplaceDialog && selectedImagePos !== null && selectedImageNode && imageReplaceDialogPosition && (
+          <div 
+            className="absolute bg-white rounded-lg shadow-xl p-6 w-[500px] z-50 image-replace-dialog"
+            style={{
+              top: `${imageReplaceDialogPosition.top}px`,
+              left: `${imageReplaceDialogPosition.left}px`,
+            }}
+          >
+              <h3 className="text-lg font-semibold mb-4">Replace Image</h3>
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/jpeg,image/jpg,image/png,image/webp,image/gif';
+                    input.onchange = async (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (!file) return;
+                      
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      
+                      try {
+                        const response = await fetch('/api/upload', {
+                          method: 'POST',
+                          body: formData,
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success && data.url) {
+                          const { tr } = editor.state;
+                          const attrs = { ...selectedImageNode.attrs, src: data.url };
+                          tr.setNodeMarkup(selectedImagePos, undefined, attrs);
+                          editor.view.dispatch(tr);
+                          setShowImageReplaceDialog(false);
+                          setImageReplaceDialogPosition(null);
+                        } else {
+                          alert('Failed to upload image');
+                        }
+                      } catch (error) {
+                        console.error('Error uploading image:', error);
+                        alert('Error uploading image');
+                      }
+                    };
+                    input.click();
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Upload size={16} />
+                  <span>Upload from computer</span>
+                </button>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">OR</span>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Enter image URL"
+                  className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const url = (e.target as HTMLInputElement).value.trim();
+                      if (url) {
+                        const { tr } = editor.state;
+                        const attrs = { ...selectedImageNode.attrs, src: url };
+                        tr.setNodeMarkup(selectedImagePos, undefined, attrs);
+                        editor.view.dispatch(tr);
+                        setShowImageReplaceDialog(false);
+                        setImageReplaceDialogPosition(null);
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImageReplaceDialog(false);
+                    setImageReplaceDialogPosition(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 rounded hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+          </div>
+        )}
+        
         {/* Link Popover */}
         {showLinkPopover && linkPopoverUrl && (
           <div 
@@ -2285,9 +4026,22 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                 type="button"
                 onClick={() => {
                   if (linkUrl) {
+                    // Preserve text alignment before inserting link
+                    const { state } = editor;
+                    const { selection } = state;
+                    const { $from } = selection;
+                    const node = $from.parent;
+                    const currentAlign = node.attrs.textAlign || 'left';
+                    
                     if (linkEditRange) {
                       // Edit existing link: replace the entire link with new text and URL
                       const { from, to } = linkEditRange;
+                      
+                      // Get alignment from the node at the selection
+                      const nodeAtPos = state.doc.nodeAt(from);
+                      const alignFromNode = nodeAtPos?.attrs?.textAlign || 
+                                          state.doc.resolve(from).parent.attrs.textAlign || 
+                                          'left';
                       
                       // Replace the entire link range with new link
                       editor.chain()
@@ -2295,9 +4049,14 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                         .setTextSelection({ from, to })
                         .deleteSelection()
                         .insertContent(`<a href="${linkUrl}">${linkText || linkUrl}</a>`)
+                        .setTextAlign(alignFromNode)
                         .run();
                     } else if (linkText) {
-                      editor.chain().focus().insertContent(`<a href="${linkUrl}">${linkText}</a>`).run();
+                      editor.chain()
+                        .focus()
+                        .insertContent(`<a href="${linkUrl}">${linkText}</a>`)
+                        .setTextAlign(currentAlign)
+                        .run();
                     } else {
                       editor.chain().focus().setLink({ href: linkUrl }).run();
                     }
