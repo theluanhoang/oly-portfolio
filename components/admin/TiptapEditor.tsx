@@ -466,18 +466,18 @@ const ResizableImage = Image.extend({
     let wrapperStyle = 'position: relative; display: inline-block; max-width: 100%;';
     let wrapperClass = 'resizable-image-wrapper';
     
-    // Handle alignment
+    // Handle alignment - using text-align approach like reactjs-tiptap-editor
     if (align === 'full') {
       wrapperStyle += ' width: 100%; display: block;';
       wrapperClass += ' image-align-full';
     } else if (align === 'center') {
-      wrapperStyle += ' display: block; margin: 0 auto;';
+      wrapperStyle += ' display: block; text-align: center;';
       wrapperClass += ' image-align-center';
     } else if (align === 'left') {
-      wrapperStyle += ' display: block;';
+      wrapperStyle += ' display: block; text-align: left;';
       wrapperClass += ' image-align-left';
     } else if (align === 'right') {
-      wrapperStyle += ' display: block; margin-left: auto;';
+      wrapperStyle += ' display: block; text-align: right;';
       wrapperClass += ' image-align-right';
     } else if (align === 'float-left') {
       wrapperStyle += ' float: left; margin-right: 1em;';
@@ -488,9 +488,10 @@ const ResizableImage = Image.extend({
     }
     
     // Build img attributes, ensuring id is included
+    // Don't set display here - let CSS handle it (like reactjs-tiptap-editor)
     const imgAttrs: Record<string, unknown> = {
       ...HTMLAttributes,
-      style: `display: block; max-width: 100%; height: auto; ${HTMLAttributes.width ? `width: ${HTMLAttributes.width}px;` : ''} ${HTMLAttributes.height ? `height: ${HTMLAttributes.height}px;` : ''}`,
+      style: `max-width: 100%; height: auto; ${HTMLAttributes.width ? `width: ${HTMLAttributes.width}px;` : ''} ${HTMLAttributes.height ? `height: ${HTMLAttributes.height}px;` : ''}`,
     };
     
     if (imageId) {
@@ -1703,7 +1704,7 @@ const ResizableImage = Image.extend({
 
       // Function to update caption and alignment when node changes
       const updateCaptionAndAlignment = () => {
-        console.log('[NodeView] updateCaptionAndAlignment() called');
+        console.log('[NodeView] updateCaptionAndAlignment() called, align:', node.attrs.align);
         const currentCaption = node.attrs.caption;
         const currentAlign = node.attrs.align || 'left';
         
@@ -1717,13 +1718,118 @@ const ResizableImage = Image.extend({
         }
         
         if (dom) {
-          if (currentAlign === 'center') {
-          dom.style.textAlign = 'center';
-        } else if (currentAlign === 'right') {
-          dom.style.textAlign = 'right';
-        } else {
-            dom.style.textAlign = 'left';
+          // Reset all alignment styles first
+          dom.style.textAlign = '';
+          dom.style.marginLeft = '';
+          dom.style.marginRight = '';
+          dom.style.margin = '';
+          dom.style.float = '';
+          dom.style.width = '';
+          dom.style.display = '';
+          
+          // Get the image container (could be link or imgWrapper)
+          const imageContainer = dom.firstElementChild as HTMLElement;
+          
+          // Reset image container styles
+          if (imageContainer) {
+            imageContainer.style.marginLeft = '';
+            imageContainer.style.marginRight = '';
+            imageContainer.style.margin = '';
+            imageContainer.style.display = '';
+            imageContainer.style.width = '';
           }
+          
+          // Also reset imgWrapper if it exists and is different from imageContainer
+          if (imgWrapper && imageContainer !== imgWrapper) {
+            imgWrapper.style.marginLeft = '';
+            imgWrapper.style.marginRight = '';
+            imgWrapper.style.margin = '';
+            imgWrapper.style.display = '';
+            imgWrapper.style.width = '';
+          }
+          
+          // Apply proper alignment styles for block images
+          if (currentAlign === 'full') {
+            dom.style.width = '100%';
+            dom.style.display = 'block';
+            if (imageContainer) {
+              imageContainer.style.width = '100%';
+              imageContainer.style.display = 'block';
+            }
+            if (imgWrapper) {
+              imgWrapper.style.width = '100%';
+              imgWrapper.style.display = 'block';
+            }
+          } else if (currentAlign === 'center') {
+            dom.style.width = '100%';
+            dom.style.display = 'block';
+            dom.style.textAlign = 'center';
+            if (imageContainer) {
+              imageContainer.style.display = 'inline-block';
+            }
+            if (imgWrapper) {
+              imgWrapper.style.display = 'inline-block';
+            }
+          } else if (currentAlign === 'right') {
+            dom.style.width = '100%';
+            dom.style.display = 'block';
+            dom.style.textAlign = 'right';
+            if (imageContainer) {
+              imageContainer.style.display = 'inline-block';
+            }
+            if (imgWrapper) {
+              imgWrapper.style.display = 'inline-block';
+            }
+          } else if (currentAlign === 'left') {
+            dom.style.width = '100%';
+            dom.style.display = 'block';
+            dom.style.textAlign = 'left';
+            if (imageContainer) {
+              imageContainer.style.display = 'inline-block';
+            }
+            if (imgWrapper) {
+              imgWrapper.style.display = 'inline-block';
+            }
+          } else if (currentAlign === 'float-left') {
+            dom.style.float = 'left';
+            dom.style.marginRight = '1em';
+            dom.style.display = 'inline-block';
+            if (imageContainer) {
+              imageContainer.style.display = 'inline-block';
+            }
+            if (imgWrapper) {
+              imgWrapper.style.display = 'inline-block';
+            }
+          } else if (currentAlign === 'float-right') {
+            dom.style.float = 'right';
+            dom.style.marginLeft = '1em';
+            dom.style.display = 'inline-block';
+            if (imageContainer) {
+              imageContainer.style.display = 'inline-block';
+            }
+            if (imgWrapper) {
+              imgWrapper.style.display = 'inline-block';
+            }
+          } else {
+            // Default: left alignment
+            dom.style.width = '100%';
+            dom.style.display = 'block';
+            dom.style.textAlign = 'left';
+            if (imageContainer) {
+              imageContainer.style.display = 'inline-block';
+            }
+            if (imgWrapper) {
+              imgWrapper.style.display = 'inline-block';
+            }
+          }
+          
+          console.log('[NodeView] Alignment applied:', {
+            align: currentAlign,
+            domWidth: dom.style.width,
+            domDisplay: dom.style.display,
+            domTextAlign: dom.style.textAlign,
+            imageContainerDisplay: imageContainer?.style.display,
+          });
         }
       };
 
