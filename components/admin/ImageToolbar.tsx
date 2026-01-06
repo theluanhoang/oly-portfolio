@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlignLeft, AlignCenter, AlignRight, Maximize2, Link as LinkIcon, RefreshCw, Trash2, MoreVertical, Type, FileImage } from 'lucide-react';
 import type { Editor } from '@tiptap/core';
-import { TextSelection } from 'prosemirror-state';
+import { NodeSelection } from 'prosemirror-state';
 
 interface ImageToolbarProps {
   editor: Editor;
@@ -31,7 +31,6 @@ export function ImageToolbar({
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [, forceUpdate] = useState(0);
   
-  // Read current node state directly from editor to ensure we have the latest values
   const getCurrentNode = () => {
     const { doc } = editor.state;
     const node = doc.nodeAt(imagePos);
@@ -42,7 +41,6 @@ export function ImageToolbar({
   const currentAlign = currentNode?.attrs?.align || null;
   const hasLink = !!currentNode?.attrs?.href;
   
-  // Listen for editor updates to refresh the toolbar
   useEffect(() => {
     const updateToolbar = () => {
       forceUpdate(prev => prev + 1);
@@ -57,7 +55,6 @@ export function ImageToolbar({
     };
   }, [editor]);
 
-  // Close more menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -75,62 +72,60 @@ export function ImageToolbar({
   }, [showMoreMenu]);
 
   const handleAlign = (align: string | null) => {
-    console.log('[ImageToolbar] handleAlign called with:', align);
-    console.log('[ImageToolbar] imagePos:', imagePos);
-    
-    // Use TipTap command to update image alignment
-    // This matches the approach used in reactjs-tiptap-editor
     const alignValue: 'left' | 'center' | 'right' | 'full' | null = 
       (align === 'left' || align === 'center' || align === 'right' || align === 'full') 
         ? align as 'left' | 'center' | 'right' | 'full'
         : null;
     
-    console.log('[ImageToolbar] alignValue:', alignValue);
     
-    // Get current node state
-    const { doc } = editor.state;
-    const node = doc.nodeAt(imagePos);
-    console.log('[ImageToolbar] node:', node);
+    const { state } = editor;
+    const { selection } = state;
+    let node = null;
+    let pos = imagePos;
+    
+    if (selection instanceof NodeSelection && selection.node) {
+      node = selection.node;
+      pos = selection.from;
+    } else {
+      const { doc } = state;
+      node = doc.nodeAt(imagePos);
+      pos = imagePos;
+    }
     
     if (!node || node.type.name !== 'image') {
-      console.warn('[ImageToolbar] Node not found or not an image node');
+      const { doc } = state;
+      node = doc.nodeAt(imagePos);
+      if (!node || node.type.name !== 'image') {
+        return;
+      }
+      pos = imagePos;
+    }
+    
+    const currentAlign = node.attrs.align || null;
+    
+    if (currentAlign === alignValue) {
       return;
     }
     
-    // Check if alignment actually changed
-    const currentAlign = node.attrs.align || null;
-    console.log('[ImageToolbar] currentAlign:', currentAlign, 'newAlign:', alignValue);
+    const { doc, tr } = state;
+    const actualPos = pos;
+    const actualNode = doc.nodeAt(actualPos);
     
-    if (currentAlign === alignValue) {
-      console.log('[ImageToolbar] Alignment unchanged, skipping');
-      return; // No change needed
+    if (!actualNode || actualNode.type.name !== 'image') {
+      return;
     }
     
-    // Use setNodeMarkup to update node attributes directly
-    // This is the most reliable way and ensures node view's update() method is called
-    const { tr } = editor.state;
+    tr.setSelection(NodeSelection.create(doc, actualPos));
     
-    console.log('[ImageToolbar] Updating node markup with align:', alignValue);
+    if (actualNode) {
+      tr.setNodeMarkup(actualPos, undefined, {
+        ...actualNode.attrs,
+        align: alignValue,
+      });
+    }
     
-    // Update node attributes - this will trigger node view's update() method
-    // ProseMirror will automatically call the update() method of the node view
-    tr.setNodeMarkup(imagePos, undefined, {
-      ...node.attrs,
-      align: alignValue,
-    });
-    
-    // Also update selection to ensure the node remains selected
-    // This helps ensure the node view updates properly
-    tr.setSelection(TextSelection.create(tr.doc, imagePos, imagePos + node.nodeSize));
-    
-    console.log('[ImageToolbar] Dispatching transaction');
-    
-    // Dispatch the transaction
-    // The node view's update() method will be called automatically by ProseMirror
-    // which will then call updateCaptionAndAlignment() to update the DOM styles
     editor.view.dispatch(tr);
     
-    console.log('[ImageToolbar] Transaction dispatched');
   };
 
   const handleDelete = () => {
@@ -174,7 +169,6 @@ export function ImageToolbar({
         <button
           type="button"
           onClick={(e) => {
-            console.log('[ImageToolbar] Center align button clicked');
             e.stopPropagation();
             handleAlign('center');
           }}
@@ -188,7 +182,6 @@ export function ImageToolbar({
         <button
           type="button"
           onClick={(e) => {
-            console.log('[ImageToolbar] Right align button clicked');
             e.stopPropagation();
             handleAlign('right');
           }}
@@ -202,7 +195,6 @@ export function ImageToolbar({
         <button
           type="button"
           onClick={(e) => {
-            console.log('[ImageToolbar] Full align button clicked');
             e.stopPropagation();
             handleAlign('full');
           }}
