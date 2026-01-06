@@ -680,8 +680,9 @@ const ResizableImage = Image.extend({
 
       // Handle caption
       const caption = node.attrs.caption;
+      let captionEl: HTMLElement | null = null;
       if (caption) {
-        const captionEl = document.createElement('div');
+        captionEl = document.createElement('div');
         captionEl.className = 'image-caption';
         captionEl.style.textAlign = 'center';
         captionEl.style.fontStyle = 'italic';
@@ -693,21 +694,26 @@ const ResizableImage = Image.extend({
       }
 
       let isResizing = false;
-      let isDragging = false;
       let resizeHandle: 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w' | null = null;
       let startX = 0;
       let startY = 0;
       let startWidth = 0;
       let startHeight = 0;
-      let dragStartPos: number | undefined = undefined;
-      let lastMovedToPos: number | null = null; 
-      let mouseDownPos: { x: number; y: number } | null = null;
-      let pendingInsertPos: number | null = null;
-      let dragPreviewNode: PMNode | null = null;
+      let wasCtrlClick: boolean = false;
+      type DragState = {
+        isActive: boolean;
+        startPos: number;
+        node: PMNode;
+        nodeSize: number;
+        nodeId: string;
+        startTime: number;
+        pendingInsertPos: number | null;
+        lastMovedToPos: number | null;
+      };
+      
+      let dragState: DragState | null = null;
       let dragPreviewElement: HTMLElement | null = null;
       let lastMouseEvent: MouseEvent | null = null;
-      let wasCtrlClick: boolean = false; // Track if the last click was with Ctrl/Cmd
-      const DRAG_THRESHOLD = 5;
 
       const getCursorForPosition = (position: string): string => {
         const cursors: Record<string, string> = {
@@ -814,13 +820,10 @@ const ResizableImage = Image.extend({
         img.style.height = `${newHeight}px`;
         imgWrapper.style.width = `${newWidth}px`;
         
-        // Preserve alignment during resize - only set dom width if alignment is not left/center/right/full
-        // For left/center/right/full alignment, we need dom to keep width: 100% for alignment to work
         const currentAlign = node.attrs.align;
         if (currentAlign !== 'left' && currentAlign !== 'center' && currentAlign !== 'right' && currentAlign !== 'full') {
           dom.style.width = `${newWidth}px`;
         }
-        // Don't set dom.style.width for left/center/right/full to preserve alignment
         dom.style.height = 'fit-content';
         
         if (img.style.outline) {
@@ -917,10 +920,60 @@ const ResizableImage = Image.extend({
         }
       };
 
+      const startDrag = (pos: number): boolean => {
+        if (dragState?.isActive) {
+          return false;
+        }
+        
+        const { doc } = view.state;
+        const node = doc.nodeAt(pos);
+        if (!node || node.type.name !== 'image') {
+          return false;
+        }
+        
+        const nodeId = node.attrs.id;
+        if (!nodeId) {
+          return false;
+        }
+        
+        dragState = {
+          isActive: false,
+          startPos: pos,
+          node: node,
+          nodeSize: node.nodeSize,
+          nodeId: nodeId,
+          startTime: Date.now(),
+          pendingInsertPos: null,
+          lastMovedToPos: null,
+        };
+        
+        return true;
+      };
+
       const handleImageMouseDown = (e: MouseEvent) => {
         if (e.target === img && !isResizing) {
           const pos = getPos();
           if (typeof pos === 'number') {
+            let isDrag = false;
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const DRAG_THRESHOLD = 5;
+            
+            wasCtrlClick = e.ctrlKey || e.metaKey;
+            
+            const handleMouseMove = (moveEvent: MouseEvent) => {
+              const deltaX = Math.abs(moveEvent.clientX - startX);
+              const deltaY = Math.abs(moveEvent.clientY - startY);
+              if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
+                isDrag = true;
+              }
+            };
+            
+            const handleMouseUp = () => {
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+              
+              if (!isDrag && !dragState?.isActive) {
             e.preventDefault();
             e.stopPropagation();
             
@@ -935,37 +988,21 @@ const ResizableImage = Image.extend({
             } else {
               tr.setSelection(TextSelection.create(doc, pos));
             }
-            view.dispatch(tr);
-            showHandles();
+                view.dispatch(tr);
+                showHandles();
+                
+                if (wasCtrlClick) {
+                  const event = new CustomEvent('toggleImageSelection', { detail: { pos, mouseX: e.clientX, mouseY: e.clientY } });
+                  document.dispatchEvent(event);
+                } else {
+                  const event = new CustomEvent('selectImage', { detail: { pos, mouseX: e.clientX, mouseY: e.clientY, isMultiSelect: false } });
+                  document.dispatchEvent(event);
+                }
+              }
+            };
             
-            wasCtrlClick = e.ctrlKey || e.metaKey;
-            
-            if (wasCtrlClick) {
-              // Multi-select: toggle this image in/out of selection
-              const event = new CustomEvent('toggleImageSelection', { detail: { pos, mouseX: e.clientX, mouseY: e.clientY } });
-              document.dispatchEvent(event);
-            } else {
-              // Single select: replace current selection with this image only
-              const event = new CustomEvent('selectImage', { detail: { pos, mouseX: e.clientX, mouseY: e.clientY, isMultiSelect: false } });
-              document.dispatchEvent(event);
-            }
-            
-            dragStartPos = pos;
-            lastMovedToPos = null;
-            pendingInsertPos = null;
-            mouseDownPos = { x: e.clientX, y: e.clientY };
-            isDragging = false;
-            // Capture the node with all its attributes at mousedown
-            // This ensures we preserve alignment and other attributes during drag
-            dragPreviewNode = nodeAtPos;
-            
-            console.log('[DragReorder] MouseDown:', {
-              pos,
-              imageId: nodeAtPos?.attrs?.id,
-              imageSrc: nodeAtPos?.attrs?.src?.substring(0, 50),
-              mousePos: { x: e.clientX, y: e.clientY },
-              wasCtrlClick,
-            });
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
           }
         }
       };
@@ -976,18 +1013,83 @@ const ResizableImage = Image.extend({
         if (!isResizing) {
           const pos = getPos();
           if (typeof pos === 'number') {
-            dragStartPos = pos;
-            lastMovedToPos = null; // Reset when starting new drag
-            isDragging = true;
+            e.stopPropagation();
+            
+            if (!dragState || !dragState.isActive) {
+              const success = startDrag(pos);
+              if (success && dragState) {
+                dragState.isActive = true;
+              } else {
+                return;
+              }
+            }
+            
+            if (!dragPreviewElement) {
+              createDragPreview();
+            }
+            updateDragPreviewPosition(e);
+            
+            lastMouseEvent = e;
+            
             if (e.dataTransfer) {
               e.dataTransfer.effectAllowed = 'move';
               e.dataTransfer.setData('text/html', '');
+              
+              let emptyDiv = document.getElementById('tiptap-drag-ghost');
+              if (!emptyDiv) {
+                emptyDiv = document.createElement('div');
+                emptyDiv.id = 'tiptap-drag-ghost';
+                emptyDiv.style.width = '1px';
+                emptyDiv.style.height = '1px';
+                emptyDiv.style.position = 'absolute';
+                emptyDiv.style.top = '-1000px';
+                emptyDiv.style.left = '-1000px';
+                emptyDiv.style.opacity = '0';
+                emptyDiv.style.pointerEvents = 'none';
+                document.body.appendChild(emptyDiv);
+              }
+              
+              try {
+                e.dataTransfer.setDragImage(emptyDiv, 0, 0);
+              } catch {
+                const emptyImg = document.createElement('img');
+                emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
+                emptyImg.width = 1;
+                emptyImg.height = 1;
+                e.dataTransfer.setDragImage(emptyImg, 0, 0);
+              }
             }
           }
         }
       };
 
       img.addEventListener('dragstart', handleImageDragStart);
+      
+      const handleImageDragEnd = (e: DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        removeDragPreview();
+        
+        if (dragState?.isActive) {
+          if (dragState.pendingInsertPos !== null) {
+            try {
+              performDragDrop(dragState, dragState.pendingInsertPos);
+            } catch {
+              // Silent fail
+            }
+          }
+          
+          lastMouseEvent = null;
+          if (img) {
+            img.style.opacity = '';
+            img.style.cursor = '';
+          }
+          cleanupDrag();
+        }
+      };
+      
+      img.addEventListener('dragend', handleImageDragEnd);
 
       dom.addEventListener('click', (e) => {
         if (e.target !== img && !handles.includes(e.target as HTMLElement)) {
@@ -1014,7 +1116,8 @@ const ResizableImage = Image.extend({
       };
 
       let lastMoveTime = 0;
-      const MOVE_THROTTLE = 16;
+      const MOVE_THROTTLE = 8; // Reduced for smoother updates
+      let rafId: number | null = null;
 
       const createDragPreview = (): HTMLElement => {
         if (dragPreviewElement) {
@@ -1055,7 +1158,7 @@ const ResizableImage = Image.extend({
         return preview;
       };
 
-      const updateDragPreviewPosition = (e: MouseEvent) => {
+      const updateDragPreviewPosition = (e: MouseEvent | DragEvent) => {
         if (dragPreviewElement) {
           const offsetX = 10;
           const offsetY = 10;
@@ -1071,411 +1174,338 @@ const ResizableImage = Image.extend({
         }
       };
 
-      const handleDocumentMouseMove = (e: MouseEvent) => {
-        if (!isDragging && dragStartPos !== undefined && mouseDownPos !== null && !isResizing) {
-          const deltaX = Math.abs(e.clientX - mouseDownPos.x);
-          const deltaY = Math.abs(e.clientY - mouseDownPos.y);
-          const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      let cachedImageNodes: Array<{ pos: number; size: number; center: number }> | null = null;
+      let cachedDocSize = 0;
+      let cachedNodeId: string | null = null;
+      
+      const findInsertPosition = (
+        targetPos: number,
+        dragState: DragState,
+        doc: PMNode
+      ): number | null => {
+        try {
+          const clampedPos = Math.max(0, Math.min(targetPos, doc.content.size));
           
-          if (distance >= DRAG_THRESHOLD) {
-            isDragging = true;
-            pendingInsertPos = null;
-            if (img) {
-              img.style.cursor = 'grabbing';
-              img.style.opacity = '0.5';
+          const { startPos, nodeSize } = dragState;
+          const nodeStart = startPos;
+          const nodeEnd = startPos + nodeSize;
+          
+          if (clampedPos > nodeStart && clampedPos < nodeEnd) {
+            return null;
+          }
+          
+          const currentDocSize = doc.content.size;
+          const needsRebuild = !cachedImageNodes || 
+                               cachedDocSize !== currentDocSize || 
+                               cachedNodeId !== dragState.nodeId;
+          
+          if (needsRebuild) {
+            cachedImageNodes = [];
+            doc.descendants((node, pos) => {
+              if (node.type.name === 'image' && node.attrs.id !== dragState.nodeId) {
+                const size = node.nodeSize;
+                cachedImageNodes!.push({ 
+                  pos, 
+                  size,
+                  center: pos + size / 2
+                });
+              }
+            });
+            cachedImageNodes.sort((a, b) => a.pos - b.pos);
+            cachedDocSize = currentDocSize;
+            cachedNodeId = dragState.nodeId;
+          }
+          
+          let targetImage: { pos: number; size: number; center: number } | null = null;
+          
+          if (cachedImageNodes && cachedImageNodes.length > 0) {
+            for (const img of cachedImageNodes) {
+              const imgStart = img.pos;
+              const imgEnd = img.pos + img.size;
+              
+              if (clampedPos >= imgStart && clampedPos < imgEnd) {
+                targetImage = {
+                  pos: img.pos,
+                  size: img.size,
+                  center: img.center
+                };
+                break;
+              }
             }
-            createDragPreview();
-            updateDragPreviewPosition(e);
-            console.log('[DragReorder] Drag started:', {
-              dragStartPos,
-              distance,
-              threshold: DRAG_THRESHOLD,
-            });
-          } else {
-            return;
-          }
-        }
-        
-        if (isDragging && dragStartPos !== undefined && !isResizing) {
-          lastMouseEvent = e;
-          updateDragPreviewPosition(e);
-          
-          const now = Date.now();
-          if (now - lastMoveTime < MOVE_THROTTLE) {
-            return;
-          }
-          lastMoveTime = now;
-
-          const coords = view.posAtCoords({ left: e.clientX, top: e.clientY });
-          if (!coords) return;
-          
-          const { doc } = view.state;
-          const node = doc.nodeAt(dragStartPos);
-          if (!node || node.type.name !== 'image') {
-            return;
-          }
-
-          const targetPos = coords.pos;
-          const nodeSize = node.nodeSize;
-          const nodeStart = dragStartPos;
-          const nodeEnd = dragStartPos + nodeSize;
-          
-          // Skip if targetPos is strictly inside the node being dragged (not at boundaries)
-          // Allow drag when targetPos is exactly at nodeStart or nodeEnd (boundaries)
-          if (targetPos > nodeStart && targetPos < nodeEnd) {
-            console.log('[DragReorder] TargetPos inside dragged node, skipping:', {
-              targetPos,
-              nodeStart,
-              nodeEnd,
-            });
-            return;
-          }
-          
-          // If targetPos is exactly at nodeStart or nodeEnd, we still allow drag
-          // This handles edge cases where mouse is at the boundary
-          
-          console.log('[DragReorder] MouseMove:', {
-            targetPos,
-            nodeStart,
-            nodeEnd,
-            nodeSize,
-            docSize: doc.content.size,
-          });
-          
-          /**
-           * Improved logic for finding valid insert position:
-           * 1. First, try to find a valid position directly from targetPos
-           * 2. If targetPos is at an image, insert before/after based on direction
-           * 3. Otherwise, find the nearest valid position that can contain an image
-           */
-          const findValidInsertPosition = (pos: number): number | null => {
-            try {
-              // Clamp position to valid range
-              const clampedPos = Math.max(0, Math.min(pos, doc.content.size));
+            
+            if (!targetImage) {
+              let nearestImage: { pos: number; size: number; center: number; distance: number } | null = null;
               
-              console.log('[DragReorder] findValidInsertPosition called:', {
-                pos,
-                clampedPos,
-                nodeStart,
-                nodeEnd,
-                docSize: doc.content.size,
-              });
+              let left = 0;
+              let right = cachedImageNodes.length - 1;
+              let closestIdx = 0;
+              let minDistance = Infinity;
               
-              // Try to resolve the position
-              const $pos = doc.resolve(clampedPos);
-              const nodeAtPos = doc.nodeAt(clampedPos);
-              
-              // If we're directly at an image node
-              if (nodeAtPos && nodeAtPos.type.name === 'image') {
-                // Check if this is the node being dragged (by comparing position ranges)
-                const isDraggedNode = clampedPos >= nodeStart && clampedPos < nodeEnd;
+              while (left <= right) {
+                const mid = Math.floor((left + right) / 2);
+                const img = cachedImageNodes[mid];
+                const distance = Math.abs(clampedPos - img.center);
                 
-                if (isDraggedNode) {
-                  // This is the node being dragged, find the nearest valid position
-                  // We need to find a position outside the dragged node
-                  
-                  // Try to find position before the dragged node
-                  if (clampedPos > 0) {
-                    // Search backward to find a valid position before this node
-                    for (let p = clampedPos - 1; p >= Math.max(0, clampedPos - 50); p--) {
-                      try {
-                        const $testPos = doc.resolve(p);
-                        const testNode = doc.nodeAt(p);
-                        // If we find another image or valid position, use it
-                        if (testNode && testNode.type.name === 'image') {
-                          const result = p;
-                          console.log('[DragReorder] At dragged node, found image before:', result);
-                          return result;
-                        }
-                        // Check if we can insert at this position
-                        const testParent = $testPos.node($testPos.depth);
-                        const testIndex = $testPos.index($testPos.depth);
-                        if (testParent.canReplace(testIndex, testIndex, Fragment.from(node))) {
-                          const result = p;
-                          console.log('[DragReorder] At dragged node, found valid position before:', result);
-                          return result;
-                        }
-                      } catch {
-                        continue;
-                      }
-                    }
-                    // Fallback: use position before dragged node
-                    const beforePos = clampedPos;
-                    console.log('[DragReorder] At dragged node, using position before:', beforePos);
-                    return beforePos;
+                if (distance < minDistance) {
+                  minDistance = distance;
+                  closestIdx = mid;
+                }
+                
+                if (clampedPos < img.center) {
+                  right = mid - 1;
                   } else {
-                    // At start of document, find position after
-                    const afterPos = clampedPos + nodeAtPos.nodeSize;
-                    console.log('[DragReorder] At dragged node (start of doc), trying to insert after:', afterPos);
-                    return afterPos;
-                  }
-                }
-                
-                // This is a different image node
-                // Determine direction: are we dragging forward or backward?
-                // Logic: 
-                // - When dragging backward (pos > nodeStart): user wants dragged image to appear AFTER target image
-                //   So we insert AFTER target image (clampedPos + nodeSize)
-                // - When dragging forward (pos < nodeStart): user wants dragged image to appear BEFORE target image
-                //   So we insert BEFORE target image (clampedPos)
-                const direction = pos < nodeStart ? 'forward' : 'backward';
-                // CORRECTED: When dragging backward, insert AFTER target image
-                // When dragging forward, insert BEFORE target image
-                const result = pos < nodeStart ? clampedPos : clampedPos + nodeAtPos.nodeSize;
-                
-                console.log('[DragReorder] Found image node at position:', {
-                  clampedPos,
-                  nodeType: nodeAtPos.type.name,
-                  isDraggedNode: false,
-                  direction,
-                  result,
-                  explanation: pos < nodeStart 
-                    ? 'dragging forward: insert BEFORE target image (so dragged appears before target)' 
-                    : 'dragging backward: insert AFTER target image (so dragged appears after target)',
-                });
-                
-                return result;
-              }
-              
-              // If we're inside a text node or other content, find the best insertion point
-              // Try to find a position where we can insert an image node
-              
-              // Special case: if targetPos is at or near the end of document, find the last image
-              if (clampedPos >= doc.content.size - 1) {
-                // Find the last image node in the document
-                for (let p = doc.content.size - 1; p >= 0; p--) {
-                  const testNode = doc.nodeAt(p);
-                  if (testNode && testNode.type.name === 'image') {
-                    // Insert after the last image
-                    const result = p + testNode.nodeSize;
-                    console.log('[DragReorder] At end of document, found last image, inserting after:', {
-                      lastImagePos: p,
-                      result,
-                    });
-                    return result;
-                  }
-                }
-                // If no image found, use document end
-                console.log('[DragReorder] At end of document, no images found, using doc end');
-                return doc.content.size;
-              }
-              
-              const depth = $pos.depth;
-              
-              console.log('[DragReorder] Not at image node, searching for valid position:', {
-                nodeAtPosType: nodeAtPos?.type?.name,
-                depth,
-                clampedPos,
-                docSize: doc.content.size,
-              });
-              
-              // Walk up the tree to find a container that can hold an image
-              try {
-                for (let d = depth; d >= 0; d--) {
-                  const parent = $pos.node(d);
-                  const index = $pos.index(d);
-                  
-                  // Check if we can insert an image at this level
-                  if (parent.canReplace(index, index, Fragment.from(node))) {
-                    const result = $pos.start(d) + parent.child(index).nodeSize;
-                    console.log('[DragReorder] Found valid position walking up tree:', {
-                      depth: d,
-                      parentType: parent.type.name,
-                      index,
-                      result,
-                    });
-                    return result;
-                  }
-                }
-                
-                // Fallback: try to find position at the start of current parent
-                const parentStart = $pos.start($pos.depth);
-                const parent = $pos.node($pos.depth);
-                const index = $pos.index($pos.depth);
-                
-                // Try inserting at the start of current position's parent
-                if (parent.canReplace(index, index, Fragment.from(node))) {
-                  console.log('[DragReorder] Found valid position at parent start:', parentStart);
-                  return parentStart;
-                }
-              } catch (error) {
-                console.warn('[DragReorder] Error walking up tree, trying fallback search:', {
-                  error: error instanceof Error ? error.message : String(error),
-                });
-              }
-              
-              console.log('[DragReorder] Searching nearby positions (fallback)');
-              
-              // Last resort: try to find any valid position near the target
-              // Search backward first
-              for (let p = Math.max(0, clampedPos - 100); p < clampedPos; p++) {
-                try {
-                  const $testPos = doc.resolve(p);
-                  const testParent = $testPos.node($testPos.depth);
-                  const testIndex = $testPos.index($testPos.depth);
-                  if (testParent.canReplace(testIndex, testIndex, Fragment.from(node))) {
-                    console.log('[DragReorder] Found valid position searching backward:', p);
-                    return p;
-                  }
-                } catch {
-                  continue;
+                  left = mid + 1;
                 }
               }
               
-              // Search forward
-              for (let p = clampedPos + 1; p <= Math.min(doc.content.size, clampedPos + 100); p++) {
-                try {
-                  const $testPos = doc.resolve(p);
-                  const testParent = $testPos.node($testPos.depth);
-                  const testIndex = $testPos.index($testPos.depth);
-                  if (testParent.canReplace(testIndex, testIndex, Fragment.from(node))) {
-                    console.log('[DragReorder] Found valid position searching forward:', p);
-                    return p;
-                  }
-                } catch {
-                  continue;
+              const checkIndices = [closestIdx];
+              if (closestIdx > 0) checkIndices.push(closestIdx - 1);
+              if (closestIdx < cachedImageNodes.length - 1) checkIndices.push(closestIdx + 1);
+              
+              for (const idx of checkIndices) {
+                const img = cachedImageNodes[idx];
+                const distance = Math.abs(clampedPos - img.center);
+                
+                if (!nearestImage || distance < nearestImage.distance) {
+                  nearestImage = { 
+                    pos: img.pos, 
+                    size: img.size, 
+                    center: img.center,
+                    distance 
+                  };
                 }
               }
               
-              console.warn('[DragReorder] Could not find valid insert position');
+              const DROP_ZONE_THRESHOLD = 50;
+              if (nearestImage && nearestImage.distance < DROP_ZONE_THRESHOLD) {
+                targetImage = {
+                  pos: nearestImage.pos,
+                  size: nearestImage.size,
+                  center: nearestImage.center
+                };
+              }
+            }
+          }
+          
+          if (targetImage) {
+            const imgStart = targetImage.pos;
+            const imgEnd = targetImage.pos + targetImage.size;
+            const imgCenter = targetImage.center;
+            
+            let insertPos: number;
+            
+            const isDraggingFromBehind = nodeStart > imgEnd;
+            const isDraggingFromFront = nodeStart < imgStart;
+            
+            if (isDraggingFromBehind) {
+              insertPos = imgStart;
+            } else if (isDraggingFromFront) {
+              insertPos = imgEnd;
+            } else {
+              if (clampedPos < imgCenter) {
+                insertPos = imgStart;
+              } else {
+                insertPos = imgEnd;
+              }
+            }
+            
+            if (insertPos > nodeStart && insertPos < nodeEnd) {
               return null;
-            } catch (error) {
-              console.error('[DragReorder] Error in findValidInsertPosition:', {
-                error: error instanceof Error ? error.message : String(error),
-                pos,
-              });
+            }
+            
+            if (insertPos === nodeStart) {
+              return null;
+            }
+            
+            try {
+              const $pos = doc.resolve(insertPos);
+              const parent = $pos.parent;
+              const index = $pos.index();
+              
+              if (parent.canReplace(index, index, Fragment.from(dragState.node))) {
+                return insertPos;
+                  }
+                } catch {
+              // Fall through to default search
+            }
+          }
+          
+          const MAX_SEARCH_RADIUS = 15;
+          
+          for (let offset = 0; offset <= MAX_SEARCH_RADIUS; offset++) {
+            const positions = offset === 0 
+              ? [clampedPos]
+              : [clampedPos - offset, clampedPos + offset];
+            
+            for (const pos of positions) {
+              if (pos < 0 || pos > doc.content.size) continue;
+              
+              if (pos > nodeStart && pos < nodeEnd) continue;
+              
+              try {
+                const $pos = doc.resolve(pos);
+                const parent = $pos.parent;
+                const index = $pos.index();
+                
+                if (parent.canReplace(index, index, Fragment.from(dragState.node))) {
+                  return pos;
+                  }
+                } catch {
+                  continue;
+              }
+                }
+              }
+              
+              return null;
+        } catch {
               return null;
             }
           };
           
-          // Find the insert position before deletion
-          const insertPosBeforeDelete = findValidInsertPosition(targetPos);
-          
-          if (insertPosBeforeDelete === null) {
-            console.warn('[DragReorder] Could not find valid insert position for targetPos:', targetPos);
+      const handleDocumentMouseMove = (e: MouseEvent) => {
+        if (!dragState?.isActive || isResizing) return;
+        
+        lastMouseEvent = e;
+        
+        if (dragPreviewElement) {
+          updateDragPreviewPosition(e);
+        } else {
+          createDragPreview();
+          updateDragPreviewPosition(e);
+        }
+        
+        const now = Date.now();
+        if (now - lastMoveTime < MOVE_THROTTLE) {
             return;
           }
-          
-          console.log('[DragReorder] Found insert position:', {
-            targetPos,
-            insertPosBeforeDelete,
-            nodeStart,
-            nodeEnd,
-          });
-          
-          // Calculate the final insert position after deletion
-          // After deleting [nodeStart, nodeEnd), positions shift:
-          // - Positions < nodeStart: unchanged
-          // - Positions >= nodeEnd: subtract nodeSize
-          let finalInsertPos: number;
-          
-          if (insertPosBeforeDelete < nodeStart) {
-            // Inserting before the dragged node: position unchanged
-            finalInsertPos = insertPosBeforeDelete;
-          } else if (insertPosBeforeDelete > nodeEnd) {
-            // Inserting after the dragged node: adjust for deletion
-            finalInsertPos = insertPosBeforeDelete - nodeSize;
-          } else {
-            // Edge case: insertPos is at nodeStart or nodeEnd (boundaries)
-            // This can happen when targetPos is at the boundary of the dragged node
-            if (insertPosBeforeDelete === nodeStart) {
-              // Inserting at nodeStart: this means we want to insert before the dragged node
-              // After deletion, the position becomes the start position
-              finalInsertPos = nodeStart;
-            } else if (insertPosBeforeDelete === nodeEnd) {
-              // Inserting at nodeEnd: this means we want to insert after the dragged node
-              // After deletion, positions shift, so this becomes nodeStart
-              finalInsertPos = nodeStart;
-            } else {
-              // insertPos is strictly inside the dragged node
-              // This shouldn't happen with our improved logic, but handle it anyway
-              console.warn('[DragReorder] insertPosBeforeDelete is inside dragged node:', {
-                insertPosBeforeDelete,
-                nodeStart,
-                nodeEnd,
-              });
-              // Skip this update
-              return;
-            }
+        lastMoveTime = now;
+        
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+        }
+        
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          calculateAndSetInsertPosition(e.clientX, e.clientY);
+        });
+      };
+      
+      const cleanupDrag = () => {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        if (dragState) {
+          dragState.isActive = false;
+          dragState = null;
+        }
+        cachedImageNodes = null;
+        cachedDocSize = 0;
+        cachedNodeId = null;
+        removeDragPreview();
+        if (img) {
+          img.style.opacity = '';
+          img.style.cursor = '';
+        }
+      };
+      
+      const performDragDrop = (dragState: DragState, insertPos: number): boolean => {
+        const { doc } = view.state;
+        
+        const currentNode = doc.nodeAt(dragState.startPos);
+        if (!currentNode || 
+            currentNode.type.name !== 'image' ||
+            currentNode.attrs.id !== dragState.nodeId) {
+          return false;
+        }
+        
+        const nodeStart = dragState.startPos;
+        const nodeEnd = nodeStart + currentNode.nodeSize;
+        
+        if (insertPos === nodeStart) {
+          return true;
+        }
+        
+        let finalInsertPos = insertPos;
+        
+          if (finalInsertPos < 0) {
+            finalInsertPos = 0;
           }
+        if (finalInsertPos > doc.content.size) {
+          finalInsertPos = doc.content.size;
+        }
+        
+        try {
+          const finalTr = view.state.tr;
           
-          // Validate finalInsertPos is within document bounds
+          finalTr.delete(nodeStart, nodeEnd);
+          
+          const docAfterDelete = finalTr.doc;
+          
+          if (finalInsertPos > docAfterDelete.content.size) {
+            finalInsertPos = docAfterDelete.content.size;
+          }
           if (finalInsertPos < 0) {
             finalInsertPos = 0;
           }
           
-          // Skip if same as last position (avoid unnecessary updates)
-          if (lastMovedToPos !== null && finalInsertPos === lastMovedToPos) {
-            return;
-          }
-          
-          console.log('[DragReorder] Calculated final insert position:', {
-            insertPosBeforeDelete,
-            finalInsertPos,
-            nodeStart,
-            nodeEnd,
-            nodeSize,
-            calculation: insertPosBeforeDelete < nodeStart ? 'before (unchanged)' : 
-                        insertPosBeforeDelete > nodeEnd ? 'after (adjusted)' : 'edge case',
-          });
-          
-          // Test if we can actually insert at this position after deletion
           try {
-            const testTr = view.state.tr;
-            testTr.delete(nodeStart, nodeEnd);
-            const testDoc = testTr.doc;
-            
-            // Clamp to document size after deletion
-            if (finalInsertPos > testDoc.content.size) {
-              console.warn('[DragReorder] FinalInsertPos exceeds doc size, clamping:', {
-                finalInsertPos,
-                docSize: testDoc.content.size,
-              });
-              finalInsertPos = testDoc.content.size;
+            const $insertPos = docAfterDelete.resolve(finalInsertPos);
+            if (!$insertPos.parent.canReplace(
+              $insertPos.index(),
+              $insertPos.index(),
+              Fragment.from(currentNode)
+            )) {
+              return false;
             }
-            
-            // Try to resolve and validate the position
-            const $insertPos = testDoc.resolve(finalInsertPos);
-            
-            // Check if we can replace at this position
-            const canReplace = $insertPos.parent.canReplace($insertPos.index(), $insertPos.index(), Fragment.from(node));
-            
-            console.log('[DragReorder] Validation result:', {
-              finalInsertPos,
-              canReplace,
-              parentType: $insertPos.parent.type.name,
-              index: $insertPos.index(),
-            });
-            
-            if (canReplace) {
-              pendingInsertPos = finalInsertPos;
-              lastMovedToPos = finalInsertPos;
-            } else {
-              console.warn('[DragReorder] Cannot replace at position:', {
-                finalInsertPos,
-                parentType: $insertPos.parent.type.name,
-                index: $insertPos.index(),
-              });
-            }
-          } catch (error) {
-            // Position is invalid, skip this update
-            console.error('[DragReorder] Error validating position:', {
-              finalInsertPos,
-              error: error instanceof Error ? error.message : String(error),
-            });
+          } catch {
+            return false;
           }
+          
+          const newNode = currentNode.type.create(
+            currentNode.attrs,
+            currentNode.content
+          );
+          
+          finalTr.insert(finalInsertPos, newNode);
+          
+          view.dispatch(finalTr);
+          
+          const newState = view.state;
+          const newDoc = newState.doc;
+          const movedNode = newDoc.nodeAt(finalInsertPos);
+          
+          if (movedNode && movedNode.attrs.id === dragState.nodeId) {
+            const selectTr = newState.tr;
+            selectTr.setSelection(
+              TextSelection.create(newDoc, finalInsertPos, finalInsertPos + movedNode.nodeSize)
+            );
+            view.dispatch(selectTr);
+            
+            const event = new CustomEvent('selectImage', { 
+              detail: { pos: finalInsertPos } 
+            });
+            document.dispatchEvent(event);
+          }
+          
+          return true;
+        } catch {
+          return false;
         }
       };
 
       const handleDocumentScroll = () => {
-        if (isDragging && dragPreviewElement && lastMouseEvent) {
+        if (dragState?.isActive && dragPreviewElement && lastMouseEvent) {
           updateDragPreviewPosition(lastMouseEvent);
         }
       };
 
       const handleDocumentMouseUp = () => {
-        removeDragPreview();
+        if (!dragState?.isActive) {
+          return;
+        }
         
+        removeDragPreview();
         lastMouseEvent = null;
         
         if (img) {
@@ -1483,269 +1513,164 @@ const ResizableImage = Image.extend({
           img.style.cursor = '';
         }
         
-        if (isDragging || mouseDownPos !== null) {
-          if (isDragging && dragStartPos !== undefined && pendingInsertPos !== null && dragPreviewNode) {
-            console.log('[DragReorder] MouseUp - Starting insert:', {
-              dragStartPos,
-              pendingInsertPos,
-              isDragging,
-              hasDragPreviewNode: !!dragPreviewNode,
-            });
-            
-            // Use dragPreviewNode to preserve all attributes (including alignment)
-            const nodeToMove = dragPreviewNode;
-            
-            if (!nodeToMove || nodeToMove.type.name !== 'image') {
-              console.warn('[DragReorder] Invalid nodeToMove:', {
-                nodeType: nodeToMove?.type?.name,
-              });
-              return;
-            }
-            
-            const nodeSize = nodeToMove.nodeSize;
-            const nodeStart = dragStartPos;
-            const nodeEnd = dragStartPos + nodeSize;
-            const nodeToMoveId = nodeToMove.attrs.id;
-            
-            if (!nodeToMoveId) {
-              console.warn('[DragReorder] Node missing ID:', {
-                attrs: nodeToMove.attrs,
-              });
-              return;
-            }
-            
-            console.log('[DragReorder] Node to move:', {
-              id: nodeToMoveId,
-              nodeSize,
-              nodeStart,
-              nodeEnd,
-              attrs: {
-                src: nodeToMove.attrs.src?.substring(0, 50),
-                align: nodeToMove.attrs.align,
-                width: nodeToMove.attrs.width,
-                height: nodeToMove.attrs.height,
-              },
-            });
-            
-            try {
-              const newTr = view.state.tr;
-              
-              console.log('[DragReorder] Before delete:', {
-                docSize: view.state.doc.content.size,
-                nodeStart,
-                nodeEnd,
-              });
-              
-              // Delete the node at original position
-              newTr.delete(nodeStart, nodeEnd);
-              const newDoc = newTr.doc;
-              
-              console.log('[DragReorder] After delete:', {
-                docSize: newDoc.content.size,
-                deletedSize: nodeEnd - nodeStart,
-              });
-              
-              // pendingInsertPos was already calculated after deletion in handleDocumentMouseMove
-              // Validate and clamp it with the actual newDoc
-              let finalInsertPos = Math.max(0, Math.min(pendingInsertPos, newDoc.content.size));
-              
-              console.log('[DragReorder] Insert position:', {
-                pendingInsertPos,
-                finalInsertPos,
-                docSize: newDoc.content.size,
-              });
-              
-              // Try to resolve the position and find a valid insertion point
-              let $insertPos;
-              try {
-                $insertPos = newDoc.resolve(finalInsertPos);
-              } catch {
-                // If resolution fails, try to find a valid position near the target
-                // Search in a small range around the target position
-                const searchRange = 50;
-                const startSearch = Math.max(0, finalInsertPos - searchRange);
-                const endSearch = Math.min(newDoc.content.size, finalInsertPos + searchRange);
-                
-                for (let pos = startSearch; pos <= endSearch; pos++) {
-                  try {
-                    const $testPos = newDoc.resolve(pos);
-                    if ($testPos.parent.canReplace($testPos.index(), $testPos.index(), Fragment.from(nodeToMove))) {
-                      finalInsertPos = pos;
-                      $insertPos = $testPos;
-                      break;
-                    }
-                  } catch {
-                    continue;
-                  }
-                }
-                
-                // If still not found, search entire document (fallback)
-                if (!$insertPos) {
-                  for (let pos = 0; pos <= newDoc.content.size; pos++) {
-                    try {
-                      const $testPos = newDoc.resolve(pos);
-                      if ($testPos.parent.canReplace($testPos.index(), $testPos.index(), Fragment.from(nodeToMove))) {
-                        finalInsertPos = pos;
-                        $insertPos = $testPos;
-                        break;
-                      }
-                    } catch {
-                      continue;
-                    }
-                  }
-                }
-                
-                if (!$insertPos) {
-                  return;
-                }
-              }
-              
-              // Try to insert at the resolved position
-              const insertIndex = $insertPos.index();
-              const insertParent = $insertPos.parent;
-              
-              // Check if we can replace at this index
-              const canReplace = insertParent.canReplace(insertIndex, insertIndex, Fragment.from(nodeToMove));
-              
-              console.log('[DragReorder] Can replace check:', {
-                canReplace,
-                insertIndex,
-                parentType: insertParent.type.name,
-                finalInsertPos,
-              });
-              
-              if (canReplace) {
-                // Create new node with all attributes preserved
-                const newNode = nodeToMove.type.create(nodeToMove.attrs, nodeToMove.content);
-                newTr.insert(finalInsertPos, newNode);
-                
-                console.log('[DragReorder] Inserted node at position:', finalInsertPos);
-                
-                if (newTr.docChanged) {
-                  view.dispatch(newTr);
-                  
-                  console.log('[DragReorder] Transaction dispatched successfully');
-                  
-                  // Find and select the moved node using the known insert position
-                  // The node should be at finalInsertPos after insertion
-                  const newState = view.state;
-                  const newDoc = newState.doc;
-                  
-                  // First try the exact insert position
-                  let foundPos: number | null = null;
-                  const nodeAtInsertPos = newDoc.nodeAt(finalInsertPos);
-                  if (nodeAtInsertPos && nodeAtInsertPos.type.name === 'image' && nodeAtInsertPos.attrs.id === nodeToMoveId) {
-                    foundPos = finalInsertPos;
-                  } else {
-                    // Search near the insert position (should be very close)
-                    const searchRange = Math.min(100, newDoc.content.size);
-                    const startSearch = Math.max(0, finalInsertPos - searchRange);
-                    const endSearch = Math.min(newDoc.content.size, finalInsertPos + searchRange);
-                    
-                    for (let pos = startSearch; pos < endSearch; pos++) {
-                      const nodeAtPos = newDoc.nodeAt(pos);
-                      if (nodeAtPos && nodeAtPos.type.name === 'image' && nodeAtPos.attrs.id === nodeToMoveId) {
-                        foundPos = pos;
-                        break;
-                      }
-                    }
-                    
-                    // If still not found, search entire document (should rarely happen)
-                    if (foundPos === null) {
-                      for (let pos = 0; pos < newDoc.content.size; pos++) {
-                        const nodeAtPos = newDoc.nodeAt(pos);
-                        if (nodeAtPos && nodeAtPos.type.name === 'image' && nodeAtPos.attrs.id === nodeToMoveId) {
-                          foundPos = pos;
-                          break;
-                        }
-                      }
-                    }
-                  }
-                  
-                  // Select the moved node
-                  if (foundPos !== null) {
-                    console.log('[DragReorder] Found moved node at position:', foundPos);
-                    const { tr: selectTr, doc: selectDoc } = view.state;
-                    const movedNode = selectDoc.nodeAt(foundPos);
-                    if (movedNode && movedNode.type.name === 'image') {
-                      selectTr.setSelection(TextSelection.create(selectDoc, foundPos, foundPos + movedNode.nodeSize));
-                      view.dispatch(selectTr);
-                      
-                      const event = new CustomEvent('selectImage', { 
-                        detail: { pos: foundPos } 
-                      });
-                      document.dispatchEvent(event);
-                      
-                      console.log('[DragReorder] Successfully selected moved node:', {
-                        foundPos,
-                        expectedPos: finalInsertPos,
-                        match: foundPos === finalInsertPos,
-                      });
-                    }
-                  } else {
-                    console.warn('[DragReorder] Could not find moved node after insert:', {
-                      finalInsertPos,
-                      docSize: newDoc.content.size,
-                    });
-                  }
-                } else {
-                  console.warn('[DragReorder] Transaction did not change document');
-                }
-              } else {
-                console.warn('[DragReorder] Cannot replace at insert position:', {
-                  insertIndex,
-                  parentType: insertParent.type.name,
-                });
-              }
-            } catch (error) {
-              // Log error for debugging but don't break the UI
-              console.error('[DragReorder] Error during drag to reorder:', {
-                error: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined,
-                dragStartPos,
-                pendingInsertPos,
-              });
-            }
-          } else if (dragStartPos !== undefined) {
-            console.log('[DragReorder] MouseUp - Click only (no drag):', {
-              dragStartPos,
-              isDragging,
-              wasCtrlClick,
-            });
-            
-            // Only dispatch selectImage if we're not in multi-select mode
-            // If the click was with Ctrl/Cmd, don't dispatch selectImage to avoid resetting multi-select
+        try {
+          if (dragState.pendingInsertPos !== null) {
+            performDragDrop(dragState, dragState.pendingInsertPos);
+          } else if (dragState.startPos !== undefined) {
             const { doc, tr } = view.state;
-            const node = doc.nodeAt(dragStartPos);
+            const node = doc.nodeAt(dragState.startPos);
             
             if (node && node.type.name === 'image') {
-              tr.setSelection(TextSelection.create(doc, dragStartPos, dragStartPos + node.nodeSize));
+              tr.setSelection(TextSelection.create(doc, dragState.startPos, dragState.startPos + node.nodeSize));
               view.dispatch(tr);
               
-              // Only dispatch selectImage if it was a single click (not Ctrl/Cmd)
-              // This prevents resetting multi-select when clicking with Ctrl/Cmd
               if (!wasCtrlClick) {
                 const event = new CustomEvent('selectImage', { 
-                  detail: { 
-                    pos: dragStartPos
-                  } 
+                  detail: { pos: dragState.startPos }
                 });
                 document.dispatchEvent(event);
               }
             }
           }
-          
-          console.log('[DragReorder] MouseUp - Cleanup state');
-          
-          isDragging = false;
-          dragStartPos = undefined;
-          lastMovedToPos = null;
-          pendingInsertPos = null;
-          mouseDownPos = null;
-          dragPreviewNode = null;
-          wasCtrlClick = false;
+        } catch {
+          // Silent fail
+        } finally {
+          cleanupDrag();
         }
       };
+      
+      const calculateAndSetInsertPosition = (clientX: number, clientY: number) => {
+        if (!dragState?.isActive) return;
+        
+        const coords = view.posAtCoords({ left: clientX, top: clientY });
+        if (!coords) return;
+        
+        const { doc } = view.state;
+        
+        const currentNode = doc.nodeAt(dragState.startPos);
+        if (!currentNode || 
+            currentNode.type.name !== 'image' ||
+            currentNode.attrs.id !== dragState.nodeId) {
+          cleanupDrag();
+          return;
+        }
+        
+        const targetPos = coords.pos;
+        const insertPos = findInsertPosition(targetPos, dragState, doc);
+        
+        if (insertPos === null) {
+          return;
+        }
+        
+        const { startPos, nodeSize } = dragState;
+        const nodeStart = startPos;
+        const nodeEnd = startPos + nodeSize;
+        
+        if (insertPos === nodeStart) {
+          return;
+        }
+        
+        let finalInsertPos: number;
+        if (insertPos < nodeStart) {
+          finalInsertPos = insertPos;
+        } else if (insertPos >= nodeEnd) {
+          finalInsertPos = insertPos - nodeSize;
+        } else {
+          return;
+        }
+        
+        if (finalInsertPos === nodeStart) {
+                  return;
+        }
+        
+        finalInsertPos = Math.max(0, Math.min(finalInsertPos, doc.content.size - nodeSize));
+        
+        if (dragState.lastMovedToPos !== null && finalInsertPos === dragState.lastMovedToPos) {
+          return;
+        }
+        
+        try {
+          const testTr = view.state.tr;
+          testTr.delete(nodeStart, nodeEnd);
+          const testDoc = testTr.doc;
+          
+          if (finalInsertPos > testDoc.content.size) {
+            finalInsertPos = testDoc.content.size;
+          }
+          
+          if (finalInsertPos < 0) {
+            finalInsertPos = 0;
+          }
+          
+          const $insertPos = testDoc.resolve(finalInsertPos);
+          if ($insertPos.parent.canReplace(
+            $insertPos.index(),
+            $insertPos.index(),
+            Fragment.from(dragState.node)
+          )) {
+            dragState.pendingInsertPos = finalInsertPos;
+            dragState.lastMovedToPos = finalInsertPos;
+          }
+        } catch {
+          // Silent fail
+        }
+      };
+      
+      const handleDocumentDragOver = (e: DragEvent) => {
+        if (dragState?.isActive && dragPreviewElement) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          updateDragPreviewPosition(e);
+          lastMouseEvent = e;
+          
+          const now = Date.now();
+          if (now - lastMoveTime >= MOVE_THROTTLE) {
+            lastMoveTime = now;
+            
+            if (rafId !== null) {
+              cancelAnimationFrame(rafId);
+            }
+            
+            rafId = requestAnimationFrame(() => {
+              rafId = null;
+              calculateAndSetInsertPosition(e.clientX, e.clientY);
+            });
+          }
+        }
+      };
+      
+      const handleDocumentDrop = (e: DragEvent) => {
+        if (dragState?.isActive) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          removeDragPreview();
+          
+          try {
+            if (dragState.pendingInsertPos !== null) {
+              performDragDrop(dragState, dragState.pendingInsertPos);
+            }
+          } catch {
+            // Silent fail
+          } finally {
+            lastMouseEvent = null;
+            if (img) {
+              img.style.opacity = '';
+              img.style.cursor = '';
+            }
+            cleanupDrag();
+          }
+        }
+      };
+      
+      // Event listeners
+      document.addEventListener('click', handleDocumentClick);
+      document.addEventListener('mousemove', handleDocumentMouseMove);
+      document.addEventListener('mouseup', handleDocumentMouseUp);
+      document.addEventListener('dragover', handleDocumentDragOver);
+      document.addEventListener('drop', handleDocumentDrop);
+      document.addEventListener('scroll', handleDocumentScroll, true);
 
       const updateSelectionStyle = () => {
         const pos = getPos();
@@ -1767,213 +1692,37 @@ const ResizableImage = Image.extend({
         }
       };
       
-      updateSelectionStyle();
-      
-      document.addEventListener('click', handleDocumentClick);
-      document.addEventListener('mousemove', handleDocumentMouseMove);
-      document.addEventListener('mouseup', handleDocumentMouseUp);
-      document.addEventListener('scroll', handleDocumentScroll, true); // Use capture phase to catch all scroll events
-      
       const handleSelectionUpdate = () => {
         updateSelectionStyle();
       };
       
       document.addEventListener('imageSelectionChanged', handleSelectionUpdate);
       const intervalId = setInterval(updateSelectionStyle, 100);
+      
+      updateSelectionStyle();
 
       // Function to update caption and alignment when node changes
       const updateCaptionAndAlignment = () => {
         console.log('[NodeView] updateCaptionAndAlignment() called');
         const currentCaption = node.attrs.caption;
-        const currentAlign = node.attrs.align;
-        const currentHref = node.attrs.href;
-        console.log('[NodeView] currentAlign:', currentAlign);
+        const currentAlign = node.attrs.align || 'left';
         
-        // Get the image container (either link or imgWrapper) from DOM
-        // First try to find link, then imgWrapper (the div containing the img)
-        const linkEl = dom.querySelector('a');
-        let currentImageContainer: HTMLElement | null = null;
-        if (linkEl) {
-          currentImageContainer = linkEl as HTMLElement;
+        if (captionEl) {
+          if (currentCaption) {
+            captionEl.textContent = currentCaption as string;
+            captionEl.style.display = 'block';
         } else {
-          // Find the div that directly contains the img
-          const img = dom.querySelector('img');
-          if (img && img.parentElement) {
-            currentImageContainer = img.parentElement as HTMLElement;
+            captionEl.style.display = 'none';
           }
         }
-
-        // Update caption
-        let captionEl = dom.querySelector('.image-caption') as HTMLElement;
-        if (currentCaption) {
-          if (!captionEl) {
-            captionEl = document.createElement('div');
-            captionEl.className = 'image-caption';
-            captionEl.style.textAlign = 'center';
-            captionEl.style.fontStyle = 'italic';
-            captionEl.style.color = '#666';
-            captionEl.style.marginTop = '0.5em';
-            captionEl.style.fontSize = '0.9em';
-            dom.appendChild(captionEl);
-          }
-          captionEl.textContent = currentCaption as string;
-        } else if (captionEl) {
-          captionEl.remove();
-        }
-
-        // Update alignment - reset all styles first
-        console.log('[NodeView] Resetting alignment styles');
-        // Reset alignment-related styles but keep position and maxWidth
-        dom.style.width = '';
-        dom.style.margin = '';
-        dom.style.marginLeft = '';
-        dom.style.marginRight = '';
-        dom.style.float = '';
-        dom.style.textAlign = '';
-        dom.style.display = '';
-        // Don't reset display here - let alignment logic set it
-
-        console.log('[NodeView] Applying alignment:', currentAlign);
-        if (currentAlign === 'full') {
-          dom.style.width = '100%';
-          dom.style.display = 'block';
-          dom.style.margin = '0';
-          dom.style.marginLeft = '0';
-          dom.style.marginRight = '0';
-          console.log('[NodeView] Applied full alignment');
-        } else if (currentAlign === 'center') {
-          dom.style.width = '100%';
-          dom.style.display = 'block';
-          dom.style.margin = '0';
-          dom.style.marginLeft = '0';
-          dom.style.marginRight = '0';
+        
+        if (dom) {
+          if (currentAlign === 'center') {
           dom.style.textAlign = 'center';
-          // Center the image content within the wrapper using text-align
-          if (currentImageContainer) {
-            (currentImageContainer as HTMLElement).style.display = 'inline-block';
-            (currentImageContainer as HTMLElement).style.margin = '0';
-            (currentImageContainer as HTMLElement).style.maxWidth = '100%';
-          }
-          console.log('[NodeView] Applied center alignment');
-        } else if (currentAlign === 'left') {
-          dom.style.width = '100%';
-          dom.style.display = 'block';
-          dom.style.margin = '0';
-          dom.style.marginLeft = '0';
-          dom.style.marginRight = '0';
-          dom.style.textAlign = 'left';
-          // Align image content to the left within the wrapper using text-align
-          if (currentImageContainer) {
-            (currentImageContainer as HTMLElement).style.display = 'inline-block';
-            (currentImageContainer as HTMLElement).style.margin = '0';
-            (currentImageContainer as HTMLElement).style.maxWidth = '100%';
-          }
-          console.log('[NodeView] Applied left alignment');
         } else if (currentAlign === 'right') {
-          dom.style.width = '100%';
-          dom.style.display = 'block';
-          dom.style.margin = '0';
-          dom.style.marginLeft = '0';
-          dom.style.marginRight = '0';
           dom.style.textAlign = 'right';
-          // Align image content to the right within the wrapper using text-align
-          if (currentImageContainer) {
-            (currentImageContainer as HTMLElement).style.display = 'inline-block';
-            (currentImageContainer as HTMLElement).style.margin = '0';
-            (currentImageContainer as HTMLElement).style.maxWidth = '100%';
-          }
-          console.log('[NodeView] Applied right alignment');
-        } else if (currentAlign === 'float-left') {
-          dom.style.display = 'inline-block'; // Float needs inline-block
-          dom.style.float = 'left';
-          dom.style.margin = '0';
-          dom.style.marginRight = '1em';
-          dom.style.marginLeft = '0';
-          dom.style.width = '';
-          dom.style.textAlign = '';
-          // Reset image container styles for float
-          if (currentImageContainer) {
-            (currentImageContainer as HTMLElement).style.display = '';
-            (currentImageContainer as HTMLElement).style.margin = '';
-            (currentImageContainer as HTMLElement).style.marginLeft = '';
-            (currentImageContainer as HTMLElement).style.marginRight = '';
-            (currentImageContainer as HTMLElement).style.width = '';
-            (currentImageContainer as HTMLElement).style.maxWidth = '';
-          }
-          console.log('[NodeView] Applied float-left alignment');
-        } else if (currentAlign === 'float-right') {
-          dom.style.display = 'inline-block'; // Float needs inline-block
-          dom.style.float = 'right';
-          dom.style.margin = '0';
-          dom.style.marginLeft = '1em';
-          dom.style.marginRight = '0';
-          dom.style.width = '';
-          dom.style.textAlign = '';
-          // Reset image container styles for float
-          if (currentImageContainer) {
-            (currentImageContainer as HTMLElement).style.display = '';
-            (currentImageContainer as HTMLElement).style.margin = '';
-            (currentImageContainer as HTMLElement).style.marginLeft = '';
-            (currentImageContainer as HTMLElement).style.marginRight = '';
-            (currentImageContainer as HTMLElement).style.width = '';
-            (currentImageContainer as HTMLElement).style.maxWidth = '';
-          }
-          console.log('[NodeView] Applied float-right alignment');
         } else {
-          // Default: no alignment, use inline-block
-          dom.style.display = 'inline-block';
-          dom.style.margin = '0';
-          dom.style.width = '';
-          dom.style.textAlign = '';
-          // Reset image container styles
-          if (currentImageContainer) {
-            (currentImageContainer as HTMLElement).style.display = '';
-            (currentImageContainer as HTMLElement).style.margin = '';
-            (currentImageContainer as HTMLElement).style.marginLeft = '';
-            (currentImageContainer as HTMLElement).style.marginRight = '';
-            (currentImageContainer as HTMLElement).style.width = '';
-            (currentImageContainer as HTMLElement).style.maxWidth = '';
-          }
-          console.log('[NodeView] No alignment applied (currentAlign is null or unknown)');
-        }
-        
-        // Force a reflow to ensure styles are applied
-        void dom.offsetHeight;
-        
-        console.log('[NodeView] Final DOM styles:', {
-          width: dom.style.width,
-          display: dom.style.display,
-          margin: dom.style.margin,
-          marginLeft: dom.style.marginLeft,
-          marginRight: dom.style.marginRight,
-          float: dom.style.float,
-          computedDisplay: window.getComputedStyle(dom).display,
-          computedMarginLeft: window.getComputedStyle(dom).marginLeft,
-          computedMarginRight: window.getComputedStyle(dom).marginRight,
-        });
-
-        // Update link - img is already in dom, check if it's wrapped in link
-        const existingLink = dom.querySelector('a');
-        if (currentHref) {
-          if (!existingLink) {
-            // Wrap img in link
-            const link = document.createElement('a');
-            link.href = currentHref as string;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            // Replace img with link containing img
-            if (img.parentNode) {
-              img.parentNode.insertBefore(link, img);
-              link.appendChild(img);
-            }
-          } else {
-            existingLink.href = currentHref as string;
-          }
-        } else if (existingLink && existingLink.contains(img)) {
-          // Remove link, keep img
-          if (existingLink.parentNode) {
-            existingLink.parentNode.insertBefore(img, existingLink);
-            existingLink.remove();
+            dom.style.textAlign = 'left';
           }
         }
       };
@@ -1981,10 +1730,20 @@ const ResizableImage = Image.extend({
       // Initial update
       updateCaptionAndAlignment();
 
+      // Cleanup function
       return {
         dom,
         contentDOM: null,
         ignoreMutation: () => true,
+        stopEvent: (event: Event) => {
+          if (event.type.startsWith('drag')) {
+            return false;
+          }
+          if (event.type === 'mousedown' && (event.target === img || event.target === dom)) {
+            return false;
+          }
+          return true;
+        },
         update: (updatedNode: PMNode) => {
           console.log('[NodeView] update() called', updatedNode.attrs);
           if (updatedNode.type.name !== 'image') {
@@ -2001,11 +1760,9 @@ const ResizableImage = Image.extend({
           document.removeEventListener('click', handleDocumentClick);
           document.removeEventListener('mousemove', handleDocumentMouseMove);
           document.removeEventListener('mouseup', handleDocumentMouseUp);
-          document.removeEventListener('scroll', handleDocumentScroll, true);
+          document.removeEventListener('scroll', handleDocumentScroll);
           document.removeEventListener('imageSelectionChanged', handleSelectionUpdate);
           clearInterval(intervalId);
-          // Clean up drag preview if still exists
-          removeDragPreview();
         },
       };
     };
@@ -4331,4 +4088,5 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     </div>
   );
 }
+
 
