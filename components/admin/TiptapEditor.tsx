@@ -22,7 +22,8 @@ import { Extension, type CommandProps, type Editor } from '@tiptap/core';
 import { Fragment, type Node as PMNode } from 'prosemirror-model';
 import { TextSelection } from 'prosemirror-state';
 import type { EditorView, NodeView } from 'prosemirror-view';
-import { AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo2, Redo2, List, ListOrdered, Highlighter, X, Type, ChevronDown, Link as LinkIcon, Menu, Search, Copy, Pencil, Unlink, Image as ImageIcon, Upload, Globe, Grid3x3, LayoutGrid, Columns } from 'lucide-react';
+import { X, ChevronDown, Menu, Search, Copy, Pencil, Unlink, Image as ImageIcon, Upload, Globe, Grid3x3, LayoutGrid, Columns } from 'lucide-react';
+import { tiptapIcons } from './tiptapIcons';
 import { Iframe, type IframeAttributes } from './Iframe';
 import { ImageGallery } from './ImageGallery';
 import { ImageToolbar } from './ImageToolbar';
@@ -44,7 +45,7 @@ const generateImageId = (): string => {
 
 // Global drag state to track if any image is being dragged
 // This allows wheel events to check drag state even from different node view instances
-let globalImageDragState: { isActive: boolean; nodeId: string | null } = {
+const globalImageDragState: { isActive: boolean; nodeId: string | null } = {
   isActive: false,
   nodeId: null,
 };
@@ -64,12 +65,12 @@ interface ColorPickerProps {
   showColorIndicator?: boolean;
 }
 
-function ColorPicker({ 
-  icon, 
-  currentColor, 
-  onColorChange, 
-  onRemove, 
-  isActive, 
+function ColorPicker({
+  icon,
+  currentColor,
+  onColorChange,
+  onRemove,
+  isActive,
   title,
   defaultColor = '#ffffff',
   showColorIndicator = false
@@ -93,32 +94,18 @@ function ColorPicker({
   }, [showPicker]);
 
   const getButtonStyle = () => {
-    if (showColorIndicator) {
-      return {
-        backgroundColor: 'white',
-        borderColor: isActive ? currentColor : '#e0e0e0',
-      };
-    }
     return {
-      backgroundColor: currentColor,
-      borderColor: isActive ? currentColor : '#e0e0e0',
+      backgroundColor: 'white',
+      borderColor: 'transparent',
     };
   };
 
   const getIconStyle = () => {
-    if (showColorIndicator) {
-      return {};
-    }
-    return {
-      filter: currentColor === defaultColor ? 'none' : 'brightness(0) invert(1)',
-    };
+    return {};
   };
 
   const getIconClassName = () => {
-    if (showColorIndicator) {
-      return 'text-[#333]';
-    }
-    return currentColor === defaultColor ? 'text-[#333]' : 'text-white';
+    return isActive ? 'text-[#111]' : 'text-[#555]';
   };
 
   return (
@@ -126,19 +113,13 @@ function ColorPicker({
       <button
         type="button"
         onClick={() => setShowPicker(!showPicker)}
-        className="px-3 py-2 h-10 border text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center relative"
+        className="px-3 py-2 h-10 text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center relative"
         title={title}
         style={getButtonStyle()}
       >
         <span className={getIconClassName()} style={getIconStyle()}>
           {icon}
         </span>
-        {showColorIndicator && (
-          <div 
-            className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-4 h-1.5 rounded border border-gray-300"
-            style={{ backgroundColor: currentColor }}
-          />
-        )}
       </button>
       
       {showPicker && (
@@ -2990,239 +2971,242 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     return null;
   }
 
+  const toolbarButtonClass = (isActive = false, disabled = false) =>
+    `h-9 w-9 rounded-md text-[13px] font-semibold flex items-center justify-center transition-colors border ${
+      isActive
+        ? 'bg-slate-900 text-white border-slate-900'
+        : 'bg-transparent text-slate-700 border-transparent hover:bg-slate-100 hover:border-slate-200'
+    } ${disabled ? 'opacity-40 cursor-not-allowed hover:bg-transparent hover:border-transparent' : ''}`;
+
+  const toolbarGroupClass = 'flex items-center gap-1';
+  const popoverCardClass = 'rounded-lg border border-slate-200 bg-white shadow-md shadow-slate-200/70';
+
   return (
-    <div className="border border-[#e0e0e0] overflow-hidden">
+    <div className="border border-[#e0e0e0] overflow-hidden rounded-2xl shadow-sm bg-white/90 backdrop-blur">
       {/* Toolbar */}
-      <div className="border-b border-[#e0e0e0] bg-[#f5f5f5] p-3 flex flex-wrap gap-2">
+      <div className="border-b border-[#e0e0e0] bg-white p-4 flex flex-wrap gap-3 items-center">
         {/* Paragraph & Heading */}
-        <div className="relative">
-          <select
-            onChange={(e) => {
-              const level = parseInt(e.target.value);
-              if (level === 0) {
-                editor.chain().focus().setParagraph().run();
-              } else {
-                editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 }).run();
+        <div className="min-w-[200px]">
+          <div className="relative">
+            <select
+              onChange={(e) => {
+                const level = parseInt(e.target.value);
+                if (level === 0) {
+                  editor.chain().focus().setParagraph().run();
+                } else {
+                  editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 }).run();
+                }
+              }}
+              value={
+                editor.isActive('heading', { level: 1 }) ? '1' :
+                editor.isActive('heading', { level: 2 }) ? '2' :
+                editor.isActive('heading', { level: 3 }) ? '3' :
+                editor.isActive('heading', { level: 4 }) ? '4' :
+                editor.isActive('heading', { level: 5 }) ? '5' :
+                editor.isActive('heading', { level: 6 }) ? '6' : '0'
               }
-            }}
-            value={
-              editor.isActive('heading', { level: 1 }) ? '1' :
-              editor.isActive('heading', { level: 2 }) ? '2' :
-              editor.isActive('heading', { level: 3 }) ? '3' :
-              editor.isActive('heading', { level: 4 }) ? '4' :
-              editor.isActive('heading', { level: 5 }) ? '5' :
-              editor.isActive('heading', { level: 6 }) ? '6' : '0'
-            }
-            className="px-3 pr-10 py-2 h-10 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase focus:outline-none focus:border-[#333] transition-colors appearance-none cursor-pointer"
-            title="Paragraph & Heading"
-          >
-            <option value="0">Paragraph</option>
-            <option value="1">Heading 1</option>
-            <option value="2">Heading 2</option>
-            <option value="3">Heading 3</option>
-            <option value="4">Heading 4</option>
-            <option value="5">Heading 5</option>
-            <option value="6">Heading 6</option>
-          </select>
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-            <ChevronDown size={16} className="text-[#333]" />
+              className="w-full appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 pr-10 text-sm text-slate-800 outline-none"
+              title="Paragraph & Heading"
+            >
+              <option value="0" style={{ fontSize: '14px', fontWeight: 400 }}>
+                Paragraph
+              </option>
+              <option value="1" style={{ fontSize: '24px', fontWeight: 600 }}>
+                Heading 1
+              </option>
+              <option value="2" style={{ fontSize: '20px', fontWeight: 600 }}>
+                Heading 2
+              </option>
+              <option value="3" style={{ fontSize: '18px', fontWeight: 600 }}>
+                Heading 3
+              </option>
+              <option value="4" style={{ fontSize: '16px', fontWeight: 600 }}>
+                Heading 4
+              </option>
+              <option value="5" style={{ fontSize: '14px', fontWeight: 600 }}>
+                Heading 5
+              </option>
+              <option value="6" style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>
+                Heading 6
+              </option>
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+              <ChevronDown size={16} />
+            </div>
           </div>
         </div>
 
         {/* Undo/Redo */}
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().undo().run()}
-          disabled={!editor.can().undo()}
-          className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          title="Undo"
-        >
-          <Undo2 size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().redo().run()}
-          disabled={!editor.can().redo()}
-          className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          title="Redo"
-        >
-          <Redo2 size={16} />
-        </button>
+        <div className={toolbarGroupClass} title="History">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().undo().run()}
+            disabled={!editor.can().undo()}
+            className={toolbarButtonClass(false, !editor.can().undo())}
+            aria-label="Undo"
+          >
+            <tiptapIcons.Undo2 size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().redo().run()}
+            disabled={!editor.can().redo()}
+            className={toolbarButtonClass(false, !editor.can().redo())}
+            aria-label="Redo"
+          >
+            <tiptapIcons.Redo2 size={16} />
+          </button>
+        </div>
 
-        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
-
-        {/* Bold, Italic, Strike, Underline */}
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`px-4 py-2 border border-[#e0e0e0] text-xs font-bold tracking-[1px] uppercase transition-colors ${
-            editor.isActive('bold') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
-          }`}
-          title="Bold"
-        >
-          B
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={`px-4 py-2 border border-[#e0e0e0] text-xs italic tracking-[1px] uppercase transition-colors ${
-            editor.isActive('italic') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
-          }`}
-          title="Italic"
-        >
-          I
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          className={`px-4 py-2 border border-[#e0e0e0] text-xs underline tracking-[1px] uppercase transition-colors ${
-            editor.isActive('underline') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
-          }`}
-          title="Underline"
-        >
-          U
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-          className={`px-4 py-2 border border-[#e0e0e0] text-xs line-through tracking-[1px] uppercase transition-colors ${
-            editor.isActive('strike') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
-          }`}
-          title="Strikethrough"
-        >
-          S
-        </button>
-
-        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
+        {/* Core formatting */}
+        <div className={toolbarGroupClass} title="Inline formatting">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            className={toolbarButtonClass(editor.isActive('bold'))}
+            aria-label="Bold"
+          >
+            <tiptapIcons.Bold size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            className={toolbarButtonClass(editor.isActive('italic'))}
+            aria-label="Italic"
+          >
+            <tiptapIcons.Italic size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            className={toolbarButtonClass(editor.isActive('underline'))}
+            aria-label="Underline"
+          >
+            <tiptapIcons.Underline size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            className={toolbarButtonClass(editor.isActive('strike'))}
+            aria-label="Strikethrough"
+          >
+            <tiptapIcons.Strikethrough size={16} />
+          </button>
+        </div>
 
         {/* Subscript/Superscript */}
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleSubscript().run()}
-          className={`px-4 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors ${
-            editor.isActive('subscript') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
-          }`}
-          title="Subscript"
-        >
-          x₂
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleSuperscript().run()}
-          className={`px-4 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors ${
-            editor.isActive('superscript') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
-          }`}
-          title="Superscript"
-        >
-          x²
-        </button>
-
-        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
+        <div className={toolbarGroupClass} title="Script">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleSubscript().run()}
+            className={toolbarButtonClass(editor.isActive('subscript'))}
+            aria-label="Subscript"
+          >
+            <tiptapIcons.Subscript size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleSuperscript().run()}
+            className={toolbarButtonClass(editor.isActive('superscript'))}
+            aria-label="Superscript"
+          >
+            <tiptapIcons.Superscript size={16} />
+          </button>
+        </div>
 
         {/* Text Alignment */}
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign('left').run()}
-          className={`px-3 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
-            editor.isActive({ textAlign: 'left' }) ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
-          }`}
-          title="Align Left"
-        >
-          <AlignLeft size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign('center').run()}
-          className={`px-3 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
-            editor.isActive({ textAlign: 'center' }) ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
-          }`}
-          title="Align Center"
-        >
-          <AlignCenter size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign('right').run()}
-          className={`px-3 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
-            editor.isActive({ textAlign: 'right' }) ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
-          }`}
-          title="Align Right"
-        >
-          <AlignRight size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-          className={`px-3 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
-            editor.isActive({ textAlign: 'justify' }) ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
-          }`}
-          title="Justify"
-        >
-          <AlignJustify size={16} />
-        </button>
+        <div className={toolbarGroupClass} title="Alignment">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign('left').run()}
+            className={toolbarButtonClass(editor.isActive({ textAlign: 'left' }))}
+            aria-label="Align Left"
+          >
+            <tiptapIcons.AlignLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign('center').run()}
+            className={toolbarButtonClass(editor.isActive({ textAlign: 'center' }))}
+            aria-label="Align Center"
+          >
+            <tiptapIcons.AlignCenter className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign('right').run()}
+            className={toolbarButtonClass(editor.isActive({ textAlign: 'right' }))}
+            aria-label="Align Right"
+          >
+            <tiptapIcons.AlignRight className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+            className={toolbarButtonClass(editor.isActive({ textAlign: 'justify' }))}
+            aria-label="Justify"
+          >
+            <tiptapIcons.AlignJustify className="h-5 w-5" />
+          </button>
+        </div>
 
         {/* Lists */}
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={`px-3 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
-            editor.isActive('bulletList') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
-          }`}
-          title="Bullet List"
-        >
-          <List size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={`px-3 py-2 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
-            editor.isActive('orderedList') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
-          }`}
-          title="Numbered List"
-        >
-          <ListOrdered size={16} />
-        </button>
+        <div className={toolbarGroupClass} title="Lists">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+            className={toolbarButtonClass(editor.isActive('bulletList'))}
+            aria-label="Bullet List"
+          >
+            <tiptapIcons.List size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            className={toolbarButtonClass(editor.isActive('orderedList'))}
+            aria-label="Numbered List"
+          >
+            <tiptapIcons.ListOrdered size={16} />
+          </button>
+        </div>
 
-        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
-
-        {/* Link */}
-        <button
-          type="button"
-          onClick={() => {
-            const { from, to } = editor.state.selection;
-            const selectedText = editor.state.doc.textBetween(from, to, ' ');
-            const linkAttrs = editor.getAttributes('link');
-            setLinkText(selectedText);
-            setLinkUrl(linkAttrs.href || '');
-            
-            const { view } = editor;
-            const startCoords = view.coordsAtPos(from);
-            const endCoords = view.coordsAtPos(to);
-            
-            const editorDom = view.dom;
-            const editorContentContainer = editorDom.closest('.ProseMirror')?.parentElement;
-            
-            if (editorContentContainer) {
-              const containerRect = editorContentContainer.getBoundingClientRect();
-              const spacing = 30;
+        {/* Insert */}
+        <div className={`${toolbarGroupClass} gap-1`} title="Insert">
+          <button
+            type="button"
+            onClick={() => {
+              const { from, to } = editor.state.selection;
+              const selectedText = editor.state.doc.textBetween(from, to, ' ');
+              const linkAttrs = editor.getAttributes('link');
+              setLinkText(selectedText);
+              setLinkUrl(linkAttrs.href || '');
               
-              const left = startCoords.left - containerRect.left;
-              const top = endCoords.bottom - containerRect.top + spacing;
+              const { view } = editor;
+              const startCoords = view.coordsAtPos(from);
+              const endCoords = view.coordsAtPos(to);
               
-              setLinkDialogPosition({ top, left });
-            } else {
-              setLinkDialogPosition(null);
-            }
-            
-            setShowLinkDialog(true);
-          }}
-          className={`px-3 py-2 h-10 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
-            editor.isActive('link') ? 'bg-[#333] text-white border-[#333]' : 'bg-white text-[#333] hover:bg-[#f5f5f5]'
-          }`}
-          title="Insert Link"
-        >
-          <LinkIcon size={16} />
-        </button>
+              const editorDom = view.dom;
+              const editorContentContainer = editorDom.closest('.ProseMirror')?.parentElement;
+              
+              if (editorContentContainer) {
+                const containerRect = editorContentContainer.getBoundingClientRect();
+                const spacing = 30;
+                
+                const left = startCoords.left - containerRect.left;
+                const top = endCoords.bottom - containerRect.top + spacing;
+                
+                setLinkDialogPosition({ top, left });
+              } else {
+                setLinkDialogPosition(null);
+              }
+              
+              setShowLinkDialog(true);
+            }}
+            className={toolbarButtonClass(editor.isActive('link'))}
+            aria-label="Insert Link"
+          >
+            <tiptapIcons.Link size={16} />
+          </button>
 
         {showLinkDialog && !linkDialogPosition && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-9999" onClick={() => {
@@ -3231,7 +3215,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
               setLinkUrl('');
               setLinkDialogPosition(null);
             }}>
-              <div className="bg-white rounded-lg shadow-xl p-6 w-[500px] mx-4" onClick={(e) => e.stopPropagation()}>
+              <div className={`${popoverCardClass} p-6 w-[500px] mx-4`} onClick={(e) => e.stopPropagation()}>
                 <div className="mb-4">
                   <div className="relative">
                     <Menu size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -3307,360 +3291,328 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         )}
 
 
-        {/* Image */}
-        <div className="relative image-dropdown-container">
-          <button
-            type="button"
-            onClick={() => setShowImageDropdown(!showImageDropdown)}
-            className="px-3 py-2 h-10 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center bg-white text-[#333] hover:bg-[#f5f5f5]"
-            title="Insert Image"
-          >
-            <ImageIcon size={16} />
-          </button>
-          
-          {showImageDropdown && (
-            <div className="absolute top-full left-0 mt-1 bg-white border border-[#e0e0e0] shadow-lg z-50 min-w-[200px]">
-              <button
-                type="button"
-                onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = 'image/jpeg,image/jpg,image/png,image/webp,image/gif';
-                  input.multiple = true;
-                  input.onchange = async (e) => {
-                    const files = (e.target as HTMLInputElement).files;
-                    if (!files || files.length === 0) return;
+          <div className="relative image-dropdown-container">
+            <button
+              type="button"
+              onClick={() => setShowImageDropdown(!showImageDropdown)}
+              className={toolbarButtonClass(showImageDropdown)}
+              aria-label="Insert Image"
+            >
+              <tiptapIcons.Image size={16} />
+            </button>
+            
+            {showImageDropdown && (
+              <div className={`absolute left-0 top-full z-50 mt-2 w-56 ${popoverCardClass}`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/jpeg,image/jpg,image/png,image/webp,image/gif';
+                    input.multiple = true;
+                    input.onchange = async (e) => {
+                      const files = (e.target as HTMLInputElement).files;
+                      if (!files || files.length === 0) return;
 
-                    setShowImageDropdown(false);
+                      setShowImageDropdown(false);
 
-                    const uploadAndInsert = async (file: File) => {
-                      const formData = new FormData();
-                      formData.append('file', file);
+                      const uploadAndInsert = async (file: File) => {
+                        const formData = new FormData();
+                        formData.append('file', file);
 
-                      const response = await fetch('/api/upload', {
-                        method: 'POST',
-                        body: formData,
-                      });
-
-                      const data = await response.json();
-                      if (data?.success && data.url) {
-                        const imageId = generateImageId();
-                        editor.chain().focus().run();
-
-                        const { state, view } = editor;
-                        const { schema } = state;
-                        const { tr } = state;
-                        const { from } = state.selection;
-
-                        const imageNode = schema.nodes.image.create({
-                          src: data.url,
-                          alt: '',
-                          id: imageId,
+                        const response = await fetch('/api/upload', {
+                          method: 'POST',
+                          body: formData,
                         });
 
-                        tr.insert(from, imageNode);
-                        view.dispatch(tr);
-                      } else {
-                        console.error('Failed to upload:', file.name, data?.error);
-                      }
+                        const data = await response.json();
+                        if (data?.success && data.url) {
+                          const imageId = generateImageId();
+                          editor.chain().focus().run();
+
+                          const { state, view } = editor;
+                          const { schema } = state;
+                          const { tr } = state;
+                          const { from } = state.selection;
+
+                          const imageNode = schema.nodes.image.create({
+                            src: data.url,
+                            alt: '',
+                            id: imageId,
+                          });
+
+                          tr.insert(from, imageNode);
+                          view.dispatch(tr);
+                        } else {
+                          console.error('Failed to upload:', file.name, data?.error);
+                        }
+                      };
+
+                      await Promise.allSettled(Array.from(files).map((file) => uploadAndInsert(file)));
                     };
+                    input.click();
+                  }}
+                  className="w-full px-4 py-3 text-left text-sm text-slate-800 hover:bg-slate-50 transition-colors flex items-center gap-2 rounded-t-lg"
+                >
+                  <Upload size={16} className="text-slate-500" />
+                  <span className="font-medium">Upload from computer</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = window.prompt('Enter image URL:');
+                    if (url) {
+                      const imageId = generateImageId();
+                      
+                      // Use transaction to insert image node directly with all attributes
+                      // This ensures ID is properly set and preserved
+                      editor.chain().focus().run();
+                      
+                      const { state, view } = editor;
+                      const { schema } = state;
+                      const { tr } = state;
+                      const { from } = state.selection;
+                      
+                      // Create image node with all attributes including ID
+                      const imageNode = schema.nodes.image.create({
+                        src: url,
+                        alt: '',
+                        id: imageId,
+                      });
+                      
+                      // Insert the node
+                      tr.insert(from, imageNode);
+                      view.dispatch(tr);
+                    }
+                    setShowImageDropdown(false);
+                  }}
+                  className="w-full px-4 py-3 text-left text-sm text-slate-800 hover:bg-slate-50 transition-colors flex items-center gap-2 border-t border-slate-100 rounded-b-lg"
+                >
+                  <Globe size={16} className="text-slate-500" />
+                  <span className="font-medium">Add image link</span>
+                </button>
+              </div>
+            )}
+          </div>
 
-                    await Promise.allSettled(Array.from(files).map((file) => uploadAndInsert(file)));
-                  };
-                  input.click();
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-[#333] hover:bg-[#f5f5f5] transition-colors flex items-center gap-2"
-              >
-                <Upload size={16} className="text-gray-600" />
-                <span>Upload from computer</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const url = window.prompt('Enter image URL:');
-                  if (url) {
-                    const imageId = generateImageId();
-                    
-                    // Use transaction to insert image node directly with all attributes
-                    // This ensures ID is properly set and preserved
-                    editor.chain().focus().run();
-                    
-                    const { state, view } = editor;
-                    const { schema } = state;
-                    const { tr } = state;
-                    const { from } = state.selection;
-                    
-                    // Create image node with all attributes including ID
-                    const imageNode = schema.nodes.image.create({
-                      src: url,
-                      alt: '',
-                      id: imageId,
-                    });
-                    
-                    // Insert the node
-                    tr.insert(from, imageNode);
-                    view.dispatch(tr);
-                  }
-                  setShowImageDropdown(false);
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-[#333] hover:bg-[#f5f5f5] transition-colors flex items-center gap-2 border-t border-[#e0e0e0]"
-              >
-                <Globe size={16} className="text-gray-600" />
-                <span>Add image link</span>
-              </button>
-            </div>
-          )}
-        </div>
+          <div className="relative">
+            <button
+              type="button"
+              ref={(el) => setImageLayoutButtonRef(el)}
+              onClick={(e) => {
+                if (selectedImagePositions.length < 2) {
+                  alert(`Please select at least 2 images. Currently selected: ${selectedImagePositions.length} image(s).\n\nHow to select:\n1. Click on an image to select it\n2. Hold Ctrl/Cmd and click on more images to select multiple`);
+                  return;
+                }
+                
+                if (e.currentTarget) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setImageLayoutDropdownPosition({
+                    top: rect.bottom + 4,
+                    left: rect.left,
+                  });
+                }
+                
+                setShowImageLayoutDialog(!showImageLayoutDialog);
+              }}
+              disabled={selectedImagePositions.length < 2}
+              className={toolbarButtonClass(selectedImagePositions.length >= 2, selectedImagePositions.length < 2)}
+              aria-label="Image Layout"
+              title={`Image Layout - ${selectedImagePositions.length} image(s) selected. Click images to select (Ctrl/Cmd + Click for multiple)`}
+            >
+              <Grid3x3 size={16} />
+            </button>
+          </div>
 
-        {/* Image Layout */}
-        <div className="relative">
           <button
             type="button"
-            ref={(el) => setImageLayoutButtonRef(el)}
-            onClick={(e) => {
-              if (selectedImagePositions.length < 2) {
-                alert(`Please select at least 2 images. Currently selected: ${selectedImagePositions.length} image(s).\n\nHow to select:\n1. Click on an image to select it\n2. Hold Ctrl/Cmd and click on more images to select multiple`);
+            onClick={() => {
+              const input = window.prompt('Enter YouTube URL or iframe embed HTML:');
+              if (!input) {
                 return;
               }
-              
-              if (e.currentTarget) {
-                const rect = e.currentTarget.getBoundingClientRect();
-                setImageLayoutDropdownPosition({
-                  top: rect.bottom + 4,
-                  left: rect.left,
-                });
+
+              const attrs = parseIframeInput(input);
+
+              if (!attrs || !attrs.src) {
+                alert('Could not parse YouTube URL or iframe embed code. Please check the input.');
+                return;
               }
-              
-              setShowImageLayoutDialog(!showImageLayoutDialog);
+
+              // Ensure src is not null
+              const nodeAttrs = { ...attrs, src: attrs.src || null };
+              // @ts-expect-error - setIframe is a custom command from Iframe extension
+              editor.chain().focus().setIframe(nodeAttrs).run();
             }}
-            disabled={selectedImagePositions.length < 2}
-            className={`px-3 py-2 h-10 border border-[#e0e0e0] text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center ${
-              selectedImagePositions.length >= 2 
-                ? 'bg-white text-[#333] hover:bg-[#f5f5f5] cursor-pointer' 
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-            title={`Image Layout - ${selectedImagePositions.length} image(s) selected. Click images to select (Ctrl/Cmd + Click for multiple)`}
+            className={`${toolbarButtonClass()} w-auto px-3 gap-2`}
+            aria-label="Insert YouTube Video"
+            title="Insert YouTube Video"
           >
-            <Grid3x3 size={16} />
+            <tiptapIcons.Video size={16} />
+            <span className="text-xs font-semibold text-slate-800">YouTube</span>
           </button>
         </div>
 
-        {/* YouTube */}
-        <button
-          type="button"
-          onClick={() => {
-            const input = window.prompt('Enter YouTube URL or iframe embed HTML:');
-            if (!input) {
-              return;
-            }
-
-            const attrs = parseIframeInput(input);
-
-            if (!attrs || !attrs.src) {
-              alert('Could not parse YouTube URL or iframe embed code. Please check the input.');
-              return;
-            }
-
-            // Ensure src is not null
-            const nodeAttrs = { ...attrs, src: attrs.src || null };
-            // @ts-expect-error - setIframe is a custom command from Iframe extension
-            editor.chain().focus().setIframe(nodeAttrs).run();
-          }}
-          className="px-4 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
-          title="Insert YouTube Video"
-        >
-          YouTube
-        </button>
-
-        {/* Font Family */}
-        <div className="relative">
-          <select
-            onChange={(e) => {
-              const fontFamily = e.target.value;
-              if (fontFamily === 'default') {
-                editor.chain().focus().unsetFontFamily().run();
-              } else {
-                editor.chain().focus().setFontFamily(fontFamily).run();
-              }
-            }}
-            className="px-3 pr-10 py-2 h-10 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase focus:outline-none focus:border-[#333] transition-colors appearance-none cursor-pointer"
-            title="Font Family"
-          >
-            <option value="default">Font</option>
-            <option value="Arial">Arial</option>
-            <option value="Helvetica">Helvetica</option>
-            <option value="Times New Roman">Times New Roman</option>
-            <option value="Courier New">Courier New</option>
-            <option value="Georgia">Georgia</option>
-            <option value="Verdana">Verdana</option>
-          </select>
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-            <ChevronDown size={16} className="text-[#333]" />
+        {/* Typography (font size only) */}
+        <div className={`${toolbarGroupClass} gap-2`}>
+          <div className="relative">
+            <select
+              onChange={(e) => {
+                const fontSize = e.target.value;
+                if (fontSize === 'default') {
+                  editor.chain().focus().unsetFontSize().run();
+                } else {
+                  editor.chain().focus().setFontSize(fontSize).run();
+                }
+              }}
+              className="appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 pr-10 text-sm text-slate-800 outline-none"
+              title="Font Size"
+            >
+              <option value="default" style={{ fontSize: '14px' }}>
+                Size
+              </option>
+              <option value="10" style={{ fontSize: '10px' }}>10px</option>
+              <option value="12" style={{ fontSize: '12px' }}>12px</option>
+              <option value="14" style={{ fontSize: '14px' }}>14px</option>
+              <option value="16" style={{ fontSize: '16px' }}>16px</option>
+              <option value="18" style={{ fontSize: '18px' }}>18px</option>
+              <option value="20" style={{ fontSize: '20px' }}>20px</option>
+              <option value="24" style={{ fontSize: '24px' }}>24px</option>
+              <option value="28" style={{ fontSize: '28px' }}>28px</option>
+              <option value="32" style={{ fontSize: '32px' }}>32px</option>
+              <option value="36" style={{ fontSize: '36px' }}>36px</option>
+              <option value="48" style={{ fontSize: '48px' }}>48px</option>
+            </select>
+            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
+              <ChevronDown size={16} />
+            </div>
           </div>
         </div>
 
-        {/* Font Size */}
-        <div className="relative">
-          <select
-            onChange={(e) => {
-              const fontSize = e.target.value;
-              if (fontSize === 'default') {
-                editor.chain().focus().unsetFontSize().run();
-              } else {
-                editor.chain().focus().setFontSize(fontSize).run();
-              }
+        {/* Colors */}
+        <div className={`${toolbarGroupClass} gap-2`}>
+          <ColorPicker
+            icon={<tiptapIcons.TextColor width={16} height={16} fill={textColor} />}
+            currentColor={textColor}
+            onColorChange={(color) => {
+              setTextColor(color);
+              editor.chain().focus().setColor(color).run();
             }}
-            className="px-3 pr-10 py-2 h-10 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase focus:outline-none focus:border-[#333] transition-colors appearance-none cursor-pointer"
-            title="Font Size"
-          >
-            <option value="default">Size</option>
-            <option value="10">10px</option>
-            <option value="12">12px</option>
-            <option value="14">14px</option>
-            <option value="16">16px</option>
-            <option value="18">18px</option>
-            <option value="20">20px</option>
-            <option value="24">24px</option>
-            <option value="28">28px</option>
-            <option value="32">32px</option>
-            <option value="36">36px</option>
-            <option value="48">48px</option>
-          </select>
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-            <ChevronDown size={16} className="text-[#333]" />
-          </div>
+            isActive={editor.isActive('textStyle')}
+            title="Text Color"
+            defaultColor="#000000"
+          />
+
+          <ColorPicker
+            icon={<tiptapIcons.Highlighter width={16} height={16} />}
+            currentColor={highlightColor}
+            onColorChange={(color) => {
+              setHighlightColor(color);
+              editor.chain().focus().toggleHighlight({ color }).run();
+            }}
+            onRemove={() => {
+              editor.chain().focus().unsetHighlight().run();
+              setHighlightColor('#ffffff');
+            }}
+            isActive={editor.isActive('highlight')}
+            title="Highlight"
+            defaultColor="#ffffff"
+          />
+
+          <input
+            type="color"
+            onChange={(e) => {
+              editor.chain().focus().setHighlight({ color: e.target.value }).run();
+            }}
+            className="h-9 w-12 rounded-lg border border-slate-200 shadow-inner cursor-pointer"
+            title="Background Color"
+          />
         </div>
-
-        {/* Text Color */}
-        <ColorPicker
-          icon={<Type size={16} />}
-          currentColor={textColor}
-          onColorChange={(color) => {
-            setTextColor(color);
-            editor.chain().focus().setColor(color).run();
-          }}
-          isActive={editor.isActive('textStyle')}
-          title="Text Color"
-          defaultColor="#000000"
-          showColorIndicator={true}
-        />
-
-        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
-
-        {/* Highlight */}
-        <ColorPicker
-          icon={<Highlighter size={16} />}
-          currentColor={highlightColor}
-          onColorChange={(color) => {
-            setHighlightColor(color);
-            editor.chain().focus().toggleHighlight({ color }).run();
-          }}
-          onRemove={() => {
-            editor.chain().focus().unsetHighlight().run();
-            setHighlightColor('#ffffff');
-          }}
-          isActive={editor.isActive('highlight')}
-          title="Highlight"
-          defaultColor="#ffffff"
-          showColorIndicator={true}
-        />
-
-
-        {/* Background Color */}
-        <input
-          type="color"
-          onChange={(e) => {
-            editor.chain().focus().setHighlight({ color: e.target.value }).run();
-          }}
-          className="w-12 h-10 border border-[#e0e0e0] cursor-pointer"
-          title="Background Color"
-        />
-
-        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
 
         {/* Table */}
-        <button
-          type="button"
-          onClick={() => {
-            const rows = parseInt(window.prompt('Number of rows:', '3') || '3', 10);
-            const cols = parseInt(window.prompt('Number of columns:', '3') || '3', 10);
-            if (rows > 0 && cols > 0) {
-              editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
-            }
-          }}
-          className="px-4 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
-          title="Insert Table"
-        >
-          Table
-        </button>
-        {editor.isActive('table') && (
-          <>
-            <button
-              type="button"
-              onClick={() => editor.chain().focus().addColumnBefore().run()}
-              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
-              title="Add Column Before"
-            >
-              +Col
-            </button>
-            <button
-              type="button"
-              onClick={() => editor.chain().focus().addColumnAfter().run()}
-              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
-              title="Add Column After"
-            >
-              Col+
-            </button>
-            <button
-              type="button"
-              onClick={() => editor.chain().focus().deleteColumn().run()}
-              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
-              title="Delete Column"
-            >
-              -Col
-            </button>
-            <button
-              type="button"
-              onClick={() => editor.chain().focus().addRowBefore().run()}
-              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
-              title="Add Row Before"
-            >
-              +Row
-            </button>
-            <button
-              type="button"
-              onClick={() => editor.chain().focus().addRowAfter().run()}
-              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
-              title="Add Row After"
-            >
-              Row+
-            </button>
-            <button
-              type="button"
-              onClick={() => editor.chain().focus().deleteRow().run()}
-              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
-              title="Delete Row"
-            >
-              -Row
-            </button>
-            <button
-              type="button"
-              onClick={() => editor.chain().focus().deleteTable().run()}
-              className="px-3 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
-              title="Delete Table"
-            >
-              ×Table
-            </button>
-          </>
-        )}
-
-        <div className="w-px h-8 bg-[#e0e0e0] mx-1" />
+        <div className={`${toolbarGroupClass} gap-1`} title="Table tools">
+          <button
+            type="button"
+            onClick={() => {
+              const rows = parseInt(window.prompt('Number of rows:', '3') || '3', 10);
+              const cols = parseInt(window.prompt('Number of columns:', '3') || '3', 10);
+              if (rows > 0 && cols > 0) {
+                editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
+              }
+            }}
+            className={`${toolbarButtonClass()} w-auto px-3 gap-2`}
+            title="Insert Table"
+          >
+            <tiptapIcons.Table size={16} />
+            <span className="text-xs font-semibold text-slate-800">Table</span>
+          </button>
+          {editor.isActive('table') && (
+            <>
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().addColumnBefore().run()}
+                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
+                title="Add Column Before"
+              >
+                +Col
+              </button>
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().addColumnAfter().run()}
+                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
+                title="Add Column After"
+              >
+                Col+
+              </button>
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().deleteColumn().run()}
+                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
+                title="Delete Column"
+              >
+                -Col
+              </button>
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().addRowBefore().run()}
+                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
+                title="Add Row Before"
+              >
+                +Row
+              </button>
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().addRowAfter().run()}
+                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
+                title="Add Row After"
+              >
+                Row+
+              </button>
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().deleteRow().run()}
+                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
+                title="Delete Row"
+              >
+                -Row
+              </button>
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().deleteTable().run()}
+                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
+                title="Delete Table"
+              >
+                ×Table
+              </button>
+            </>
+          )}
+        </div>
 
         {/* Clear Formatting */}
         <button
           type="button"
           onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}
-          className="px-4 py-2 border border-[#e0e0e0] bg-white text-[#333] text-xs tracking-[1px] uppercase hover:bg-[#f5f5f5] transition-colors"
+          className={`${toolbarButtonClass()} w-auto px-4`}
           title="Clear Formatting"
         >
           Clear
@@ -3737,7 +3689,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         {/* Image Alt Text Dialog */}
         {showImageAltDialog && selectedImagePos !== null && selectedImageNode && imageAltDialogPosition && (
           <div 
-            className="absolute bg-white rounded-lg shadow-xl p-6 w-[500px] z-50 image-alt-dialog"
+            className={`absolute ${popoverCardClass} p-6 w-[500px] z-50 image-alt-dialog`}
             style={{
               top: `${imageAltDialogPosition.top}px`,
               left: `${imageAltDialogPosition.left}px`,
@@ -3798,7 +3750,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         {/* Image Caption Dialog */}
         {showImageCaptionDialog && selectedImagePos !== null && selectedImageNode && imageCaptionDialogPosition && (
           <div 
-            className="absolute bg-white rounded-lg shadow-xl p-6 w-[500px] z-50 image-caption-dialog"
+            className={`absolute ${popoverCardClass} p-6 w-[500px] z-50 image-caption-dialog`}
             style={{
               top: `${imageCaptionDialogPosition.top}px`,
               left: `${imageCaptionDialogPosition.left}px`,
@@ -3846,7 +3798,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         {/* Image Link Dialog */}
         {showImageLinkDialog && selectedImagePos !== null && selectedImageNode && imageLinkDialogPosition && (
           <div 
-            className="absolute bg-white rounded-lg shadow-xl p-6 w-[500px] z-50 image-link-dialog"
+            className={`absolute ${popoverCardClass} p-6 w-[500px] z-50 image-link-dialog`}
             style={{
               top: `${imageLinkDialogPosition.top}px`,
               left: `${imageLinkDialogPosition.left}px`,
@@ -3909,7 +3861,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         {/* Image Replace Dialog */}
         {showImageReplaceDialog && selectedImagePos !== null && selectedImageNode && imageReplaceDialogPosition && (
           <div 
-            className="absolute bg-white rounded-lg shadow-xl p-6 w-[500px] z-50 image-replace-dialog"
+            className={`absolute ${popoverCardClass} p-6 w-[500px] z-50 image-replace-dialog`}
             style={{
               top: `${imageReplaceDialogPosition.top}px`,
               left: `${imageReplaceDialogPosition.left}px`,
@@ -4005,7 +3957,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         {/* Link Popover */}
         {showLinkPopover && linkPopoverUrl && (
           <div 
-            className="link-popover absolute bg-white rounded-lg shadow-lg z-50"
+            className={`link-popover absolute ${popoverCardClass} z-50`}
             style={{
               top: `${linkPopoverPosition.top}px`,
               left: `${linkPopoverPosition.left}px`,
@@ -4113,7 +4065,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         
         {showLinkDialog && linkDialogPosition && (
           <div 
-            className="absolute bg-white rounded-lg shadow-xl p-6 w-[500px] z-50"
+            className={`absolute ${popoverCardClass} p-6 w-[500px] z-50`}
             style={{
               top: `${linkDialogPosition.top}px`,
               left: `${linkDialogPosition.left}px`,
@@ -4214,7 +4166,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       {/* Image Layout Dropdown */}
       {showImageLayoutDialog && selectedImagePositions.length >= 2 && imageLayoutDropdownPosition && (
         <div 
-          className="image-layout-dropdown fixed bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50 min-w-[280px]"
+          className={`image-layout-dropdown fixed ${popoverCardClass} p-4 z-50 min-w-[280px]`}
           style={{
             top: `${imageLayoutDropdownPosition.top}px`,
             left: `${imageLayoutDropdownPosition.left}px`,
@@ -4455,7 +4407,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
               className="w-full text-left p-3 border border-gray-200 rounded hover:border-blue-500 transition-colors"
             >
               <div className="flex items-center gap-2 mb-1">
-                <List size={20} className="text-gray-600" />
+                <tiptapIcons.List size={20} className="text-gray-600" />
                 <div className="font-semibold text-sm">Stacked</div>
               </div>
               <div className="text-xs text-gray-500">Images stacked vertically</div>
