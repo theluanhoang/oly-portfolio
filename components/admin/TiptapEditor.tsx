@@ -42,6 +42,17 @@ const generateImageId = (): string => {
   return `img-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 };
 
+// Global drag state to track if any image is being dragged
+// This allows wheel events to check drag state even from different node view instances
+let globalImageDragState: { isActive: boolean; nodeId: string | null } = {
+  isActive: false,
+  nodeId: null,
+};
+
+// Global wheel handler to avoid multiple registrations
+let globalWheelHandler: ((e: WheelEvent) => void) | null = null;
+let wheelHandlerRegistered = false;
+
 interface ColorPickerProps {
   icon: React.ReactNode;
   currentColor: string;
@@ -584,7 +595,16 @@ const ResizableImage = Image.extend({
       img.style.display = 'block';
       img.style.maxWidth = '100%';
       img.style.height = 'auto';
-      img.draggable = true;
+      // Disable native HTML5 drag behaviour – we'll implement our own drag/reorder logic
+      img.draggable = false;
+      // Guard: if browser still fires dragstart, prevent it to avoid native ghost preview
+      const preventNativeDrag = (ev: DragEvent) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        return false;
+      };
+      img.addEventListener('dragstart', preventNativeDrag);
+      dom.addEventListener('dragstart', preventNativeDrag);
       
       const imgWrapper = document.createElement('div');
       imgWrapper.style.position = 'relative';
@@ -701,6 +721,75 @@ const ResizableImage = Image.extend({
       let startWidth = 0;
       let startHeight = 0;
       let wasCtrlClick: boolean = false;
+      // Custom drag state for image reordering (mouse-based, not HTML5 drag & drop)
+      let isImageDragging = false;
+      let dragStartPos: number | null = null;
+      let dragLastClientX = 0;
+      let dragLastClientY = 0;
+      let dropIndicatorEl: HTMLElement | null = null;
+
+      // Helpers to clean up drag preview when native drag/drop fires unexpectedly
+      const handleNativeDrop = () => {
+        removeDragPreview();
+        if (img) {
+          img.style.opacity = '';
+          img.style.cursor = '';
+        }
+        isImageDragging = false;
+        dragStartPos = null;
+      };
+
+      const handleNativeDragEnd = () => {
+        removeDragPreview();
+        if (img) {
+          img.style.opacity = '';
+          img.style.cursor = '';
+        }
+        isImageDragging = false;
+        dragStartPos = null;
+      };
+
+      const showDropIndicator = (insertPos: number) => {
+        const pmContainer = view.dom.closest('.ProseMirror')?.parentElement as HTMLElement | null;
+        if (!pmContainer) return;
+        const containerPosition = window.getComputedStyle(pmContainer).position;
+        if (containerPosition === 'static') {
+          pmContainer.style.position = 'relative';
+        }
+        let coords: { left: number; right: number; top: number; bottom: number };
+        try {
+          coords = view.coordsAtPos(insertPos);
+        } catch {
+          return;
+        }
+        const rect = pmContainer.getBoundingClientRect();
+        if (!dropIndicatorEl) {
+          const el = document.createElement('div');
+          el.className = 'tiptap-drop-indicator';
+          el.style.position = 'absolute';
+          el.style.height = '2px';
+          el.style.background = '#3b82f6';
+          el.style.boxShadow = '0 0 8px rgba(59,130,246,0.6)';
+          el.style.zIndex = '10000';
+          dropIndicatorEl = el;
+          pmContainer.appendChild(el);
+        }
+        const relativeTop = coords.top - rect.top + pmContainer.scrollTop;
+        dropIndicatorEl.style.left = '0px';
+        dropIndicatorEl.style.width = '100%';
+        dropIndicatorEl.style.top = `${relativeTop}px`;
+      };
+
+      const hideDropIndicator = () => {
+        if (dropIndicatorEl) {
+          dropIndicatorEl.remove();
+          dropIndicatorEl = null;
+        }
+      };
+
+      // Legacy drag/drop state used by the older HTML5 drag implementation.
+      // These are kept so that the remaining helper functions compile,
+      // but the native drag behaviour is disabled via `img.draggable = false`.
       type DragState = {
         isActive: boolean;
         startPos: number;
@@ -711,7 +800,7 @@ const ResizableImage = Image.extend({
         pendingInsertPos: number | null;
         lastMovedToPos: number | null;
       };
-      
+
       let dragState: DragState | null = null;
       let dragPreviewElement: HTMLElement | null = null;
       let lastMouseEvent: MouseEvent | null = null;
@@ -921,77 +1010,219 @@ const ResizableImage = Image.extend({
         }
       };
 
-      const startDrag = (pos: number): boolean => {
-        if (dragState?.isActive) {
-          return false;
-        }
-        
-        const { doc } = view.state;
-        const node = doc.nodeAt(pos);
+      // Helper to move the image node from its original position to the position
+      // closest to the given client coordinates.
+      const moveImageNode = (fromPos: number, clientX: number, clientY: number) => {
+        const { state, dispatch } = view;
+        const { doc } = state;
+
+        const node = doc.nodeAt(fromPos);
         if (!node || node.type.name !== 'image') {
-          return false;
+          return;
         }
-        
+
         const nodeId = node.attrs.id;
         if (!nodeId) {
-          return false;
+          return;
         }
-        
-        dragState = {
-          isActive: false,
-          startPos: pos,
+
+        // Get target position from coordinates
+        const coords = view.posAtCoords({ left: clientX, top: clientY });
+        if (!coords) {
+          return;
+        }
+
+        const targetPos = coords.pos;
+        const nodeSize = node.nodeSize;
+        const fromEnd = fromPos + nodeSize;
+
+        // Create a temporary drag state for findInsertPosition
+        const tempDragState: DragState = {
+          isActive: true,
+          startPos: fromPos,
           node: node,
-          nodeSize: node.nodeSize,
+          nodeSize: nodeSize,
           nodeId: nodeId,
           startTime: Date.now(),
           pendingInsertPos: null,
           lastMovedToPos: null,
         };
+
+        // Use the sophisticated findInsertPosition logic to find the best insert position
+        const insertPos = findInsertPosition(targetPos, tempDragState, doc);
         
-        return true;
+        if (insertPos === null) {
+          return; // Cannot find valid insert position
+        }
+
+        if (insertPos === fromPos) {
+          return; // Same position, no need to move
+        }
+
+        const tr = state.tr;
+
+        // Remove the node from its original position first
+        tr.delete(fromPos, fromEnd);
+
+        // After deletion, positions after the deleted range shift left
+        let finalInsertPos = insertPos;
+        if (finalInsertPos > fromPos) {
+          finalInsertPos -= nodeSize;
+        }
+
+        // Clamp target position to valid range
+        if (finalInsertPos < 0) {
+          finalInsertPos = 0;
+        }
+        if (finalInsertPos > tr.doc.content.size) {
+          finalInsertPos = tr.doc.content.size;
+        }
+
+        // Verify the position is still valid after deletion
+        try {
+          const $insertPos = tr.doc.resolve(finalInsertPos);
+          const parent = $insertPos.parent;
+          const index = $insertPos.index();
+          
+          if (!parent.canReplace(index, index, Fragment.from(node))) {
+            return; // Cannot insert at this position
+          }
+        } catch {
+          return; // Invalid position
+        }
+
+        // Create and insert the new node
+        const newNode = node.type.create(node.attrs, node.content);
+        tr.insert(finalInsertPos, newNode);
+
+        // Try to keep selection on the moved image
+        const newDoc = tr.doc;
+        const movedNode = newDoc.nodeAt(finalInsertPos);
+        if (movedNode && movedNode.type.name === 'image' && movedNode.attrs.id === nodeId) {
+          tr.setSelection(
+            TextSelection.create(newDoc, finalInsertPos, finalInsertPos + movedNode.nodeSize)
+          );
+        }
+
+        dispatch(tr);
       };
 
       const handleImageMouseDown = (e: MouseEvent) => {
         if (e.target === img && !isResizing) {
           const pos = getPos();
           if (typeof pos === 'number') {
-            let isDrag = false;
-            const startX = e.clientX;
-            const startY = e.clientY;
+            let hasExceededThreshold = false;
+            const startClientX = e.clientX;
+            const startClientY = e.clientY;
             const DRAG_THRESHOLD = 5;
-            
+
             wasCtrlClick = e.ctrlKey || e.metaKey;
-            
+            isImageDragging = false;
+            dragStartPos = null;
+
             const handleMouseMove = (moveEvent: MouseEvent) => {
-              const deltaX = Math.abs(moveEvent.clientX - startX);
-              const deltaY = Math.abs(moveEvent.clientY - startY);
-              if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
-                isDrag = true;
+              const deltaX = Math.abs(moveEvent.clientX - startClientX);
+              const deltaY = Math.abs(moveEvent.clientY - startClientY);
+              if (!hasExceededThreshold && (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD)) {
+                hasExceededThreshold = true;
+                isImageDragging = true;
+                dragStartPos = pos;
+                
+                // Create drag preview when drag starts
+                if (!dragPreviewElement) {
+                  createDragPreview();
+                }
+                
+                // Make original image semi-transparent during drag
+                img.style.opacity = '0.5';
+                img.style.cursor = 'grabbing';
+              }
+
+              if (isImageDragging) {
+                dragLastClientX = moveEvent.clientX;
+                dragLastClientY = moveEvent.clientY;
+                
+                // Update drag preview position
+                if (dragPreviewElement) {
+                  updateDragPreviewPosition(moveEvent);
+                }
+
+                // Update drop indicator using current insert position guess
+                const coords = view.posAtCoords({ left: moveEvent.clientX, top: moveEvent.clientY });
+                if (!coords || dragStartPos === null) {
+                  hideDropIndicator();
+                } else {
+                  const { doc } = view.state;
+                  const node = doc.nodeAt(dragStartPos);
+                  if (!node || node.type.name !== 'image') {
+                    hideDropIndicator();
+                  } else {
+                    const tempState: DragState = {
+                      isActive: true,
+                      startPos: dragStartPos,
+                      node,
+                      nodeSize: node.nodeSize,
+                      nodeId: node.attrs.id,
+                      startTime: Date.now(),
+                      pendingInsertPos: null,
+                      lastMovedToPos: null,
+                    };
+                    const insertPos = findInsertPosition(coords.pos, tempState, doc);
+                    if (insertPos !== null) {
+                      showDropIndicator(insertPos);
+                    } else {
+                      hideDropIndicator();
+                    }
+                  }
+                }
               }
             };
-            
-            const handleMouseUp = () => {
+
+            const handleMouseUp = (upEvent: MouseEvent) => {
               document.removeEventListener('mousemove', handleMouseMove);
               document.removeEventListener('mouseup', handleMouseUp);
-              
-              if (!isDrag && !dragState?.isActive) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const clearClickOutsideEvent = new CustomEvent('clearClickOutsideTimeout');
-            document.dispatchEvent(clearClickOutsideEvent);
-            
-            const { tr, doc } = view.state;
-            const nodeAtPos = doc.nodeAt(pos);
-            
-            if (nodeAtPos && nodeAtPos.type.name === 'image') {
-              tr.setSelection(TextSelection.create(doc, pos, pos + nodeAtPos.nodeSize));
-            } else {
-              tr.setSelection(TextSelection.create(doc, pos));
-            }
+              document.removeEventListener('drop', handleNativeDrop);
+              document.removeEventListener('dragend', handleNativeDragEnd);
+
+              // Remove drag preview and restore image opacity
+              removeDragPreview();
+              hideDropIndicator();
+              if (img) {
+                img.style.opacity = '';
+                img.style.cursor = '';
+              }
+
+              if (isImageDragging && dragStartPos !== null) {
+                // Perform the actual move
+                moveImageNode(dragStartPos, dragLastClientX || upEvent.clientX, dragLastClientY || upEvent.clientY);
+                isImageDragging = false;
+                dragStartPos = null;
+                // Prevent default behavior after drag
+                upEvent.preventDefault();
+                upEvent.stopPropagation();
+                return;
+              }
+
+              // Treat as a normal click/select when not dragging
+              // Only prevent default if this was a click (not a drag)
+              if (!hasExceededThreshold) {
+                upEvent.preventDefault();
+                upEvent.stopPropagation();
+
+                const clearClickOutsideEvent = new CustomEvent('clearClickOutsideTimeout');
+                document.dispatchEvent(clearClickOutsideEvent);
+
+                const { tr, doc } = view.state;
+                const nodeAtPos = doc.nodeAt(pos);
+
+                if (nodeAtPos && nodeAtPos.type.name === 'image') {
+                  tr.setSelection(TextSelection.create(doc, pos, pos + nodeAtPos.nodeSize));
+                } else {
+                  tr.setSelection(TextSelection.create(doc, pos));
+                }
                 view.dispatch(tr);
                 showHandles();
-                
+
                 if (wasCtrlClick) {
                   const event = new CustomEvent('toggleImageSelection', { detail: { pos, mouseX: e.clientX, mouseY: e.clientY } });
                   document.dispatchEvent(event);
@@ -1001,96 +1232,17 @@ const ResizableImage = Image.extend({
                 }
               }
             };
-            
+
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
+            // In case the browser still fires native drag/drop events, clean up preview
+            document.addEventListener('drop', handleNativeDrop);
+            document.addEventListener('dragend', handleNativeDragEnd);
           }
         }
       };
 
       img.addEventListener('mousedown', handleImageMouseDown);
-
-      const handleImageDragStart = (e: DragEvent) => {
-        if (!isResizing) {
-          const pos = getPos();
-          if (typeof pos === 'number') {
-            e.stopPropagation();
-            
-            if (!dragState || !dragState.isActive) {
-              const success = startDrag(pos);
-              if (success && dragState) {
-                dragState.isActive = true;
-              } else {
-                return;
-              }
-            }
-            
-            if (!dragPreviewElement) {
-              createDragPreview();
-            }
-            updateDragPreviewPosition(e);
-            
-            lastMouseEvent = e;
-            
-            if (e.dataTransfer) {
-              e.dataTransfer.effectAllowed = 'move';
-              e.dataTransfer.setData('text/html', '');
-              
-              let emptyDiv = document.getElementById('tiptap-drag-ghost');
-              if (!emptyDiv) {
-                emptyDiv = document.createElement('div');
-                emptyDiv.id = 'tiptap-drag-ghost';
-                emptyDiv.style.width = '1px';
-                emptyDiv.style.height = '1px';
-                emptyDiv.style.position = 'absolute';
-                emptyDiv.style.top = '-1000px';
-                emptyDiv.style.left = '-1000px';
-                emptyDiv.style.opacity = '0';
-                emptyDiv.style.pointerEvents = 'none';
-                document.body.appendChild(emptyDiv);
-              }
-              
-              try {
-                e.dataTransfer.setDragImage(emptyDiv, 0, 0);
-              } catch {
-                const emptyImg = document.createElement('img');
-                emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
-                emptyImg.width = 1;
-                emptyImg.height = 1;
-                e.dataTransfer.setDragImage(emptyImg, 0, 0);
-              }
-            }
-          }
-        }
-      };
-
-      img.addEventListener('dragstart', handleImageDragStart);
-      
-      const handleImageDragEnd = (e: DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        removeDragPreview();
-        
-        if (dragState?.isActive) {
-          if (dragState.pendingInsertPos !== null) {
-            try {
-              performDragDrop(dragState, dragState.pendingInsertPos);
-            } catch {
-              // Silent fail
-            }
-          }
-          
-          lastMouseEvent = null;
-          if (img) {
-            img.style.opacity = '';
-            img.style.cursor = '';
-          }
-          cleanupDrag();
-        }
-      };
-      
-      img.addEventListener('dragend', handleImageDragEnd);
 
       dom.addEventListener('click', (e) => {
         if (e.target !== img && !handles.includes(e.target as HTMLElement)) {
@@ -1175,7 +1327,7 @@ const ResizableImage = Image.extend({
         }
       };
 
-      let cachedImageNodes: Array<{ pos: number; size: number; center: number }> | null = null;
+      let cachedImageNodes: Array<{ pos: number; size: number }> | null = null;
       let cachedDocSize = 0;
       let cachedNodeId: string | null = null;
       
@@ -1191,6 +1343,7 @@ const ResizableImage = Image.extend({
           const nodeStart = startPos;
           const nodeEnd = startPos + nodeSize;
           
+          // If inside current node range, ignore
           if (clampedPos > nodeStart && clampedPos < nodeEnd) {
             return null;
           }
@@ -1202,14 +1355,12 @@ const ResizableImage = Image.extend({
           
           if (needsRebuild) {
             cachedImageNodes = [];
+            // Include ALL image nodes (kể cả ảnh đang drag) để tính gap chính xác.
+            // Các gap rơi trong vùng ảnh đang kéo sẽ được lọc ở bước sau.
             doc.descendants((node, pos) => {
-              if (node.type.name === 'image' && node.attrs.id !== dragState.nodeId) {
+              if (node.type.name === 'image') {
                 const size = node.nodeSize;
-                cachedImageNodes!.push({ 
-                  pos, 
-                  size,
-                  center: pos + size / 2
-                });
+                cachedImageNodes!.push({ pos, size });
               }
             });
             cachedImageNodes.sort((a, b) => a.pos - b.pos);
@@ -1217,120 +1368,52 @@ const ResizableImage = Image.extend({
             cachedNodeId = dragState.nodeId;
           }
           
-          let targetImage: { pos: number; size: number; center: number } | null = null;
-          
+          // Gap-based strategy: build gaps between images (and before first / after last)
           if (cachedImageNodes && cachedImageNodes.length > 0) {
-            for (const img of cachedImageNodes) {
-              const imgStart = img.pos;
-              const imgEnd = img.pos + img.size;
-              
-              if (clampedPos >= imgStart && clampedPos < imgEnd) {
-                targetImage = {
-                  pos: img.pos,
-                  size: img.size,
-                  center: img.center
-                };
-                break;
+            const gaps: number[] = [];
+            const first = cachedImageNodes[0];
+            const last = cachedImageNodes[cachedImageNodes.length - 1];
+
+            // Before first
+            gaps.push(first.pos);
+            // Between
+            for (let i = 0; i < cachedImageNodes.length - 1; i++) {
+              const prev = cachedImageNodes[i];
+              gaps.push(prev.pos + prev.size);
+            }
+            // After last
+            gaps.push(last.pos + last.size);
+
+            // Filter out gaps that fall inside the dragged node range
+            const validGaps = gaps.filter((g) => g <= nodeStart || g >= nodeEnd);
+
+            // Find nearest gap by absolute distance to clampedPos
+            let bestGap: number | null = null;
+            let bestDistance = Infinity;
+            for (const g of validGaps) {
+              const d = Math.abs(clampedPos - g);
+              if (d < bestDistance) {
+                bestDistance = d;
+                bestGap = g;
               }
             }
-            
-            if (!targetImage) {
-              let nearestImage: { pos: number; size: number; center: number; distance: number } | null = null;
-              
-              let left = 0;
-              let right = cachedImageNodes.length - 1;
-              let closestIdx = 0;
-              let minDistance = Infinity;
-              
-              while (left <= right) {
-                const mid = Math.floor((left + right) / 2);
-                const img = cachedImageNodes[mid];
-                const distance = Math.abs(clampedPos - img.center);
-                
-                if (distance < minDistance) {
-                  minDistance = distance;
-                  closestIdx = mid;
+
+            if (bestGap !== null) {
+              // Validate that we can insert at bestGap
+              try {
+                const $pos = doc.resolve(bestGap);
+                const parent = $pos.parent;
+                const index = $pos.index();
+                if (parent.canReplace(index, index, Fragment.from(dragState.node))) {
+                  return bestGap;
                 }
-                
-                if (clampedPos < img.center) {
-                  right = mid - 1;
-                  } else {
-                  left = mid + 1;
-                }
-              }
-              
-              const checkIndices = [closestIdx];
-              if (closestIdx > 0) checkIndices.push(closestIdx - 1);
-              if (closestIdx < cachedImageNodes.length - 1) checkIndices.push(closestIdx + 1);
-              
-              for (const idx of checkIndices) {
-                const img = cachedImageNodes[idx];
-                const distance = Math.abs(clampedPos - img.center);
-                
-                if (!nearestImage || distance < nearestImage.distance) {
-                  nearestImage = { 
-                    pos: img.pos, 
-                    size: img.size, 
-                    center: img.center,
-                    distance 
-                  };
-                }
-              }
-              
-              const DROP_ZONE_THRESHOLD = 50;
-              if (nearestImage && nearestImage.distance < DROP_ZONE_THRESHOLD) {
-                targetImage = {
-                  pos: nearestImage.pos,
-                  size: nearestImage.size,
-                  center: nearestImage.center
-                };
+              } catch {
+                // fall through to fallback
               }
             }
           }
           
-          if (targetImage) {
-            const imgStart = targetImage.pos;
-            const imgEnd = targetImage.pos + targetImage.size;
-            const imgCenter = targetImage.center;
-            
-            let insertPos: number;
-            
-            const isDraggingFromBehind = nodeStart > imgEnd;
-            const isDraggingFromFront = nodeStart < imgStart;
-            
-            if (isDraggingFromBehind) {
-              insertPos = imgStart;
-            } else if (isDraggingFromFront) {
-              insertPos = imgEnd;
-            } else {
-              if (clampedPos < imgCenter) {
-                insertPos = imgStart;
-              } else {
-                insertPos = imgEnd;
-              }
-            }
-            
-            if (insertPos > nodeStart && insertPos < nodeEnd) {
-              return null;
-            }
-            
-            if (insertPos === nodeStart) {
-              return null;
-            }
-            
-            try {
-              const $pos = doc.resolve(insertPos);
-              const parent = $pos.parent;
-              const index = $pos.index();
-              
-              if (parent.canReplace(index, index, Fragment.from(dragState.node))) {
-                return insertPos;
-                  }
-                } catch {
-              // Fall through to default search
-            }
-          }
-          
+          // Fallback: scan around clampedPos for any valid insertion point
           const MAX_SEARCH_RADIUS = 15;
           
           for (let offset = 0; offset <= MAX_SEARCH_RADIUS; offset++) {
@@ -1340,7 +1423,6 @@ const ResizableImage = Image.extend({
             
             for (const pos of positions) {
               if (pos < 0 || pos > doc.content.size) continue;
-              
               if (pos > nodeStart && pos < nodeEnd) continue;
               
               try {
@@ -1350,18 +1432,18 @@ const ResizableImage = Image.extend({
                 
                 if (parent.canReplace(index, index, Fragment.from(dragState.node))) {
                   return pos;
-                  }
-                } catch {
-                  continue;
-              }
                 }
+              } catch {
+                continue;
               }
-              
-              return null;
-        } catch {
-              return null;
             }
-          };
+          }
+          
+          return null;
+        } catch {
+          return null;
+        }
+      };
           
       const handleDocumentMouseMove = (e: MouseEvent) => {
         if (!dragState?.isActive || isResizing) return;
@@ -1373,6 +1455,57 @@ const ResizableImage = Image.extend({
         } else {
           createDragPreview();
           updateDragPreviewPosition(e);
+        }
+        
+        // Auto-scroll when dragging near edges of editor container
+        if (globalImageDragState.isActive) {
+          const proseMirror = view.dom.closest('.ProseMirror');
+          if (proseMirror) {
+            let scrollContainer: HTMLElement | null = proseMirror.parentElement;
+            while (scrollContainer) {
+              const style = window.getComputedStyle(scrollContainer);
+              if (style.overflowY === 'auto' || style.overflowY === 'scroll' || 
+                  scrollContainer.classList.contains('overflow-y-auto')) {
+                break;
+              }
+              scrollContainer = scrollContainer.parentElement;
+            }
+            
+            if (!scrollContainer) {
+              scrollContainer = proseMirror.parentElement;
+              while (scrollContainer && scrollContainer !== document.body) {
+                if (scrollContainer.scrollHeight > scrollContainer.clientHeight) {
+                  break;
+                }
+                scrollContainer = scrollContainer.parentElement;
+              }
+            }
+            
+            if (scrollContainer) {
+              const rect = scrollContainer.getBoundingClientRect();
+              const SCROLL_THRESHOLD = 50; // pixels from edge
+              const SCROLL_SPEED = 10; // pixels per frame
+              
+              let scrollDelta = 0;
+              
+              // Check if near top edge
+              if (e.clientY < rect.top + SCROLL_THRESHOLD && scrollContainer.scrollTop > 0) {
+                scrollDelta = -SCROLL_SPEED;
+              }
+              // Check if near bottom edge
+              else if (e.clientY > rect.bottom - SCROLL_THRESHOLD && 
+                       scrollContainer.scrollTop < scrollContainer.scrollHeight - scrollContainer.clientHeight) {
+                scrollDelta = SCROLL_SPEED;
+              }
+              
+              if (scrollDelta !== 0) {
+                scrollContainer.scrollBy({
+                  top: scrollDelta,
+                  behavior: 'auto',
+                });
+              }
+            }
+          }
         }
         
         const now = Date.now();
@@ -1392,13 +1525,27 @@ const ResizableImage = Image.extend({
       };
       
       const cleanupDrag = () => {
+        console.log('[DEBUG] cleanupDrag called', {
+          hasRafId: rafId !== null,
+          hasDragState: !!dragState,
+          dragStateActive: dragState?.isActive,
+          globalDragActive: globalImageDragState.isActive,
+        });
+        
         if (rafId !== null) {
           cancelAnimationFrame(rafId);
           rafId = null;
         }
         if (dragState) {
           dragState.isActive = false;
+          // Only clear global state if this is the active drag
+          if (globalImageDragState.nodeId === dragState.nodeId) {
+            globalImageDragState.isActive = false;
+            globalImageDragState.nodeId = null;
+            console.log('[DEBUG] Global drag state cleaned up');
+          }
           dragState = null;
+          console.log('[DEBUG] Drag state cleaned up');
         }
         cachedImageNodes = null;
         cachedDocSize = 0;
@@ -1618,54 +1765,200 @@ const ResizableImage = Image.extend({
       };
       
       const handleDocumentDragOver = (e: DragEvent) => {
-        if (dragState?.isActive && dragPreviewElement) {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          updateDragPreviewPosition(e);
-          lastMouseEvent = e;
-          
-          const now = Date.now();
-          if (now - lastMoveTime >= MOVE_THROTTLE) {
-            lastMoveTime = now;
-            
-            if (rafId !== null) {
-              cancelAnimationFrame(rafId);
-            }
-            
-            rafId = requestAnimationFrame(() => {
-              rafId = null;
-              calculateAndSetInsertPosition(e.clientX, e.clientY);
-            });
+        console.log('[DEBUG] handleDocumentDragOver called', {
+          dragStateActive: dragState?.isActive,
+          hasDragPreview: !!dragPreviewElement,
+          clientX: e.clientX,
+          clientY: e.clientY,
+          target: e.target,
+        });
+
+        if (!dragState?.isActive || !dragPreviewElement) {
+          console.log('[DEBUG] Drag over ignored - not active or no preview');
+          return;
+        }
+
+        // Always preventDefault to allow drop, but wheel events are handled separately
+        // Wheel events fire independently and won't be blocked by this
+        e.preventDefault();
+        e.stopPropagation();
+
+        updateDragPreviewPosition(e);
+        lastMouseEvent = e;
+
+        const now = Date.now();
+        if (now - lastMoveTime >= MOVE_THROTTLE) {
+          lastMoveTime = now;
+
+          if (rafId !== null) {
+            cancelAnimationFrame(rafId);
           }
+
+          rafId = requestAnimationFrame(() => {
+            rafId = null;
+            calculateAndSetInsertPosition(e.clientX, e.clientY);
+          });
         }
       };
       
       const handleDocumentDrop = (e: DragEvent) => {
-        if (dragState?.isActive) {
-          e.preventDefault();
-          e.stopPropagation();
+        if (!dragState?.isActive) {
+          return;
+        }
+
+        const editorContainer = view.dom.parentElement || view.dom;
+        const rect = editorContainer.getBoundingClientRect();
+        const isInsideEditor =
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom;
+
+        if (!isInsideEditor) {
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        removeDragPreview();
+
+        try {
+          if (dragState.pendingInsertPos !== null) {
+            performDragDrop(dragState, dragState.pendingInsertPos);
+          }
+        } catch {
+          // Silent fail
+        } finally {
+          lastMouseEvent = null;
+          if (img) {
+            img.style.opacity = '';
+            img.style.cursor = '';
+          }
+          cleanupDrag();
+        }
+      };
+
+      // Allow manual scroll (mouse wheel) during drag by scrolling the editor container ourselves
+      // Note: Wheel events may not fire during drag, so we also use auto-scroll in mousemove
+      const handleDocumentWheel = (e: WheelEvent) => {
+        console.log('[DEBUG] handleDocumentWheel called', {
+          dragStateActive: dragState?.isActive,
+          globalDragActive: globalImageDragState.isActive,
+          deltaY: e.deltaY,
+          deltaX: e.deltaX,
+          target: e.target,
+          currentTarget: e.currentTarget,
+        });
+
+        // Use global drag state instead of local dragState to work across all node views
+        if (!globalImageDragState.isActive) {
+          console.log('[DEBUG] Global drag state not active, ignoring wheel event');
+          return;
+        }
+
+        // Prevent default to take control of scrolling
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Find the scroll container - find .ProseMirror from the event target or use view.dom
+        const target = e.target as HTMLElement;
+        const proseMirror = target.closest('.ProseMirror') || view.dom.closest('.ProseMirror');
+        console.log('[DEBUG] ProseMirror element:', proseMirror);
+        
+        if (!proseMirror) {
+          console.log('[DEBUG] ProseMirror not found');
+          return;
+        }
+
+        // Find the scrollable parent container
+        let scrollContainer: HTMLElement | null = proseMirror.parentElement;
+        console.log('[DEBUG] Starting scroll container search from:', scrollContainer);
+        
+        while (scrollContainer) {
+          const style = window.getComputedStyle(scrollContainer);
+          const overflowY = style.overflowY;
+          const hasOverflowClass = scrollContainer.classList.contains('overflow-y-auto');
+          console.log('[DEBUG] Checking container:', {
+            element: scrollContainer,
+            overflowY,
+            hasOverflowClass,
+            scrollHeight: scrollContainer.scrollHeight,
+            clientHeight: scrollContainer.clientHeight,
+          });
           
-          removeDragPreview();
-          
-          try {
-            if (dragState.pendingInsertPos !== null) {
-              performDragDrop(dragState, dragState.pendingInsertPos);
+          if (overflowY === 'auto' || overflowY === 'scroll' || hasOverflowClass) {
+            console.log('[DEBUG] Found scroll container by overflow style:', scrollContainer);
+            break;
+          }
+          scrollContainer = scrollContainer.parentElement;
+        }
+
+        if (!scrollContainer) {
+          console.log('[DEBUG] Scroll container not found by overflow, trying fallback');
+          // Fallback: try to find any scrollable ancestor
+          scrollContainer = proseMirror.parentElement;
+          while (scrollContainer && scrollContainer !== document.body) {
+            const scrollHeight = scrollContainer.scrollHeight;
+            const clientHeight = scrollContainer.clientHeight;
+            console.log('[DEBUG] Fallback check:', {
+              element: scrollContainer,
+              scrollHeight,
+              clientHeight,
+              isScrollable: scrollHeight > clientHeight,
+            });
+            
+            if (scrollHeight > clientHeight) {
+              console.log('[DEBUG] Found scroll container by scrollHeight:', scrollContainer);
+              break;
             }
-          } catch {
-            // Silent fail
-          } finally {
-            lastMouseEvent = null;
-            if (img) {
-              img.style.opacity = '';
-              img.style.cursor = '';
-            }
-            cleanupDrag();
+            scrollContainer = scrollContainer.parentElement;
           }
         }
+
+        if (!scrollContainer) {
+          console.error('[DEBUG] Scroll container not found! Cannot scroll during drag.');
+          return;
+        }
+
+        console.log('[DEBUG] Scrolling container:', {
+          container: scrollContainer,
+          currentScrollTop: scrollContainer.scrollTop,
+          scrollHeight: scrollContainer.scrollHeight,
+          clientHeight: scrollContainer.clientHeight,
+          deltaY: e.deltaY,
+          deltaX: e.deltaX,
+        });
+
+        // Prevent browser default to avoid wheel being ignored during drag
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Manually scroll the editor container
+        const beforeScroll = scrollContainer.scrollTop;
+        scrollContainer.scrollBy({
+          top: e.deltaY,
+          left: e.deltaX,
+          behavior: 'auto',
+        });
+        const afterScroll = scrollContainer.scrollTop;
+        
+        console.log('[DEBUG] Scroll executed:', {
+          beforeScroll,
+          afterScroll,
+          delta: afterScroll - beforeScroll,
+          expectedDelta: e.deltaY,
+        });
       };
       
       // Event listeners
+      // Register wheel handler globally only once (shared across all node views)
+      if (!wheelHandlerRegistered) {
+        globalWheelHandler = handleDocumentWheel;
+        document.addEventListener('wheel', handleDocumentWheel, { passive: false, capture: true });
+        wheelHandlerRegistered = true;
+        console.log('[DEBUG] Global wheel handler registered');
+      }
       document.addEventListener('click', handleDocumentClick);
       document.addEventListener('mousemove', handleDocumentMouseMove);
       document.addEventListener('mouseup', handleDocumentMouseUp);
@@ -1863,9 +2156,14 @@ const ResizableImage = Image.extend({
           return true;
         },
         destroy: () => {
+          // Only remove wheel handler if this is the last node view being destroyed
+          // Note: In practice, we keep it registered as it's shared
+          // The wheel handler uses global state so it's safe to keep it
           document.removeEventListener('click', handleDocumentClick);
           document.removeEventListener('mousemove', handleDocumentMouseMove);
           document.removeEventListener('mouseup', handleDocumentMouseUp);
+          document.removeEventListener('dragover', handleDocumentDragOver);
+          document.removeEventListener('drop', handleDocumentDrop);
           document.removeEventListener('scroll', handleDocumentScroll);
           document.removeEventListener('imageSelectionChanged', handleSelectionUpdate);
           clearInterval(intervalId);
