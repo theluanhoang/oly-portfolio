@@ -45,7 +45,7 @@ const generateImageId = (): string => {
 
 // Global drag state to track if any image is being dragged
 // This allows wheel events to check drag state even from different node view instances
-let globalImageDragState: { isActive: boolean; nodeId: string | null } = {
+const globalImageDragState: { isActive: boolean; nodeId: string | null } = {
   isActive: false,
   nodeId: null,
 };
@@ -3492,7 +3492,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         {/* Colors */}
         <div className={`${toolbarGroupClass} gap-2`}>
           <ColorPicker
-            icon={<tiptapIcons.TextColor width={16} height={16} />}
+            icon={<tiptapIcons.TextColor width={16} height={16} fill={textColor} />}
             currentColor={textColor}
             onColorChange={(color) => {
               setTextColor(color);
