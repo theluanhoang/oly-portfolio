@@ -3330,68 +3330,42 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                   input.onchange = async (e) => {
                     const files = (e.target as HTMLInputElement).files;
                     if (!files || files.length === 0) return;
-                    
+
                     setShowImageDropdown(false);
-                    
-                    // Upload files sequentially to avoid potential issues with concurrent uploads
-                    const uploadedUrls: string[] = [];
-                    for (const file of Array.from(files)) {
+
+                    const uploadAndInsert = async (file: File) => {
                       const formData = new FormData();
                       formData.append('file', file);
-                      
-                      try {
-                        const response = await fetch('/api/upload', {
-                          method: 'POST',
-                          body: formData,
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (data.success && data.url) {
-                          uploadedUrls.push(data.url);
-                        } else {
-                          console.error('Failed to upload:', file.name, data.error);
-                        }
-                      } catch (error) {
-                        console.error('Error uploading image:', file.name, error);
-                      }
-                    }
-                    
-                    if (uploadedUrls.length > 0) {
-                      // Insert all images sequentially
-                      // Insert each image one by one to ensure proper insertion
-                      for (let i = 0; i < uploadedUrls.length; i++) {
-                        const url = uploadedUrls[i];
+
+                      const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData,
+                      });
+
+                      const data = await response.json();
+                      if (data?.success && data.url) {
                         const imageId = generateImageId();
-                        
-                        // Use transaction to insert image node directly with all attributes
-                        // This ensures ID is properly set and preserved
                         editor.chain().focus().run();
-                        
+
                         const { state, view } = editor;
                         const { schema } = state;
                         const { tr } = state;
                         const { from } = state.selection;
-                        
-                        // Create image node with all attributes including ID
+
                         const imageNode = schema.nodes.image.create({
-                          src: url,
+                          src: data.url,
                           alt: '',
                           id: imageId,
                         });
-                        
-                        // Insert the node
+
                         tr.insert(from, imageNode);
                         view.dispatch(tr);
-                        
-                        // Small delay to ensure each image is processed
-                        if (i < uploadedUrls.length - 1) {
-                          await new Promise(resolve => setTimeout(resolve, 100));
-                        }
+                      } else {
+                        console.error('Failed to upload:', file.name, data?.error);
                       }
-                    } else {
-                      alert('Failed to upload images');
-                    }
+                    };
+
+                    await Promise.allSettled(Array.from(files).map((file) => uploadAndInsert(file)));
                   };
                   input.click();
                 }}
