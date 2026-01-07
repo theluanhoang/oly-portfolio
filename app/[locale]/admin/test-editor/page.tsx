@@ -88,7 +88,7 @@ function test() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-7xl mx-auto py-12 px-8 md:px-4">
+      <div className="mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Tiptap Editor Test Page</h1>
           <p className="text-gray-600">Test all features of the Tiptap Editor component</p>
