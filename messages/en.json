@@ -36,7 +36,12 @@
         "title": "PRODUCT",
         "loading": "Loading products...",
         "loadError": "Failed to load products",
-        "moreProducts": "MORE PRODUCTS"
+        "moreProducts": "MORE PRODUCTS",
+        "comingSoon": {
+            "title": "Coming Soon",
+            "message": "The products page is under development and will be available soon. Please check back later!",
+            "close": "Close"
+        }
     },
     "ProductInfo": {
         "category": "Category",
@@ -52,7 +57,11 @@
         "title": "Projects",
         "loading": "Loading...",
         "moreProject": "MORE PROJECT",
-        "gallery": "GALLERY"
+        "gallery": "GALLERY",
+        "emptyState": {
+            "title": "No projects yet",
+            "message": "There are no projects to display at the moment. Please check back later."
+        }
     },
     "ProjectInfo": {
         "location": "Location",

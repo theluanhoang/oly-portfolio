@@ -36,7 +36,12 @@
         "title": "SẢN PHẨM",
         "loading": "Đang tải sản phẩm...",
         "loadError": "Không thể tải danh sách sản phẩm",
-        "moreProducts": "SẢN PHẨM KHÁC"
+        "moreProducts": "SẢN PHẨM KHÁC",
+        "comingSoon": {
+            "title": "Sắp ra mắt",
+            "message": "Trang sản phẩm đang được phát triển và sẽ sớm ra mắt. Vui lòng quay lại sau!",
+            "close": "Đóng"
+        }
     },
     "ProductInfo": {
         "category": "Danh mục",
@@ -52,7 +57,11 @@
         "title": "Dự án",
         "loading": "Đang tải...",
         "moreProject": "DỰ ÁN KHÁC",
-        "gallery": "THƯ VIỆN ẢNH"
+        "gallery": "THƯ VIỆN ẢNH",
+        "emptyState": {
+            "title": "Chưa có dự án nào",
+            "message": "Hiện tại chưa có dự án nào được hiển thị. Vui lòng quay lại sau."
+        }
     },
     "ProjectInfo": {
         "location": "Vị trí",
