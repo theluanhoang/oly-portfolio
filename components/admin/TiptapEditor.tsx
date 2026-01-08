@@ -526,7 +526,7 @@ const ResizableImage = Image.extend({
     }
     
     return [
-      'span',
+      'div',
       {
         class: wrapperClass,
         style: wrapperStyle,
@@ -2493,7 +2493,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         link: false,
       }),
       ResizableImage.configure({
-        inline: true,
+        inline: false,
         allowBase64: true,
       }),
       Link.configure({
@@ -2535,60 +2535,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     content: content || '',
     onUpdate: ({ editor }: { editor: Editor }) => {
       if (onChange) {
-        let html = editor.getHTML();
-        
-        const processImageSpacing = (htmlString: string): string => {
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = htmlString;
-          
-          const walker = document.createTreeWalker(
-            tempDiv,
-            NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
-            null
-          );
-          
-          const imageWrappers: HTMLElement[] = [];
-          const nodes: Node[] = [];
-          
-          let node;
-          while (node = walker.nextNode()) {
-            nodes.push(node);
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              const element = node as HTMLElement;
-              if (element.classList?.contains('resizable-image-wrapper')) {
-                imageWrappers.push(element);
-              }
-            }
-          }
-          
-          imageWrappers.forEach((wrapper, index) => {
-            if (index < imageWrappers.length - 1) {
-              const nextWrapper = imageWrappers[index + 1];
-              let spaceCount = 0;
-              
-              let currentNode = wrapper.nextSibling;
-              while (currentNode && currentNode !== nextWrapper) {
-                if (currentNode.nodeType === Node.TEXT_NODE) {
-                  const text = currentNode.textContent || '';
-                  spaceCount += (text.match(/ /g) || []).length;
-                }
-                currentNode = currentNode.nextSibling;
-              }
-              
-              if (spaceCount > 0) {
-                const marginRight = spaceCount * 0.25;
-                const currentStyle = wrapper.getAttribute('style') || '';
-                const styleWithoutMargin = currentStyle.replace(/margin-right:\s*[^;]+;?/g, '').trim();
-                const newStyle = styleWithoutMargin ? `${styleWithoutMargin}; margin-right: ${marginRight}em;` : `margin-right: ${marginRight}em;`;
-                wrapper.setAttribute('style', newStyle);
-              }
-            }
-          });
-          
-          return tempDiv.innerHTML;
-        };
-        
-        html = processImageSpacing(html);
+        const html = editor.getHTML();
         onChange(html);
       }
     },

@@ -1,4 +1,3 @@
-import { Prisma } from "../app/generated/prisma/client";
 import prisma from "../lib/prisma";
 import { seedProducts } from "./seed-products";
 
@@ -6,7 +5,20 @@ const getPlaceholderImage = (index: number, width = 1200, height = 800) => {
   return `https://picsum.photos/seed/project-${index}/${width}/${height}`;
 };
 
-const projectData: Prisma.ProjectCreateInput[] = [
+type SeedProject = {
+  slug: string;
+  title: string;
+  category: string;
+  type: string;
+  location: string;
+  area: string;
+  year: string;
+  heroImage: string;
+  content: string;
+  gallery: string[];
+};
+
+const projectData: SeedProject[] = [
   {
     slug: 'narrow-house',
     title: 'NARROW HOUSE',
@@ -249,8 +261,24 @@ export async function main() {
 
       await prisma.project.create({
         data: {
-          ...project,
+          slug: project.slug,
+          heroImage: project.heroImage,
+          gallery: project.gallery,
           displayOrder,
+          translations: {
+            create: [
+              {
+                locale: "vi",
+                title: project.title,
+                category: project.category,
+                type: project.type,
+                location: project.location,
+                area: project.area,
+                year: project.year,
+                content: project.content,
+              },
+            ],
+          },
         },
       });
 

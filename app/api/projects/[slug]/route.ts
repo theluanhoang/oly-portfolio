@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions, checkAdminAuth } from '@/lib/auth';
+import type { ProjectTranslationSchema } from '@/lib/validations/projectSchema';
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -9,12 +10,34 @@ interface RouteParams {
 export async function GET(request: Request, { params }: RouteParams): Promise<Response> {
   try {
     const { slug } = await params;
+    const { searchParams } = new URL(request.url);
+    const locale = searchParams.get('locale')?.trim();
+    
     const project = await prisma.project.findUnique({
       where: { slug },
+      include: {
+        translations: true,
+      },
     });
 
     if (!project) {
       return Response.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    if (locale) {
+      const translation = project.translations.find(t => t.locale === locale);
+      if (translation) {
+        return Response.json({
+          ...project,
+          title: translation.title,
+          category: translation.category,
+          type: translation.type,
+          location: translation.location,
+          area: translation.area,
+          year: translation.year,
+          content: translation.content,
+        });
+      }
     }
 
     return Response.json(project);
@@ -44,6 +67,7 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
     
     const existingProject = await prisma.project.findUnique({
       where: { slug },
+      include: { translations: true },
     });
 
     if (!existingProject) {
@@ -65,24 +89,50 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
       }
     }
 
+    // Update project base fields
     const updated = await prisma.project.update({
       where: { slug },
       data: {
         slug: projectData.slug || slug,
-        title: projectData.title,
-        category: projectData.category,
-        type: projectData.type && projectData.type.trim() ? projectData.type.trim() : '',
-        location: projectData.location || '',
-        area: projectData.area || '',
-        year: projectData.year || '',
         heroImage: projectData.heroImage || '',
-        content: projectData.content || '',
         gallery: projectData.gallery || [],
         displayOrder: projectData.displayOrder !== undefined ? Number(projectData.displayOrder) : existingProject.displayOrder,
       },
     });
 
-    return Response.json(updated);
+    if (projectData.translations && typeof projectData.translations === 'object') {
+      const translations = projectData.translations as Record<string, ProjectTranslationSchema>;
+      
+      await prisma.projectTranslation.deleteMany({
+        where: { projectId: updated.id },
+      });
+
+      for (const [locale, translationData] of Object.entries(translations)) {
+        if (translationData && typeof translationData === 'object') {
+          const translation = translationData as ProjectTranslationSchema;
+          await prisma.projectTranslation.create({
+            data: {
+              projectId: updated.id,
+              locale,
+              title: translation.title || '',
+              category: translation.category || '',
+              type: translation.type && translation.type.trim() ? translation.type.trim() : '',
+              location: translation.location || '',
+              area: translation.area || '',
+              year: translation.year || '',
+              content: translation.content || '',
+            },
+          });
+        }
+      }
+    }
+
+    const updatedWithTranslations = await prisma.project.findUnique({
+      where: { id: updated.id },
+      include: { translations: true },
+    });
+
+    return Response.json(updatedWithTranslations);
   } catch (error) {
     console.error('Error updating project:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

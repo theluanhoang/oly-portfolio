@@ -8,12 +8,20 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import TiptapEditor from '@/components/admin/TiptapEditor';
 import GalleryUpload from '@/components/admin/GalleryUpload';
+import { LocaleTabs } from '@/components/admin/LocaleTabs';
 import FormField from '@/components/forms/FormField';
-import { Header, PageHeader, StepIndicator } from '@/components/layout';
+import { Header, StepIndicator } from '@/components/layout';
 import { Button } from '@/components/ui';
 import { useGalleryUpload } from '@/hooks/useGalleryUpload';
-import { projectSchema, ProjectSchema, ProjectCategory } from '@/lib/validations/projectSchema';
+import { projectSchema, ProjectSchema, ProjectCategory, ProjectTranslationSchema } from '@/lib/validations/projectSchema';
 import { getTypeOptionsByCategory } from '@/lib/constants/projectConstants';
+import type { ProjectTranslation } from '@/types/project';
+
+const LOCALES = ['vi', 'en'];
+const LOCALE_LABELS: Record<string, { label: string }> = {
+  vi: { label: 'Tiếng Việt' },
+  en: { label: 'English' },
+};
 
 export default function EditProjectPage() {
   const params = useParams();
@@ -21,6 +29,7 @@ export default function EditProjectPage() {
   const slug = typeof params.slug === 'string' ? params.slug : '';
   const t = useTranslations('Admin.projects');
   const [currentStep, setCurrentStep] = useState(1);
+  const [currentLocale, setCurrentLocale] = useState('vi');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -28,24 +37,37 @@ export default function EditProjectPage() {
   const methods = useForm<ProjectSchema>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
-      title: '',
       slug: '',
+      gallery: [],
+      translations: {
+        vi: {
+          title: '',
+          category: ProjectCategory.Architecture,
+          type: '',
+          location: '',
+          area: '',
+          year: '',
+          content: '',
+        },
+        en: {
+          title: '',
       category: ProjectCategory.Architecture,
       type: '',
       location: '',
       area: '',
       year: '',
-      gallery: [],
       content: '',
+        },
+      },
     },
-    mode: 'onBlur',
+    mode: 'onChange',
   });
 
   const { handleSubmit, trigger, setValue, watch, formState: { errors }, reset } = methods;
-  const content = watch('content');
-  const category = watch('category');
+  const translations = watch('translations');
+  const currentTranslation = translations[currentLocale] || translations.vi || translations.en;
 
-  const typeOptions = getTypeOptionsByCategory(category);
+  const typeOptions = getTypeOptionsByCategory(currentTranslation?.category);
 
   const gallery = useGalleryUpload({
     onUploadSuccess: (urls) => {
@@ -74,16 +96,45 @@ export default function EditProjectPage() {
           ? project.gallery.findIndex((url: string) => url === project.heroImage)
           : -1;
 
-        reset({
+        const translationsData: Record<string, ProjectTranslationSchema> = {};
+        
+        if (project.translations && Array.isArray(project.translations)) {
+          project.translations.forEach((trans: ProjectTranslation) => {
+            translationsData[trans.locale] = {
+              title: trans.title || '',
+              category: trans.category || ProjectCategory.Architecture,
+              type: trans.type || '',
+              location: trans.location || '',
+              area: trans.area || '',
+              year: trans.year || '',
+              content: trans.content || '',
+            };
+          });
+        } else {
+          translationsData.vi = {
           title: project.title || '',
-          slug: project.slug || '',
-          category: (project.category as ProjectCategory) || ProjectCategory.Architecture,
+            category: project.category || ProjectCategory.Architecture,
           type: project.type || '',
           location: project.location || '',
           area: project.area || '',
           year: project.year || '',
+            content: project.content || '',
+          };
+          translationsData.en = {
+            title: '',
+            category: ProjectCategory.Architecture,
+            type: '',
+            location: '',
+            area: '',
+            year: '',
+            content: '',
+          };
+        }
+
+        reset({
+          slug: project.slug || '',
           gallery: project.gallery || [],
-          content: project.content || '',
+          translations: translationsData,
         });
 
         gallery.setGalleryUrls(project.gallery || []);
@@ -99,23 +150,41 @@ export default function EditProjectPage() {
     if (slug) {
       loadProject();
     }
-  }, [slug, reset]);
-
-  useEffect(() => {
-    if (!category) {
-      setValue('type', '', { shouldValidate: false });
-    }
-  }, [category, setValue]);
-
-  const handleContentChange = (newContent: string) => {
-    setValue('content', newContent, { shouldValidate: false });
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, reset, t]);
 
   const handleNext = async () => {
     if (currentStep === 1) {
-      const isValid = await trigger(['title', 'slug', 'category', 'location', 'area', 'year', 'gallery']);
+      const slugValid = await trigger('slug');
+      const galleryValid = await trigger('gallery');
+      const viFieldsValid = await trigger([
+        'translations.vi.title' as keyof ProjectSchema,
+        'translations.vi.category' as keyof ProjectSchema,
+        'translations.vi.location' as keyof ProjectSchema,
+        'translations.vi.area' as keyof ProjectSchema,
+        'translations.vi.year' as keyof ProjectSchema,
+      ]);
+      const enFieldsValid = await trigger([
+        'translations.en.title' as keyof ProjectSchema,
+        'translations.en.category' as keyof ProjectSchema,
+        'translations.en.location' as keyof ProjectSchema,
+        'translations.en.area' as keyof ProjectSchema,
+        'translations.en.year' as keyof ProjectSchema,
+      ]);
+      
+      const isValid = slugValid && galleryValid && viFieldsValid && enFieldsValid;
+      
       if (isValid) {
         setCurrentStep(2);
+      } else {
+        const viHasError = errors.translations?.vi;
+        const enHasError = errors.translations?.en;
+        
+        if (enHasError && !viHasError) {
+          setCurrentLocale('en');
+        } else if (viHasError) {
+          setCurrentLocale('vi');
+        }
       }
     }
   };
@@ -126,6 +195,18 @@ export default function EditProjectPage() {
     }
   };
 
+  const updateTranslation = (locale: string, field: string, value: string) => {
+    const currentTranslations = watch('translations') || {};
+    const localeTranslation = currentTranslations[locale] || {};
+    setValue('translations', {
+      ...currentTranslations,
+      [locale]: {
+        ...localeTranslation,
+        [field]: value,
+      },
+    }, { shouldValidate: true });
+  };
+
   const onSubmit = async (data: ProjectSchema) => {
     setIsSaving(true);
     setSaveMessage(null);
@@ -134,17 +215,11 @@ export default function EditProjectPage() {
       const galleryUrlStrings = gallery.getGalleryUrlStrings();
       const projectData = {
         slug: data.slug,
-        title: data.title,
-        category: data.category,
-        type: data.type && data.type.trim() ? data.type.trim() : '',
-        location: data.location,
-        area: data.area,
-        year: data.year,
         heroImage: galleryUrlStrings.length > 0 && gallery.heroImageIndex < galleryUrlStrings.length 
           ? galleryUrlStrings[gallery.heroImageIndex] 
           : (galleryUrlStrings.length > 0 ? galleryUrlStrings[0] : ''),
         gallery: galleryUrlStrings,
-        content: data.content || '',
+        translations: data.translations,
       };
       
       const response = await fetch(`/api/projects/${encodeURIComponent(slug)}`, {
@@ -201,10 +276,23 @@ export default function EditProjectPage() {
       <Header isFixed={true} />
 
       <div className="max-w-5xl mx-auto py-12 px-8 md:px-4">
-        <PageHeader
-          title={t('edit.title')}
-          subtitle={`${t('new.step')} ${currentStep} ${t('new.of')} 2`}
-        />
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-4xl font-normal tracking-[3px] uppercase text-[#333] md:text-2xl">
+              {t('edit.title')}
+            </h1>
+            <LocaleTabs
+              locales={LOCALES}
+              currentLocale={currentLocale}
+              onLocaleChange={setCurrentLocale}
+              translations={LOCALE_LABELS}
+              variant="inline"
+            />
+          </div>
+          <p className="text-sm text-[#666] tracking-[1px] uppercase">
+            {`${t('new.step')} ${currentStep} ${t('new.of')} 2`}
+          </p>
+        </div>
 
         <StepIndicator currentStep={currentStep} totalSteps={2} />
 
@@ -216,10 +304,11 @@ export default function EditProjectPage() {
                   <h2 className="text-lg font-normal tracking-[2px] uppercase text-[#333] mb-6 border-b border-[#e0e0e0] pb-2">
                     {t('new.projectInfo')}
                   </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6" key={currentLocale}>
                     <div className="md:col-span-2">
                       <FormField
-                        name="title"
+                        key={`title-${currentLocale}`}
+                        name={`translations.${currentLocale}.title`}
                         label={t('fields.title')}
                         placeholder="NARROW HOUSE"
                         required
@@ -237,7 +326,8 @@ export default function EditProjectPage() {
 
                     <div>
                       <FormField
-                        name="category"
+                        key={`category-${currentLocale}`}
+                        name={`translations.${currentLocale}.category`}
                         label={t('fields.category')}
                         type="select"
                         placeholder={t('fields.selectCategory')}
@@ -251,18 +341,20 @@ export default function EditProjectPage() {
 
                     <div>
                       <FormField
-                        name="type"
+                        key={`type-${currentLocale}`}
+                        name={`translations.${currentLocale}.type`}
                         label={t('fields.subCategory')}
                         type="select"
-                        placeholder={category ? t('fields.selectSubCategory') : t('fields.selectCategoryFirst')}
+                        placeholder={currentTranslation?.category ? t('fields.selectSubCategory') : t('fields.selectCategoryFirst')}
                         options={typeOptions}
-                        disabled={!category}
+                        disabled={!currentTranslation?.category}
                       />
                     </div>
 
                     <div>
                       <FormField
-                        name="location"
+                        key={`location-${currentLocale}`}
+                        name={`translations.${currentLocale}.location`}
                         label={t('fields.location')}
                         placeholder="TP. Hồ Chí Minh"
                         required
@@ -271,7 +363,8 @@ export default function EditProjectPage() {
 
                     <div>
                       <FormField
-                        name="area"
+                        key={`area-${currentLocale}`}
+                        name={`translations.${currentLocale}.area`}
                         label={t('fields.area')}
                         placeholder="58 m²"
                         required
@@ -280,7 +373,8 @@ export default function EditProjectPage() {
 
                     <div>
                       <FormField
-                        name="year"
+                        key={`year-${currentLocale}`}
+                        name={`translations.${currentLocale}.year`}
                         label={t('fields.year')}
                         placeholder="2018"
                         required
@@ -330,9 +424,13 @@ export default function EditProjectPage() {
                   <h2 className="text-lg font-normal tracking-[2px] uppercase text-[#333] mb-6 border-b border-[#e0e0e0] pb-2">
                     {t('new.content')}
                   </h2>
+
                   <TiptapEditor
-                    content={content || ''}
-                    onChange={handleContentChange}
+                    key={`content-${currentLocale}`}
+                    content={currentTranslation?.content || ''}
+                    onChange={(newContent) => {
+                      updateTranslation(currentLocale, 'content', newContent);
+                    }}
                   />
                 </div>
 
@@ -364,4 +462,3 @@ export default function EditProjectPage() {
     </div>
   );
 }
-

@@ -10,7 +10,7 @@ export default function ProjectContent({ content }: ProjectContentProps) {
   }
 
   return (
-    <div className="project-content prose prose-lg max-w-none text-foreground">
+    <div className="project-content max-w-none text-foreground">
       <div dangerouslySetInnerHTML={{ __html: content }} />
     </div>
   );

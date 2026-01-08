@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { projectSchema } from '@/lib/validations/projectSchema';
+import { projectSchema, type ProjectTranslationSchema } from '@/lib/validations/projectSchema';
 import type { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, checkAdminAuth } from '@/lib/auth';
@@ -17,9 +17,16 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const projectData = await request.json();
     
-    if (!projectData.slug || !projectData.title) {
+    if (!projectData.slug) {
       return Response.json(
-        { error: 'Missing required fields: slug, title' },
+        { error: 'Missing required field: slug' },
+        { status: 400 }
+      );
+    }
+
+    if (!projectData.translations || Object.keys(projectData.translations).length === 0) {
+      return Response.json(
+        { error: 'Missing required field: translations (at least one locale required)' },
         { status: 400 }
       );
     }
@@ -49,15 +56,25 @@ export async function POST(request: NextRequest): Promise<Response> {
     const project = await prisma.project.create({
       data: {
         slug: projectData.slug,
-        title: projectData.title,
-        category: projectData.category,
-        type: projectData.type && projectData.type.trim() ? projectData.type.trim() : '',
-        location: projectData.location || '',
-        area: projectData.area || '',
-        year: projectData.year || '',
         heroImage: projectData.heroImage || '',
-        content: projectData.content || '',
         gallery: projectData.gallery || [],
+        translations: {
+          create: Object
+            .entries(projectData.translations as Record<string, ProjectTranslationSchema>)
+            .map(([locale, translationData]) => ({
+              locale,
+              title: translationData.title || '',
+              category: translationData.category || '',
+              type: translationData.type && translationData.type.trim() ? translationData.type.trim() : '',
+              location: translationData.location || '',
+              area: translationData.area || '',
+              year: translationData.year || '',
+              content: translationData.content || '',
+            })),
+        },
+      },
+      include: {
+        translations: true,
       },
     });
     

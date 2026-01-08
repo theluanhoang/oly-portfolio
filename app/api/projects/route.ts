@@ -10,6 +10,7 @@ export async function GET(request: Request): Promise<Response> {
     const categoryFilter = searchParams.get('category')?.trim() || '';
     const yearFilter = searchParams.get('year')?.trim() || '';
     const locationFilter = searchParams.get('location')?.trim() || '';
+    const locale = searchParams.get('locale')?.trim() || 'vi'; // Default locale for admin
     const searchValue = search.toLowerCase();
 
     const hasPagination = pageParam !== null || pageSizeParam !== null;
@@ -32,39 +33,17 @@ export async function GET(request: Request): Promise<Response> {
             },
           },
           {
-            title: {
-              contains: searchValue,
-              mode: Prisma.QueryMode.insensitive,
-            },
-          },
-          {
-            category: {
-              contains: searchValue,
-              mode: Prisma.QueryMode.insensitive,
-            },
-          },
-          {
-            type: {
-              contains: searchValue,
-              mode: Prisma.QueryMode.insensitive,
-            },
-          },
-          {
-            location: {
-              contains: searchValue,
-              mode: Prisma.QueryMode.insensitive,
-            },
-          },
-          {
-            area: {
-              contains: searchValue,
-              mode: Prisma.QueryMode.insensitive,
-            },
-          },
-          {
-            year: {
-              contains: searchValue,
-              mode: Prisma.QueryMode.insensitive,
+            translations: {
+              some: {
+                OR: [
+                  { title: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
+                  { category: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
+                  { type: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
+                  { location: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
+                  { area: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
+                  { year: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
+                ],
+              },
             },
           },
         ],
@@ -73,27 +52,39 @@ export async function GET(request: Request): Promise<Response> {
 
     if (categoryFilter.length > 0) {
       andConditions.push({
+        translations: {
+          some: {
         category: {
           contains: categoryFilter,
           mode: Prisma.QueryMode.insensitive,
+            },
+          },
         },
       });
     }
 
     if (yearFilter.length > 0) {
       andConditions.push({
+        translations: {
+          some: {
         year: {
           contains: yearFilter,
           mode: Prisma.QueryMode.insensitive,
+            },
+          },
         },
       });
     }
 
     if (locationFilter.length > 0) {
       andConditions.push({
+        translations: {
+          some: {
         location: {
           contains: locationFilter,
           mode: Prisma.QueryMode.insensitive,
+            },
+          },
         },
       });
     }
@@ -101,31 +92,27 @@ export async function GET(request: Request): Promise<Response> {
     const where: Prisma.ProjectWhereInput | undefined =
       andConditions.length > 0 ? { AND: andConditions } : undefined;
 
-    const validSortFields: Record<string, keyof Prisma.ProjectOrderByWithRelationInput> = {
-      title: 'title',
-      category: 'category',
-      location: 'location',
-      year: 'year',
-      createdAt: 'createdAt',
-      displayOrder: 'displayOrder',
-    };
-
-    const orderByField = validSortFields[sortField] || 'displayOrder';
-    const orderByDirection = sortDirection === 'asc' ? 'asc' : 'desc';
-
     const orderBy: Prisma.ProjectOrderByWithRelationInput | Prisma.ProjectOrderByWithRelationInput[] = 
-      orderByField === 'displayOrder'
+      sortField === 'displayOrder'
         ? [
-            { displayOrder: orderByDirection },
+            { displayOrder: sortDirection === 'asc' ? 'asc' : 'desc' },
             { createdAt: 'desc' }
           ]
-        : { [orderByField]: orderByDirection };
+        : sortField === 'createdAt'
+        ? { createdAt: sortDirection === 'asc' ? 'asc' : 'desc' }
+        : [
+            { displayOrder: 'asc' },
+            { createdAt: 'desc' }
+          ];
 
     const [total, items] = await Promise.all([
       prisma.project.count({ where }),
       prisma.project.findMany({
         where,
         orderBy,
+        include: {
+          translations: true,
+        },
         ...(pageSize !== undefined && {
           skip: (page - 1) * pageSize,
           take: pageSize,
@@ -133,7 +120,26 @@ export async function GET(request: Request): Promise<Response> {
       }),
     ]);
 
-    return Response.json({ items, total, page, pageSize: pageSize || total });
+    const transformedItems = items.map((project) => {
+      const defaultTranslation = project.translations.find(t => t.locale === locale) 
+        || project.translations.find(t => t.locale === 'vi')
+        || project.translations.find(t => t.locale === 'en')
+        || project.translations[0];
+
+      return {
+        ...project,
+        title: defaultTranslation?.title || '',
+        category: defaultTranslation?.category || '',
+        type: defaultTranslation?.type || '',
+        location: defaultTranslation?.location || '',
+        area: defaultTranslation?.area || '',
+        year: defaultTranslation?.year || '',
+        content: defaultTranslation?.content || '',
+        heroImage: project.heroImage,
+      };
+    });
+
+    return Response.json({ items: transformedItems, total, page, pageSize: pageSize || total });
   } catch (error) {
     console.error('Error fetching projects:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -93,6 +93,15 @@ html {
   border-radius: 4px;
 }
 
+.ProseMirror .resizable-image-wrapper {
+  margin-bottom: 1em;
+  margin-top: 0;
+}
+
+.ProseMirror .resizable-image-wrapper:first-child {
+  margin-top: 0;
+}
+
 .ProseMirror iframe {
   width: 100% !important;
   max-width: 100% !important;
@@ -101,7 +110,12 @@ html {
   aspect-ratio: 16 / 9;
   height: auto !important;
   min-height: 250px;
-  margin: 1.5rem 0;
+  margin: 0 0 1.5em 0;
+  margin-top: 1.5em;
+}
+
+.ProseMirror iframe:first-child {
+  margin-top: 0;
 }
 
 @media (min-width: 768px) {
@@ -118,48 +132,105 @@ html {
 .ProseMirror ul,
 .ProseMirror ol {
   padding-left: 1.5rem;
-  margin: 1rem 0;
+  margin: 0 0 1.5em 0;
+  margin-top: 1.5em;
+}
+
+.ProseMirror ul:first-child,
+.ProseMirror ol:first-child {
+  margin-top: 0;
 }
 
 .ProseMirror h1 {
   font-size: 2rem;
   font-weight: bold;
-  margin: 1rem 0;
+  margin: 0 0 0.75em 0;
+  margin-top: 1.5em;
+  line-height: 1.2;
+}
+
+.ProseMirror h1:first-child {
+  margin-top: 0;
 }
 
 .ProseMirror h2 {
   font-size: 1.5rem;
   font-weight: bold;
-  margin: 1rem 0;
+  margin: 0 0 0.75em 0;
+  margin-top: 1.5em;
+  line-height: 1.2;
+}
+
+.ProseMirror h2:first-child {
+  margin-top: 0;
 }
 
 .ProseMirror h3 {
   font-size: 1.25rem;
   font-weight: bold;
-  margin: 1rem 0;
+  margin: 0 0 0.5em 0;
+  margin-top: 1.25em;
+  line-height: 1.3;
+}
+
+.ProseMirror h3:first-child {
+  margin-top: 0;
 }
 
 .ProseMirror h4 {
   font-size: 1.125rem;
   font-weight: bold;
-  margin: 1rem 0;
+  margin: 0 0 0.5em 0;
+  margin-top: 1.25em;
+  line-height: 1.3;
+}
+
+.ProseMirror h4:first-child {
+  margin-top: 0;
 }
 
 .ProseMirror h5 {
   font-size: 1rem;
   font-weight: bold;
-  margin: 1rem 0;
+  margin: 0 0 0.5em 0;
+  margin-top: 1em;
+  line-height: 1.4;
+}
+
+.ProseMirror h5:first-child {
+  margin-top: 0;
 }
 
 .ProseMirror h6 {
   font-size: 0.875rem;
   font-weight: bold;
-  margin: 1rem 0;
+  margin: 0 0 0.5em 0;
+  margin-top: 1em;
+  line-height: 1.4;
+}
+
+.ProseMirror h6:first-child {
+  margin-top: 0;
 }
 
 .ProseMirror p {
-  margin: 0.5rem 0;
+  margin: 0 0 1em 0;
   line-height: 1.6;
+  min-height: 1em;
+}
+
+.ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+/* Preserve spacing for empty paragraphs */
+.ProseMirror p:empty {
+  min-height: 1em;
+  margin-bottom: 1em;
+}
+
+.ProseMirror p:empty:last-child {
+  margin-bottom: 0;
 }
 
 .ProseMirror mark {
@@ -196,10 +267,15 @@ html {
 
 .ProseMirror .tiptap-table {
   border-collapse: collapse;
-  margin: 1rem 0;
+  margin: 0 0 1.5em 0;
+  margin-top: 1.5em;
   table-layout: fixed;
   width: 100%;
   overflow: hidden;
+}
+
+.ProseMirror .tiptap-table:first-child {
+  margin-top: 0;
 }
 
 .ProseMirror .tiptap-table td,
@@ -265,8 +341,8 @@ html {
 .project-content img {
   max-width: 100%;
   height: auto;
-  margin: 2rem 0;
-  display: block;
+  margin: 0;
+  border-radius: 4px;
 }
 
 /* Image alignment styles for preview */
@@ -274,7 +350,12 @@ html {
 .project-content .resizable-image-wrapper {
   position: relative;
   max-width: 100%;
-  margin: 2rem 0;
+  margin-bottom: 1em;
+  margin-top: 0;
+}
+
+.project-content .resizable-image-wrapper:first-child {
+  margin-top: 0;
 }
 
 /* Override default img margin when inside wrapper */
@@ -333,7 +414,7 @@ html {
   float: left !important;
   margin-right: 1em !important;
   margin-top: 0 !important;
-  margin-bottom: 1em !important;
+  margin-bottom: 0 !important;
   margin-left: 0 !important;
 }
 
@@ -341,7 +422,7 @@ html {
   float: right !important;
   margin-left: 1em !important;
   margin-top: 0 !important;
-  margin-bottom: 1em !important;
+  margin-bottom: 0 !important;
   margin-right: 0 !important;
 }
 
@@ -362,11 +443,17 @@ html {
 .project-content iframe {
   width: 100% !important;
   max-width: 100% !important;
-  height: 400px !important;
-  margin: 2rem 0;
   display: block !important;
   border: none !important;
-  min-height: 400px;
+  aspect-ratio: 16 / 9;
+  height: auto !important;
+  min-height: 250px;
+  margin: 0 0 1.5em 0;
+  margin-top: 1.5em;
+}
+
+.project-content iframe:first-child {
+  margin-top: 0;
 }
 
 /* YouTube responsive aspect ratio */
@@ -374,18 +461,12 @@ html {
 .project-content iframe[src*="youtu.be"] {
   aspect-ratio: 16 / 9;
   height: auto !important;
-  min-height: 400px;
+  min-height: 250px;
 }
 
-@media (max-width: 768px) {
+@media (min-width: 768px) {
   .project-content iframe {
-    height: 250px !important;
-    min-height: 250px;
-  }
-
-  .project-content iframe[src*="youtube.com"],
-  .project-content iframe[src*="youtu.be"] {
-    min-height: 250px;
+    min-height: 320px;
   }
 }
 
@@ -401,76 +482,174 @@ html {
 
 .project-content ul,
 .project-content ol {
-  padding-left: 2rem;
-  margin: 1.5rem 0;
+  padding-left: 1.5rem;
+  margin: 0 0 1.5em 0;
+  margin-top: 1.5em;
+}
+
+.project-content ul:first-child,
+.project-content ol:first-child {
+  margin-top: 0;
 }
 
 .project-content ul li,
 .project-content ol li {
-  margin: 0.75rem 0;
+  margin: 0;
   line-height: 1.8;
 }
 
 .project-content h1 {
-  font-size: 2.5rem;
-  font-weight: normal;
-  margin: 2rem 0 1.5rem;
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 0 0 0.75em 0;
+  margin-top: 1.5em;
   line-height: 1.2;
-  text-transform: uppercase;
-  letter-spacing: 2px;
+}
+
+.project-content h1:first-child {
+  margin-top: 0;
 }
 
 .project-content h2 {
-  font-size: 2rem;
-  font-weight: normal;
-  margin: 2rem 0 1.5rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0 0 0.75em 0;
+  margin-top: 1.5em;
   line-height: 1.2;
-  text-transform: uppercase;
-  letter-spacing: 2px;
+}
+
+.project-content h2:first-child {
+  margin-top: 0;
 }
 
 .project-content h3 {
-  font-size: 1.75rem;
-  font-weight: normal;
-  margin: 1.5rem 0 1rem;
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin: 0 0 0.5em 0;
+  margin-top: 1.25em;
   line-height: 1.3;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+}
+
+.project-content h3:first-child {
+  margin-top: 0;
 }
 
 .project-content h4 {
-  font-size: 1.5rem;
-  font-weight: normal;
-  margin: 1.5rem 0 1rem;
+  font-size: 1.125rem;
+  font-weight: bold;
+  margin: 0 0 0.5em 0;
+  margin-top: 1.25em;
   line-height: 1.3;
 }
 
+.project-content h4:first-child {
+  margin-top: 0;
+}
+
 .project-content h5 {
-  font-size: 1.25rem;
-  font-weight: normal;
-  margin: 1.25rem 0 0.75rem;
+  font-size: 1rem;
+  font-weight: bold;
+  margin: 0 0 0.5em 0;
+  margin-top: 1em;
   line-height: 1.4;
+}
+
+.project-content h5:first-child {
+  margin-top: 0;
 }
 
 .project-content h6 {
-  font-size: 1.125rem;
-  font-weight: normal;
-  margin: 1rem 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: bold;
+  margin: 0 0 0.5em 0;
+  margin-top: 1em;
   line-height: 1.4;
 }
 
-.project-content p {
-  margin: 1.5rem 0;
-  line-height: 1.8;
-  font-size: 1rem;
+.project-content h6:first-child {
+  margin-top: 0;
 }
 
-.project-content p:first-child {
-  margin-top: 0;
+.project-content p {
+  margin: 0 0 1em 0;
+  line-height: 1.6;
+  font-size: 1rem;
+  min-height: 1em;
 }
 
 .project-content p:last-child {
   margin-bottom: 0;
+}
+
+/* Preserve spacing for empty paragraphs */
+.project-content p:empty {
+  min-height: 1em;
+  margin-bottom: 1em;
+}
+
+.project-content p:empty:last-child {
+  margin-bottom: 0;
+}
+
+.project-content mark {
+  background-color: #ffff00;
+  padding: 0.1em 0.2em;
+  border-radius: 2px;
+}
+
+.project-content sub {
+  vertical-align: sub;
+  font-size: 0.8em;
+}
+
+.project-content sup {
+  vertical-align: super;
+  font-size: 0.8em;
+}
+
+.project-content [style*="text-align: left"] {
+  text-align: left;
+}
+
+.project-content [style*="text-align: center"] {
+  text-align: center;
+}
+
+.project-content [style*="text-align: right"] {
+  text-align: right;
+}
+
+.project-content [style*="text-align: justify"] {
+  text-align: justify;
+}
+
+.project-content .tiptap-table {
+  border-collapse: collapse;
+  margin: 0 0 1.5em 0;
+  margin-top: 1.5em;
+  table-layout: fixed;
+  width: 100%;
+  overflow: hidden;
+}
+
+.project-content .tiptap-table:first-child {
+  margin-top: 0;
+}
+
+.project-content .tiptap-table td,
+.project-content .tiptap-table th {
+  min-width: 1em;
+  border: 1px solid #ddd;
+  padding: 8px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.project-content .tiptap-table th {
+  font-weight: bold;
+  text-align: left;
+  background-color: #f5f5f5;
 }
 
 @media (max-width: 768px) {

@@ -7,16 +7,11 @@ export enum ProjectCategory {
 
 export const projectCategoryValues = Object.values(ProjectCategory) as [string, ...string[]];
 
-export const projectSchema = z.object({
+export const projectTranslationSchema = z.object({
   title: z
     .string()
     .min(1, 'Tên dự án là bắt buộc')
     .max(200, 'Tên dự án không được vượt quá 200 ký tự'),
-  slug: z
-    .string()
-    .min(1, 'Slug là bắt buộc')
-    .max(200, 'Slug không được vượt quá 200 ký tự')
-    .regex(/^[a-z0-9-]+$/, 'Slug chỉ được chứa chữ thường, số và dấu gạch ngang'),
   category: z.enum(projectCategoryValues, {
     message: 'Vui lòng chọn thể loại',
   }),
@@ -36,21 +31,38 @@ export const projectSchema = z.object({
     .string()
     .min(1, 'Năm thực hiện là bắt buộc')
     .regex(/^\d{4}$/, 'Năm phải là 4 chữ số'),
-  gallery: z
-    .array(z.string())
-    .min(1, 'Vui lòng upload ít nhất một ảnh'),
   content: z.string().optional(),
 });
 
+export const projectSchema = z.object({
+  slug: z
+    .string()
+    .min(1, 'Slug là bắt buộc')
+    .max(200, 'Slug không được vượt quá 200 ký tự')
+    .regex(/^[a-z0-9-]+$/, 'Slug chỉ được chứa chữ thường, số và dấu gạch ngang'),
+  gallery: z
+    .array(z.string())
+    .min(1, 'Vui lòng upload ít nhất một ảnh'),
+  translations: z.record(z.string(), projectTranslationSchema).refine(
+    (translations) => Object.keys(translations).length > 0,
+    'Phải có ít nhất một bản dịch'
+  ),
+});
+
 export const projectStep1Schema = projectSchema.pick({
-  title: true,
   slug: true,
+  gallery: true,
+}).extend({
+  translations: z.record(z.string(), projectTranslationSchema.pick({
+    title: true,
   category: true,
   location: true,
   area: true,
   year: true,
+  })),
 });
 
+export type ProjectTranslationSchema = z.infer<typeof projectTranslationSchema>;
 export type ProjectSchema = z.infer<typeof projectSchema>;
 export type ProjectStep1Schema = z.infer<typeof projectStep1Schema>;
 

@@ -3,14 +3,34 @@
 import prisma from '@/lib/prisma';
 
 // For server components
-export async function getProjects() {
+export async function getProjects(locale: string = 'vi') {
   try {
     const projects = await prisma.project.findMany({
+      include: {
+        translations: true,
+      },
       orderBy: {
-        createdAt: 'desc',
+        displayOrder: 'asc',
       },
     });
-    return projects;
+    
+    return projects.map((project) => {
+      const translation = project.translations.find(t => t.locale === locale) 
+        || project.translations.find(t => t.locale === 'vi')
+        || project.translations.find(t => t.locale === 'en')
+        || project.translations[0];
+
+      return {
+        ...project,
+        title: translation?.title || '',
+        category: translation?.category || '',
+        type: translation?.type || '',
+        location: translation?.location || '',
+        area: translation?.area || '',
+        year: translation?.year || '',
+        content: translation?.content || '',
+      };
+    });
   } catch (error) {
     console.error('Error fetching projects from database:', error);
     return [];
@@ -18,12 +38,34 @@ export async function getProjects() {
 }
 
 // Utility functions
-export async function getProjectBySlug(slug: string) {
+export async function getProjectBySlug(slug: string, locale: string = 'vi') {
   try {
     const project = await prisma.project.findUnique({
       where: { slug },
+      include: {
+        translations: true,
+      },
     });
-    return project;
+    
+    if (!project) {
+      return null;
+    }
+
+    const translation = project.translations.find(t => t.locale === locale) 
+      || project.translations.find(t => t.locale === 'vi')
+      || project.translations.find(t => t.locale === 'en')
+      || project.translations[0];
+
+    return {
+      ...project,
+      title: translation?.title || '',
+      category: translation?.category || '',
+      type: translation?.type || '',
+      location: translation?.location || '',
+      area: translation?.area || '',
+      year: translation?.year || '',
+      content: translation?.content || '',
+    };
   } catch (error) {
     console.error('Error fetching project by slug:', error);
     return null;
@@ -43,8 +85,8 @@ export async function getAllProjectSlugs(): Promise<string[]> {
 }
 
 // Chuyển đổi projects thành format images để hiển thị trên trang projects
-export async function getProjectsAsImages() {
-  const projects = await getProjects();
+export async function getProjectsAsImages(locale: string = 'vi') {
+  const projects = await getProjects(locale);
   return projects.map((project) => ({
     src: project.heroImage,
     alt: project.title,
@@ -53,8 +95,8 @@ export async function getProjectsAsImages() {
 }
 
 // Nhóm projects thành các section (mỗi section 4 projects)
-export async function groupProjectsIntoSections(itemsPerSection = 4) {
-  const images = await getProjectsAsImages();
+export async function groupProjectsIntoSections(itemsPerSection = 4, locale: string = 'vi') {
+  const images = await getProjectsAsImages(locale);
   const sections = [];
   for (let i = 0; i < images.length; i += itemsPerSection) {
     sections.push(images.slice(i, i + itemsPerSection));

@@ -26,14 +26,14 @@ export async function generateStaticParams() {
 }
 
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
-  const { slug } = await params;
-  const project = await getProjectBySlug(slug);
+  const { slug, locale } = await params;
+  const project = await getProjectBySlug(slug, locale);
 
   if (!project) {
     notFound();
   }
 
-  const allProjects = await getProjects();
+  const allProjects = await getProjects(locale);
   const galleryImages = project.gallery && project.gallery.length > 0 
     ? project.gallery 
     : project.heroImage 
