@@ -189,7 +189,7 @@ export function ProjectsTableView({
       columns={columns}
       translationNamespace="Admin.projects.list"
       viewUrlBuilder={(project, locale) => `/${locale}/projects/${project.slug}`}
-      getItemIdentifier={(project) => project.title}
+      getItemIdentifier={(project) => project.slug}
       emptyMessageKey="noProjects"
       errorMessageKey="error"
       sortField={sortField}

@@ -29,8 +29,9 @@ export default function ProjectsPage() {
   useEffect(() => {
     async function loadProjects() {
       try {
+        const currentLocale = window.location.pathname.split('/')[1] || 'vi';
         // Fetch projects sorted by displayOrder (ascending) to maintain the order set in admin
-        const response = await fetch('/api/projects?sortField=displayOrder&sortDirection=asc');
+        const response = await fetch(`/api/projects?sortField=displayOrder&sortDirection=asc&locale=${currentLocale}`);
         if (!response.ok) throw new Error('Failed to fetch projects');
         
         const data = await response.json() as {
