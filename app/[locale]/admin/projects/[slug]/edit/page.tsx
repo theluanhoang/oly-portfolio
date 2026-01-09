@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useRouter } from '@/i18n/routing';
 import { useForm, FormProvider } from 'react-hook-form';
@@ -13,15 +13,31 @@ import FormField from '@/components/forms/FormField';
 import { Header, StepIndicator } from '@/components/layout';
 import { Button } from '@/components/ui';
 import { useGalleryUpload } from '@/hooks/useGalleryUpload';
-import { projectSchema, ProjectSchema, ProjectCategory, ProjectTranslationSchema } from '@/lib/validations/projectSchema';
-import { getTypeOptionsByCategory } from '@/lib/constants/projectConstants';
+import { projectSchema, ProjectSchema, ProjectTranslationSchema } from '@/lib/validations/projectSchema';
 import type { ProjectTranslation } from '@/types/project';
+import { generateSlug } from '@/lib/utils';
 
 const LOCALES = ['vi', 'en'];
 const LOCALE_LABELS: Record<string, { label: string }> = {
   vi: { label: 'Tiếng Việt' },
   en: { label: 'English' },
 };
+
+interface Category {
+  id: string;
+  slug: string;
+  name: string;
+  translations?: { locale: string; name: string }[];
+  subCategories?: SubCategory[];
+}
+
+interface SubCategory {
+  id: string;
+  categoryId: string;
+  slug: string;
+  name: string;
+  translations?: { locale: string; name: string }[];
+}
 
 export default function EditProjectPage() {
   const params = useParams();
@@ -33,17 +49,34 @@ export default function EditProjectPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [translationModal, setTranslationModal] = useState<{
+    isOpen: boolean;
+    type: 'category' | 'subcategory';
+    initialName: string;
+  } | null>(null);
+  const [modalTranslations, setModalTranslations] = useState({ vi: '', en: '' });
+  const [categoryInput, setCategoryInput] = useState('');
+  const [subCategoryInput, setSubCategoryInput] = useState('');
+  const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
+  const [subCategoryPopoverOpen, setSubCategoryPopoverOpen] = useState(false);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [isCreatingSubCategory, setIsCreatingSubCategory] = useState(false);
+  const categoryInputRef = useRef<HTMLInputElement>(null);
+  const subCategoryInputRef = useRef<HTMLInputElement>(null);
 
   const methods = useForm<ProjectSchema>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
       slug: '',
       gallery: [],
+      categoryId: null,
+      subCategoryId: null,
       translations: {
         vi: {
           title: '',
-          category: ProjectCategory.Architecture,
-          type: '',
           location: '',
           area: '',
           year: '',
@@ -51,8 +84,6 @@ export default function EditProjectPage() {
         },
         en: {
           title: '',
-      category: ProjectCategory.Architecture,
-      type: '',
       location: '',
       area: '',
       year: '',
@@ -66,8 +97,239 @@ export default function EditProjectPage() {
   const { handleSubmit, trigger, setValue, watch, formState: { errors }, reset } = methods;
   const translations = watch('translations');
   const currentTranslation = translations[currentLocale] || translations.vi || translations.en;
+  const selectedCategoryId = watch('categoryId');
+  const selectedSubCategoryId = watch('subCategoryId');
 
-  const typeOptions = getTypeOptionsByCategory(currentTranslation?.category);
+  // Load categories and subcategories with all translations
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        // Load with current locale for display, but we'll get full translations from API
+        const res = await fetch(`/api/admin/categories?includeSubCategories=true&locale=${currentLocale}`);
+        if (!res.ok) throw new Error('Failed to fetch categories');
+        const data = await res.json();
+        setCategories(data.items || []);
+        
+        // Flatten subcategories
+        const allSubCategories: SubCategory[] = [];
+        (data.items || []).forEach((cat: Category) => {
+          if (cat.subCategories) {
+            allSubCategories.push(...cat.subCategories);
+          }
+        });
+        setSubCategories(allSubCategories);
+      } catch (err) {
+        console.error('Error loading categories:', err);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+    loadCategories();
+  }, [currentLocale]);
+
+  // Reset subcategory selection when category changes (không thay đổi danh sách subCategories đã flatten)
+  useEffect(() => {
+    setSubCategoryInput('');
+    setValue('subCategoryId', null);
+  }, [selectedCategoryId, setValue]);
+
+  const availableSubCategories = selectedCategoryId
+    ? subCategories.filter(sc => sc.categoryId === selectedCategoryId)
+    : [];
+
+  // Get category/subcategory name by locale
+  const getCategoryName = (cat: Category, locale: string): string => {
+    if (cat.translations) {
+      const trans = cat.translations.find(t => t.locale === locale)
+        || cat.translations.find(t => t.locale === 'vi')
+        || cat.translations.find(t => t.locale === 'en')
+        || cat.translations[0];
+      return trans?.name || cat.name;
+    }
+    return cat.name;
+  };
+
+  const getSubCategoryName = (sub: SubCategory, locale: string): string => {
+    if (sub.translations) {
+      const trans = sub.translations.find(t => t.locale === locale)
+        || sub.translations.find(t => t.locale === 'vi')
+        || sub.translations.find(t => t.locale === 'en')
+        || sub.translations[0];
+      return trans?.name || sub.name;
+    }
+    return sub.name;
+  };
+
+  // Update category/subcategory input when locale changes
+  useEffect(() => {
+    if (selectedCategoryId) {
+      const cat = categories.find(c => c.id === selectedCategoryId);
+      if (cat) {
+        setCategoryInput(getCategoryName(cat, currentLocale));
+      }
+    }
+    if (selectedSubCategoryId) {
+      const sub = subCategories.find(s => s.id === selectedSubCategoryId);
+      if (sub) {
+        setSubCategoryInput(getSubCategoryName(sub, currentLocale));
+      }
+    }
+  }, [currentLocale, selectedCategoryId, selectedSubCategoryId, categories, subCategories]);
+
+  const filteredCategories = categories.filter((cat) => {
+    const name = getCategoryName(cat, currentLocale);
+    return name.toLowerCase().includes(categoryInput.trim().toLowerCase());
+  });
+  const filteredSubCategories = availableSubCategories.filter((sub) => {
+    const name = getSubCategoryName(sub, currentLocale);
+    return name.toLowerCase().includes(subCategoryInput.trim().toLowerCase());
+  });
+
+  const handleAddCategory = () => {
+    const name = categoryInput.trim();
+    if (!name) return;
+    const existing = categories.find((c) => {
+      const catName = getCategoryName(c, currentLocale);
+      return catName.toLowerCase() === name.toLowerCase();
+    });
+    if (existing) {
+      setValue('categoryId', existing.id, { shouldValidate: true });
+      return;
+    }
+    setModalTranslations({ vi: name, en: name });
+    setTranslationModal({ isOpen: true, type: 'category', initialName: name });
+  };
+
+  const handleCreateCategory = async () => {
+    if (!modalTranslations.vi.trim() || !modalTranslations.en.trim()) {
+      setSaveMessage({ type: 'error', text: 'Vui lòng nhập đầy đủ tên tiếng Việt và tiếng Anh' });
+      return;
+    }
+    try {
+      setIsCreatingCategory(true);
+      const res = await fetch('/api/admin/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: generateSlug(modalTranslations.vi.trim()),
+          translations: {
+            vi: { name: modalTranslations.vi.trim() },
+            en: { name: modalTranslations.en.trim() },
+          },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.id) {
+        throw new Error(json.error || 'Failed to create category');
+      }
+      
+      // Reload categories to get full data including subcategories
+      const reloadRes = await fetch(`/api/admin/categories?includeSubCategories=true&locale=${currentLocale}`);
+      if (reloadRes.ok) {
+        const reloadData = await reloadRes.json();
+        setCategories(reloadData.items || []);
+        const allSubCategories: SubCategory[] = [];
+        (reloadData.items || []).forEach((cat: Category) => {
+          if (cat.subCategories) {
+            allSubCategories.push(...cat.subCategories);
+          }
+        });
+        setSubCategories(allSubCategories);
+      }
+      
+      setValue('categoryId', json.id, { shouldValidate: true });
+      // Set input to current locale translation
+      const displayName = currentLocale === 'vi' ? modalTranslations.vi.trim() : modalTranslations.en.trim();
+      setCategoryInput(displayName);
+      setValue('subCategoryId', null, { shouldValidate: true });
+      setSubCategoryInput('');
+      setTranslationModal(null);
+      setModalTranslations({ vi: '', en: '' });
+    } catch (err) {
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to create category' });
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  };
+
+  const handleAddSubCategory = () => {
+    const name = subCategoryInput.trim();
+    if (!name) return;
+    const catId = selectedCategoryId;
+    if (!catId) {
+      setSaveMessage({ type: 'error', text: 'Hãy chọn hoặc tạo thể loại trước khi thêm thể loại phụ' });
+      return;
+    }
+    const existing = availableSubCategories.find(
+      (s) => {
+        const subName = getSubCategoryName(s, currentLocale);
+        return subName.toLowerCase() === name.toLowerCase() && s.categoryId === catId;
+      }
+    );
+    if (existing) {
+      setValue('subCategoryId', existing.id, { shouldValidate: true });
+      return;
+    }
+    setModalTranslations({ vi: name, en: name });
+    setTranslationModal({ isOpen: true, type: 'subcategory', initialName: name });
+  };
+
+  const handleCreateSubCategory = async () => {
+    if (!modalTranslations.vi.trim() || !modalTranslations.en.trim()) {
+      setSaveMessage({ type: 'error', text: 'Vui lòng nhập đầy đủ tên tiếng Việt và tiếng Anh' });
+      return;
+    }
+    const catId = selectedCategoryId;
+    if (!catId) {
+      setSaveMessage({ type: 'error', text: 'Hãy chọn hoặc tạo thể loại trước khi thêm thể loại phụ' });
+      return;
+    }
+    try {
+      setIsCreatingSubCategory(true);
+      const res = await fetch('/api/admin/subcategories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId: catId,
+          slug: generateSlug(modalTranslations.vi.trim()),
+          translations: {
+            vi: { name: modalTranslations.vi.trim() },
+            en: { name: modalTranslations.en.trim() },
+          },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.id) {
+        throw new Error(json.error || 'Failed to create subcategory');
+      }
+      
+      // Reload categories to get updated subcategories
+      const reloadRes = await fetch(`/api/admin/categories?includeSubCategories=true&locale=${currentLocale}`);
+      if (reloadRes.ok) {
+        const reloadData = await reloadRes.json();
+        setCategories(reloadData.items || []);
+        const allSubCategories: SubCategory[] = [];
+        (reloadData.items || []).forEach((cat: Category) => {
+          if (cat.subCategories) {
+            allSubCategories.push(...cat.subCategories);
+          }
+        });
+        setSubCategories(allSubCategories);
+      }
+      
+      setValue('subCategoryId', json.id, { shouldValidate: true });
+      // Set input to current locale translation
+      const displayName = currentLocale === 'vi' ? modalTranslations.vi.trim() : modalTranslations.en.trim();
+      setSubCategoryInput(displayName);
+      setTranslationModal(null);
+      setModalTranslations({ vi: '', en: '' });
+    } catch (err) {
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to create subcategory' });
+    } finally {
+      setIsCreatingSubCategory(false);
+    }
+  };
 
   const gallery = useGalleryUpload({
     onUploadSuccess: (urls) => {
@@ -102,8 +364,6 @@ export default function EditProjectPage() {
           project.translations.forEach((trans: ProjectTranslation) => {
             translationsData[trans.locale] = {
               title: trans.title || '',
-              category: trans.category || ProjectCategory.Architecture,
-              type: trans.type || '',
               location: trans.location || '',
               area: trans.area || '',
               year: trans.year || '',
@@ -113,8 +373,6 @@ export default function EditProjectPage() {
         } else {
           translationsData.vi = {
           title: project.title || '',
-            category: project.category || ProjectCategory.Architecture,
-          type: project.type || '',
           location: project.location || '',
           area: project.area || '',
           year: project.year || '',
@@ -122,8 +380,6 @@ export default function EditProjectPage() {
           };
           translationsData.en = {
             title: '',
-            category: ProjectCategory.Architecture,
-            type: '',
             location: '',
             area: '',
             year: '',
@@ -134,8 +390,23 @@ export default function EditProjectPage() {
         reset({
           slug: project.slug || '',
           gallery: project.gallery || [],
+          categoryId: project.categoryId || null,
+          subCategoryId: project.subCategoryId || null,
           translations: translationsData,
         });
+
+        const categoryName =
+          project.category?.translations?.find((t: { locale: string; name: string }) => t.locale === currentLocale)?.name ||
+          project.category?.translations?.find((t: { locale: string; name: string }) => t.locale === 'vi')?.name ||
+          project.category?.translations?.[0]?.name ||
+          '';
+        const subCategoryName =
+          project.subCategory?.translations?.find((t: { locale: string; name: string }) => t.locale === currentLocale)?.name ||
+          project.subCategory?.translations?.find((t: { locale: string; name: string }) => t.locale === 'vi')?.name ||
+          project.subCategory?.translations?.[0]?.name ||
+          '';
+        setCategoryInput(categoryName);
+        setSubCategoryInput(subCategoryName);
 
         gallery.setGalleryUrls(project.gallery || []);
         gallery.setHeroImageIndex(heroImageIndex >= 0 ? heroImageIndex : 0);
@@ -159,14 +430,12 @@ export default function EditProjectPage() {
       const galleryValid = await trigger('gallery');
       const viFieldsValid = await trigger([
         'translations.vi.title' as keyof ProjectSchema,
-        'translations.vi.category' as keyof ProjectSchema,
         'translations.vi.location' as keyof ProjectSchema,
         'translations.vi.area' as keyof ProjectSchema,
         'translations.vi.year' as keyof ProjectSchema,
       ]);
       const enFieldsValid = await trigger([
         'translations.en.title' as keyof ProjectSchema,
-        'translations.en.category' as keyof ProjectSchema,
         'translations.en.location' as keyof ProjectSchema,
         'translations.en.area' as keyof ProjectSchema,
         'translations.en.year' as keyof ProjectSchema,
@@ -213,12 +482,74 @@ export default function EditProjectPage() {
     
     try {
       const galleryUrlStrings = gallery.getGalleryUrlStrings();
+      let finalCategoryId = data.categoryId || null;
+      let finalSubCategoryId = data.subCategoryId || null;
+
+      const normalizedCategories = categories || [];
+      const normalizedSubCategories = subCategories || [];
+
+      if (!finalCategoryId && categoryInput.trim()) {
+        const existingCat = normalizedCategories.find(c => c.name.toLowerCase() === categoryInput.trim().toLowerCase());
+        if (existingCat) {
+          finalCategoryId = existingCat.id;
+        } else {
+          const newCatRes = await fetch('/api/admin/categories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              slug: generateSlug(categoryInput.trim()),
+              translations: {
+                vi: { name: categoryInput.trim() },
+                en: { name: categoryInput.trim() },
+              },
+            }),
+          });
+          const newCatJson = await newCatRes.json();
+          if (!newCatRes.ok || !newCatJson.id) {
+            throw new Error(newCatJson.error || 'Failed to create category');
+          }
+          finalCategoryId = newCatJson.id;
+        }
+      }
+
+      if (!finalSubCategoryId && subCategoryInput.trim()) {
+        if (!finalCategoryId) {
+          throw new Error('Please select or create a category before adding subcategory');
+        }
+        const existingSub = normalizedSubCategories.find(
+          sc => sc.categoryId === finalCategoryId && sc.name.toLowerCase() === subCategoryInput.trim().toLowerCase()
+        );
+        if (existingSub) {
+          finalSubCategoryId = existingSub.id;
+        } else {
+          const newSubRes = await fetch('/api/admin/subcategories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              categoryId: finalCategoryId,
+              slug: generateSlug(subCategoryInput.trim()),
+              translations: {
+                vi: { name: subCategoryInput.trim() },
+                en: { name: subCategoryInput.trim() },
+              },
+            }),
+          });
+          const newSubJson = await newSubRes.json();
+          if (!newSubRes.ok || !newSubJson.id) {
+            throw new Error(newSubJson.error || 'Failed to create subcategory');
+          }
+          finalSubCategoryId = newSubJson.id;
+        }
+      }
+
       const projectData = {
         slug: data.slug,
         heroImage: galleryUrlStrings.length > 0 && gallery.heroImageIndex < galleryUrlStrings.length 
           ? galleryUrlStrings[gallery.heroImageIndex] 
           : (galleryUrlStrings.length > 0 ? galleryUrlStrings[0] : ''),
         gallery: galleryUrlStrings,
+        categoryId: finalCategoryId,
+        subCategoryId: finalSubCategoryId,
         translations: data.translations,
       };
       
@@ -325,30 +656,182 @@ export default function EditProjectPage() {
                     </div>
 
                     <div>
-                      <FormField
-                        key={`category-${currentLocale}`}
-                        name={`translations.${currentLocale}.category`}
-                        label={t('fields.category')}
-                        type="select"
+                      <label className="block text-base font-bold text-black tracking-[0.16px] leading-normal mb-2 font-montserrat">
+                        {t('fields.category')} <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          ref={categoryInputRef}
+                          value={categoryInput}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCategoryInput(val);
+                            const match = categories.find(c => {
+                              const name = getCategoryName(c, currentLocale);
+                              return name.toLowerCase() === val.trim().toLowerCase();
+                            });
+                            setValue('categoryId', match ? match.id : null, { shouldValidate: true });
+                            setSubCategoryInput('');
+                            setValue('subCategoryId', null, { shouldValidate: true });
+                            setCategoryPopoverOpen(true);
+                          }}
+                          onFocus={() => setCategoryPopoverOpen(true)}
+                          onBlur={() => setTimeout(() => setCategoryPopoverOpen(false), 150)}
                         placeholder={t('fields.selectCategory')}
+                          className="w-full h-[44px] border border-black px-4 pr-10 rounded-lg bg-white text-[#333] outline-none focus:outline-none focus:border-black transition-colors"
+                          disabled={loadingCategories}
                         required
-                        options={[
-                          { value: ProjectCategory.Architecture, label: t('categories.architecture') },
-                          { value: ProjectCategory.InteriorConstruction, label: t('categories.interiorConstruction') },
-                        ]}
-                      />
+                        />
+                      {selectedCategoryId && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setCategoryInput('');
+                            setValue('categoryId', null, { shouldValidate: true });
+                            setSubCategoryInput('');
+                            setValue('subCategoryId', null, { shouldValidate: true });
+                            setCategoryPopoverOpen(true);
+                            setTimeout(() => {
+                              categoryInputRef.current?.focus();
+                            }, 0);
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999] hover:text-[#333] transition-colors"
+                          tabIndex={-1}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                        {categoryPopoverOpen && (
+                          <div className="absolute z-20 mt-1 w-full rounded-none border border-[#e0e0e0] bg-white shadow">
+                            {filteredCategories.length > 0 ? (
+                              filteredCategories.map((cat) => (
+                                <button
+                                  type="button"
+                                  key={cat.id}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    const name = getCategoryName(cat, currentLocale);
+                                    setCategoryInput(name);
+                                    setValue('categoryId', cat.id, { shouldValidate: true });
+                                    setCategoryPopoverOpen(false);
+                                    setSubCategoryInput('');
+                                    setValue('subCategoryId', null, { shouldValidate: true });
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                                >
+                                  {getCategoryName(cat, currentLocale)}
+                                </button>
+                              ))
+                            ) : categoryInput.trim() === '' ? (
+                              <div className="px-3 py-2 text-sm text-[#666]">
+                                {t('fields.noOption')}
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-gray-100 disabled:opacity-50"
+                                disabled={isCreatingCategory}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={handleAddCategory}
+                              >
+                                {isCreatingCategory ? t('fields.creating') : `Add "${categoryInput.trim()}"`}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div>
-                      <FormField
-                        key={`type-${currentLocale}`}
-                        name={`translations.${currentLocale}.type`}
-                        label={t('fields.subCategory')}
-                        type="select"
-                        placeholder={currentTranslation?.category ? t('fields.selectSubCategory') : t('fields.selectCategoryFirst')}
-                        options={typeOptions}
-                        disabled={!currentTranslation?.category}
-                      />
+                      <label className="block text-base font-bold text-black tracking-[0.16px] leading-normal mb-2 font-montserrat">
+                        {t('fields.subCategory')}
+                      </label>
+                      <div className="relative">
+                        <input
+                          ref={subCategoryInputRef}
+                          value={subCategoryInput}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSubCategoryInput(val);
+                            const match = availableSubCategories.find(
+                              sc => {
+                                const name = getSubCategoryName(sc, currentLocale);
+                                return name.toLowerCase() === val.trim().toLowerCase();
+                              }
+                            );
+                            setValue('subCategoryId', match ? match.id : null, { shouldValidate: true });
+                            setSubCategoryPopoverOpen(true);
+                          }}
+                          onFocus={() => setSubCategoryPopoverOpen(true)}
+                          onBlur={() => setTimeout(() => setSubCategoryPopoverOpen(false), 150)}
+                          placeholder={
+                            selectedCategoryId ? t('fields.selectSubCategory') : t('fields.selectCategoryFirst')
+                          }
+                          className="w-full h-[44px] border border-black px-4 pr-10 rounded-lg bg-white text-[#333] outline-none focus:outline-none focus:border-black transition-colors"
+                          disabled={loadingCategories || !selectedCategoryId}
+                        />
+                      {selectedSubCategoryId && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSubCategoryInput('');
+                            setValue('subCategoryId', null, { shouldValidate: true });
+                            setSubCategoryPopoverOpen(true);
+                            setTimeout(() => {
+                              subCategoryInputRef.current?.focus();
+                            }, 0);
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999] hover:text-[#333] transition-colors"
+                          tabIndex={-1}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                        {subCategoryPopoverOpen && (
+                          <div className="absolute z-20 mt-1 w-full rounded-none border border-[#e0e0e0] bg-white shadow">
+                            {filteredSubCategories.length > 0 ? (
+                              filteredSubCategories.map((subCat) => (
+                                <button
+                                  type="button"
+                                  key={subCat.id}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    const name = getSubCategoryName(subCat, currentLocale);
+                                    setSubCategoryInput(name);
+                                    setValue('subCategoryId', subCat.id, { shouldValidate: true });
+                                    setSubCategoryPopoverOpen(false);
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                                >
+                                  {getSubCategoryName(subCat, currentLocale)}
+                                </button>
+                              ))
+                            ) : subCategoryInput.trim() === '' ? (
+                              <div className="px-3 py-2 text-sm text-[#666]">
+                                {t('fields.noOption')}
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-gray-100 disabled:opacity-50"
+                                disabled={isCreatingSubCategory || !selectedCategoryId}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={handleAddSubCategory}
+                              >
+                                {isCreatingSubCategory ? t('fields.creating') : `Add "${subCategoryInput.trim()}"`}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div>
@@ -458,6 +941,68 @@ export default function EditProjectPage() {
             )}
           </form>
         </FormProvider>
+
+        {translationModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4 md:p-4">
+            <div className="bg-white border border-[#e0e0e0] w-full max-w-md shadow-lg">
+              <div className="px-4 sm:px-6 md:px-6 py-3 sm:py-4 md:py-4 border-b border-[#e0e0e0]">
+                <h2 className="text-sm sm:text-base md:text-base font-semibold tracking-[1px] sm:tracking-[1.5px] md:tracking-[2px] uppercase text-[#333]">
+                  {translationModal.type === 'category' ? 'Thêm thể loại mới' : 'Thêm thể loại phụ mới'}
+                </h2>
+              </div>
+              <div className="px-4 sm:px-6 md:px-6 py-4 sm:py-5 md:py-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-medium uppercase tracking-[1px] text-[#555] mb-1">
+                    Tên tiếng Việt *
+                  </label>
+                  <input
+                    type="text"
+                    value={modalTranslations.vi}
+                    onChange={(e) => setModalTranslations({ ...modalTranslations, vi: e.target.value })}
+                    className="w-full border border-[#e0e0e0] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#333]"
+                    placeholder="Nhập tên tiếng Việt"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium uppercase tracking-[1px] text-[#555] mb-1">
+                    Tên tiếng Anh *
+                  </label>
+                  <input
+                    type="text"
+                    value={modalTranslations.en}
+                    onChange={(e) => setModalTranslations({ ...modalTranslations, en: e.target.value })}
+                    className="w-full border border-[#e0e0e0] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#333]"
+                    placeholder="Enter English name"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="px-4 sm:px-6 md:px-6 py-3 sm:py-4 md:py-4 border-t border-[#e0e0e0] flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 md:gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setTranslationModal(null);
+                    setModalTranslations({ vi: '', en: '' });
+                  }}
+                  disabled={isCreatingCategory || isCreatingSubCategory}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={translationModal.type === 'category' ? handleCreateCategory : handleCreateSubCategory}
+                  disabled={isCreatingCategory || isCreatingSubCategory || !modalTranslations.vi.trim() || !modalTranslations.en.trim()}
+                >
+                  {isCreatingCategory || isCreatingSubCategory ? 'Đang tạo...' : 'Tạo'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

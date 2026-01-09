@@ -14,11 +14,11 @@ export const projectTranslationSchema = z.object({
     .max(200, 'Tên dự án không được vượt quá 200 ký tự'),
   category: z.enum(projectCategoryValues, {
     message: 'Vui lòng chọn thể loại',
-  }),
+  }).optional(), // Deprecated, use categoryId instead
   type: z
     .string()
     .max(100, 'Thể loại phụ không được vượt quá 100 ký tự')
-    .optional(),
+    .optional(), // Deprecated, use subCategoryId instead
   location: z
     .string()
     .min(1, 'Địa điểm là bắt buộc')
@@ -43,6 +43,8 @@ export const projectSchema = z.object({
   gallery: z
     .array(z.string())
     .min(1, 'Vui lòng upload ít nhất một ảnh'),
+  categoryId: z.string().optional().nullable(),
+  subCategoryId: z.string().optional().nullable(),
   translations: z.record(z.string(), projectTranslationSchema).refine(
     (translations) => Object.keys(translations).length > 0,
     'Phải có ít nhất một bản dịch'
@@ -52,13 +54,14 @@ export const projectSchema = z.object({
 export const projectStep1Schema = projectSchema.pick({
   slug: true,
   gallery: true,
+  categoryId: true,
+  subCategoryId: true,
 }).extend({
   translations: z.record(z.string(), projectTranslationSchema.pick({
     title: true,
-  category: true,
-  location: true,
-  area: true,
-  year: true,
+    location: true,
+    area: true,
+    year: true,
   })),
 });
 
