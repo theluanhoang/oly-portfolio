@@ -37,12 +37,34 @@ export async function GET(request: Request): Promise<Response> {
               some: {
                 OR: [
                   { title: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
-                  { category: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
-                  { type: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
                   { location: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
                   { area: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
                   { year: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
                 ],
+              },
+            },
+          },
+          {
+            category: {
+              translations: {
+                some: {
+                  name: {
+                    contains: searchValue,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+              },
+            },
+          },
+          {
+            subCategory: {
+              translations: {
+                some: {
+                  name: {
+                    contains: searchValue,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
               },
             },
           },
@@ -52,11 +74,13 @@ export async function GET(request: Request): Promise<Response> {
 
     if (categoryFilter.length > 0) {
       andConditions.push({
-        translations: {
-          some: {
         category: {
-          contains: categoryFilter,
-          mode: Prisma.QueryMode.insensitive,
+          translations: {
+            some: {
+              name: {
+                contains: categoryFilter,
+                mode: Prisma.QueryMode.insensitive,
+              },
             },
           },
         },
@@ -112,6 +136,16 @@ export async function GET(request: Request): Promise<Response> {
         orderBy,
         include: {
           translations: true,
+          category: {
+            include: {
+              translations: true,
+            },
+          },
+          subCategory: {
+            include: {
+              translations: true,
+            },
+          },
         },
         ...(pageSize !== undefined && {
           skip: (page - 1) * pageSize,
@@ -126,11 +160,23 @@ export async function GET(request: Request): Promise<Response> {
         || project.translations.find(t => t.locale === 'en')
         || project.translations[0];
 
+      const categoryTranslation = project.category?.translations.find(t => t.locale === locale)
+        || project.category?.translations.find(t => t.locale === 'vi')
+        || project.category?.translations.find(t => t.locale === 'en')
+        || project.category?.translations[0];
+
+      const subCategoryTranslation = project.subCategory?.translations.find(t => t.locale === locale)
+        || project.subCategory?.translations.find(t => t.locale === 'vi')
+        || project.subCategory?.translations.find(t => t.locale === 'en')
+        || project.subCategory?.translations[0];
+
       return {
         ...project,
         title: defaultTranslation?.title || '',
-        category: defaultTranslation?.category || '',
-        type: defaultTranslation?.type || '',
+        category: categoryTranslation?.name || '',
+        categoryId: project.categoryId,
+        type: subCategoryTranslation?.name || '',
+        subCategoryId: project.subCategoryId,
         location: defaultTranslation?.location || '',
         area: defaultTranslation?.area || '',
         year: defaultTranslation?.year || '',

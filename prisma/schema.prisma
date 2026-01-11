@@ -16,9 +16,13 @@ model Project {
   heroImage    String
   gallery      String[] @default([])
   displayOrder   Int      @default(0)
+  categoryId   String?
+  subCategoryId String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  category     Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subCategory  SubCategory?  @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
   translations ProjectTranslation[]
 
   @@map("projects")
@@ -30,8 +34,6 @@ model ProjectTranslation {
   locale    String   // 'en' hoặc 'vi'
   
   title     String
-  category  String
-  type      String?  @default("")
   location  String
   area      String
   year      String
@@ -46,6 +48,73 @@ model ProjectTranslation {
   @@index([projectId])
   @@index([locale])
   @@map("project_translations")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  displayOrder Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  translations CategoryTranslation[]
+  subCategories SubCategory[]
+  projects     Project[]
+
+  @@map("categories")
+}
+
+model CategoryTranslation {
+  id         String   @id @default(cuid())
+  categoryId String
+  locale     String   // 'en' hoặc 'vi'
+  
+  name       String
+  
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@unique([categoryId, locale])
+  @@index([categoryId])
+  @@index([locale])
+  @@map("category_translations")
+}
+
+model SubCategory {
+  id          String   @id @default(cuid())
+  categoryId  String
+  slug        String
+  displayOrder Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  translations SubCategoryTranslation[]
+  projects    Project[]
+
+  @@unique([categoryId, slug])
+  @@index([categoryId])
+  @@map("sub_categories")
+}
+
+model SubCategoryTranslation {
+  id            String      @id @default(cuid())
+  subCategoryId String
+  locale        String      // 'en' hoặc 'vi'
+  
+  name          String
+  
+  subCategory   SubCategory @relation(fields: [subCategoryId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  @@unique([subCategoryId, locale])
+  @@index([subCategoryId])
+  @@index([locale])
+  @@map("sub_category_translations")
 }
 
 model Product {

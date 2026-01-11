@@ -58,14 +58,14 @@ export async function POST(request: NextRequest): Promise<Response> {
         slug: projectData.slug,
         heroImage: projectData.heroImage || '',
         gallery: projectData.gallery || [],
+        categoryId: projectData.categoryId || null,
+        subCategoryId: projectData.subCategoryId || null,
         translations: {
           create: Object
             .entries(projectData.translations as Record<string, ProjectTranslationSchema>)
             .map(([locale, translationData]) => ({
               locale,
               title: translationData.title || '',
-              category: translationData.category || '',
-              type: translationData.type && translationData.type.trim() ? translationData.type.trim() : '',
               location: translationData.location || '',
               area: translationData.area || '',
               year: translationData.year || '',
@@ -75,6 +75,16 @@ export async function POST(request: NextRequest): Promise<Response> {
       },
       include: {
         translations: true,
+        category: {
+          include: {
+            translations: true,
+          }
+        },
+        subCategory: {
+          include: {
+            translations: true,
+          }
+        }
       },
     });
     

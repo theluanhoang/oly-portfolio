@@ -17,6 +17,16 @@ export async function GET(request: Request, { params }: RouteParams): Promise<Re
       where: { slug },
       include: {
         translations: true,
+        category: {
+          include: {
+            translations: true,
+          }
+        },
+        subCategory: {
+          include: {
+            translations: true,
+          }
+        }
       },
     });
 
@@ -27,11 +37,20 @@ export async function GET(request: Request, { params }: RouteParams): Promise<Re
     if (locale) {
       const translation = project.translations.find(t => t.locale === locale);
       if (translation) {
+        const categoryTranslation = project.category?.translations.find(t => t.locale === locale)
+          || project.category?.translations.find(t => t.locale === 'vi')
+          || project.category?.translations[0];
+        const subCategoryTranslation = project.subCategory?.translations.find(t => t.locale === locale)
+          || project.subCategory?.translations.find(t => t.locale === 'vi')
+          || project.subCategory?.translations[0];
+        
         return Response.json({
           ...project,
           title: translation.title,
-          category: translation.category,
-          type: translation.type,
+          category: categoryTranslation?.name || '',
+          categoryId: project.categoryId,
+          type: subCategoryTranslation?.name || '',
+          subCategoryId: project.subCategoryId,
           location: translation.location,
           area: translation.area,
           year: translation.year,
@@ -97,6 +116,8 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
         heroImage: projectData.heroImage || '',
         gallery: projectData.gallery || [],
         displayOrder: projectData.displayOrder !== undefined ? Number(projectData.displayOrder) : existingProject.displayOrder,
+        categoryId: projectData.categoryId !== undefined ? (projectData.categoryId || null) : existingProject.categoryId,
+        subCategoryId: projectData.subCategoryId !== undefined ? (projectData.subCategoryId || null) : existingProject.subCategoryId,
       },
     });
 
@@ -115,8 +136,6 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
               projectId: updated.id,
               locale,
               title: translation.title || '',
-              category: translation.category || '',
-              type: translation.type && translation.type.trim() ? translation.type.trim() : '',
               location: translation.location || '',
               area: translation.area || '',
               year: translation.year || '',
@@ -129,7 +148,19 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
 
     const updatedWithTranslations = await prisma.project.findUnique({
       where: { id: updated.id },
-      include: { translations: true },
+      include: { 
+        translations: true,
+        category: {
+          include: {
+            translations: true,
+          }
+        },
+        subCategory: {
+          include: {
+            translations: true,
+          }
+        }
+      },
     });
 
     return Response.json(updatedWithTranslations);

@@ -8,6 +8,16 @@ export async function getProjects(locale: string = 'vi') {
     const projects = await prisma.project.findMany({
       include: {
         translations: true,
+        category: {
+          include: {
+            translations: true,
+          },
+        },
+        subCategory: {
+          include: {
+            translations: true,
+          },
+        },
       },
       orderBy: {
         displayOrder: 'asc',
@@ -20,11 +30,21 @@ export async function getProjects(locale: string = 'vi') {
         || project.translations.find(t => t.locale === 'en')
         || project.translations[0];
 
+      const categoryTranslation = project.category?.translations.find(t => t.locale === locale)
+        || project.category?.translations.find(t => t.locale === 'vi')
+        || project.category?.translations.find(t => t.locale === 'en')
+        || project.category?.translations[0];
+
+      const subCategoryTranslation = project.subCategory?.translations.find(t => t.locale === locale)
+        || project.subCategory?.translations.find(t => t.locale === 'vi')
+        || project.subCategory?.translations.find(t => t.locale === 'en')
+        || project.subCategory?.translations[0];
+
       return {
         ...project,
         title: translation?.title || '',
-        category: translation?.category || '',
-        type: translation?.type || '',
+        category: categoryTranslation?.name || '',
+        type: subCategoryTranslation?.name || '',
         location: translation?.location || '',
         area: translation?.area || '',
         year: translation?.year || '',
@@ -44,6 +64,16 @@ export async function getProjectBySlug(slug: string, locale: string = 'vi') {
       where: { slug },
       include: {
         translations: true,
+        category: {
+          include: {
+            translations: true,
+          },
+        },
+        subCategory: {
+          include: {
+            translations: true,
+          },
+        },
       },
     });
     
@@ -56,11 +86,21 @@ export async function getProjectBySlug(slug: string, locale: string = 'vi') {
       || project.translations.find(t => t.locale === 'en')
       || project.translations[0];
 
+    const categoryTranslation = project.category?.translations.find(t => t.locale === locale)
+      || project.category?.translations.find(t => t.locale === 'vi')
+      || project.category?.translations.find(t => t.locale === 'en')
+      || project.category?.translations[0];
+
+    const subCategoryTranslation = project.subCategory?.translations.find(t => t.locale === locale)
+      || project.subCategory?.translations.find(t => t.locale === 'vi')
+      || project.subCategory?.translations.find(t => t.locale === 'en')
+      || project.subCategory?.translations[0];
+
     return {
       ...project,
       title: translation?.title || '',
-      category: translation?.category || '',
-      type: translation?.type || '',
+      category: categoryTranslation?.name || '',
+      type: subCategoryTranslation?.name || '',
       location: translation?.location || '',
       area: translation?.area || '',
       year: translation?.year || '',

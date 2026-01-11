@@ -1,5 +1,6 @@
 import prisma from "../lib/prisma";
 import { seedProducts } from "./seed-products";
+import { generateSlug } from "../lib/utils";
 
 const getPlaceholderImage = (index: number, width = 1200, height = 800) => {
   return `https://picsum.photos/seed/project-${index}/${width}/${height}`;
@@ -259,19 +260,97 @@ export async function main() {
       const positionInSection = currentProjectCount % PROJECTS_PER_SECTION;
       const displayOrder = sectionIndex * PROJECTS_PER_SECTION + positionInSection;
 
+      // Find or create category
+      let category = await prisma.category.findFirst({
+        where: {
+          translations: {
+            some: {
+              name: project.category,
+              locale: 'vi',
+            },
+          },
+        },
+        include: {
+          translations: true,
+        },
+      });
+
+      if (!category) {
+        category = await prisma.category.create({
+          data: {
+            slug: generateSlug(project.category),
+            translations: {
+              create: [
+                {
+                  locale: 'vi',
+                  name: project.category,
+                },
+                {
+                  locale: 'en',
+                  name: project.category,
+                },
+              ],
+            },
+          },
+          include: {
+            translations: true,
+          },
+        });
+      }
+
+      // Find or create subcategory
+      let subCategory = await prisma.subCategory.findFirst({
+        where: {
+          categoryId: category.id,
+          translations: {
+            some: {
+              name: project.type,
+              locale: 'vi',
+            },
+          },
+        },
+        include: {
+          translations: true,
+        },
+      });
+
+      if (!subCategory) {
+        subCategory = await prisma.subCategory.create({
+          data: {
+            categoryId: category.id,
+            slug: generateSlug(project.type),
+            translations: {
+              create: [
+                {
+                  locale: 'vi',
+                  name: project.type,
+                },
+                {
+                  locale: 'en',
+                  name: project.type,
+                },
+              ],
+            },
+          },
+          include: {
+            translations: true,
+          },
+        });
+      }
+
       await prisma.project.create({
         data: {
           slug: project.slug,
           heroImage: project.heroImage,
           gallery: project.gallery,
           displayOrder,
+          categoryId: category.id,
+          subCategoryId: subCategory.id,
           translations: {
             create: [
               {
                 locale: "vi",
                 title: project.title,
-                category: project.category,
-                type: project.type,
                 location: project.location,
                 area: project.area,
                 year: project.year,
