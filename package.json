@@ -18,7 +18,12 @@
     "test:ddos:quick": "bash scripts/test-ddos-quick.sh",
     "test:auth": "tsx __tests__/api/auth-authorization.test.ts",
     "test:auth:security": "bash scripts/test-auth-security.sh",
-    "test:security": "bash scripts/test-auth-security.sh"
+    "test:security": "bash scripts/test-auth-security.sh",
+    "test:image:optimization": "tsx scripts/test-image-optimization.ts",
+    "test:image:load": "tsx scripts/test-image-upload-load.ts",
+    "test:image:load:light": "BASE_URL=http://localhost:3000 CONCURRENT=5 TOTAL=50 tsx scripts/test-image-upload-load.ts",
+    "test:image:load:heavy": "BASE_URL=http://localhost:3000 CONCURRENT=20 TOTAL=200 tsx scripts/test-image-upload-load.ts",
+    "generate:test-images": "tsx scripts/generate-test-images.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -59,6 +64,7 @@
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "react-hook-form": "^7.68.0",
+    "sharp": "^0.34.5",
     "zod": "^4.1.13"
   },
   "devDependencies": {

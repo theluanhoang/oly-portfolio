@@ -300,7 +300,3 @@ Given your current `TiptapEditor.tsx`:
   is **refinement and cleanup**, not changing the fundamental algorithm.
 
 
-
-
-
-
