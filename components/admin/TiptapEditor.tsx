@@ -64,6 +64,9 @@ interface ColorPickerProps {
   title: string;
   defaultColor?: string;
   showColorIndicator?: boolean;
+  isOpen: boolean;
+  onOpen: () => void;
+  onClose: () => void;
 }
 
 function ColorPicker({
@@ -74,31 +77,33 @@ function ColorPicker({
   isActive,
   title,
   defaultColor = '#ffffff',
-  showColorIndicator = false
+  showColorIndicator = false,
+  isOpen,
+  onOpen,
+  onClose
 }: ColorPickerProps) {
-  const [showPicker, setShowPicker] = useState(false);
   const [pickerPosition, setPickerPosition] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (showPicker && !target.closest('.color-picker-container') && !target.closest('.color-picker-popup')) {
-        setShowPicker(false);
+      if (isOpen && !target.closest('.color-picker-container') && !target.closest('.color-picker-popup')) {
+        onClose();
         setPickerPosition(null);
       }
     };
 
-    if (showPicker) {
+    if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }
-  }, [showPicker]);
+  }, [isOpen, onClose]);
 
   const handleButtonClick = () => {
-    if (!showPicker && buttonRef.current) {
+    if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const pickerWidth = 320;
       const pickerHeight = 250;
@@ -135,9 +140,9 @@ function ColorPicker({
         top,
         left,
       });
-      setShowPicker(true);
+      onOpen();
     } else {
-      setShowPicker(false);
+      onClose();
       setPickerPosition(null);
     }
   };
@@ -174,7 +179,7 @@ function ColorPicker({
         </button>
       </div>
       
-      {showPicker && pickerPosition && typeof window !== 'undefined' ? createPortal(
+      {isOpen && pickerPosition && typeof window !== 'undefined' ? createPortal(
         <div 
           className="fixed bg-white border border-[#e0e0e0] shadow-lg z-[9999] p-3 color-picker-popup" 
           style={{ 
@@ -189,7 +194,7 @@ function ColorPicker({
               type="button"
               onClick={() => {
                 onRemove();
-                setShowPicker(false);
+                onClose();
                 setPickerPosition(null);
               }}
               className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded mb-2"
@@ -210,7 +215,7 @@ function ColorPicker({
                 key={index}
                 onClick={() => {
                   onColorChange(color);
-                  setShowPicker(false);
+                  onClose();
                   setPickerPosition(null);
                 }}
                 className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 ${
@@ -2523,6 +2528,7 @@ interface TiptapEditorProps {
 export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
   const [highlightColor, setHighlightColor] = useState('#ffffff');
   const [textColor, setTextColor] = useState('#000000');
+  const [openColorPicker, setOpenColorPicker] = useState<'text' | 'highlight' | null>(null);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkText, setLinkText] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
@@ -3235,6 +3241,28 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     <div className="border border-[#e0e0e0] overflow-hidden rounded-2xl shadow-sm bg-white/90 backdrop-blur">
       {/* Toolbar */}
       <div className="border-b border-[#e0e0e0] bg-white p-4 flex flex-wrap gap-3 items-center">
+        {/* Undo/Redo */}
+        <div className={toolbarGroupClass} title="History">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().undo().run()}
+            disabled={!editor.can().undo()}
+            className={toolbarButtonClass(false, !editor.can().undo())}
+            aria-label="Undo"
+          >
+            <tiptapIcons.Undo2 size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().redo().run()}
+            disabled={!editor.can().redo()}
+            className={toolbarButtonClass(false, !editor.can().redo())}
+            aria-label="Redo"
+          >
+            <tiptapIcons.Redo2 size={16} />
+          </button>
+        </div>
+
         {/* Paragraph & Heading */}
         <div className="min-w-[200px]">
           <div className="relative">
@@ -3286,26 +3314,40 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           </div>
         </div>
 
-        {/* Undo/Redo */}
-        <div className={toolbarGroupClass} title="History">
-          <button
-            type="button"
-            onClick={() => editor.chain().focus().undo().run()}
-            disabled={!editor.can().undo()}
-            className={toolbarButtonClass(false, !editor.can().undo())}
-            aria-label="Undo"
-          >
-            <tiptapIcons.Undo2 size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => editor.chain().focus().redo().run()}
-            disabled={!editor.can().redo()}
-            className={toolbarButtonClass(false, !editor.can().redo())}
-            aria-label="Redo"
-          >
-            <tiptapIcons.Redo2 size={16} />
-          </button>
+        {/* Font Size */}
+        <div className={`${toolbarGroupClass} gap-2`}>
+          <div className="relative">
+            <select
+              onChange={(e) => {
+                const fontSize = e.target.value;
+                if (fontSize === 'default') {
+                  editor.chain().focus().unsetFontSize().run();
+                } else {
+                  editor.chain().focus().setFontSize(fontSize).run();
+                }
+              }}
+              className="appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 pr-10 text-sm text-slate-800 outline-none"
+              title="Font Size"
+            >
+              <option value="default" style={{ fontSize: '14px' }}>
+                Size
+              </option>
+              <option value="10" style={{ fontSize: '10px' }}>10px</option>
+              <option value="12" style={{ fontSize: '12px' }}>12px</option>
+              <option value="14" style={{ fontSize: '14px' }}>14px</option>
+              <option value="16" style={{ fontSize: '16px' }}>16px</option>
+              <option value="18" style={{ fontSize: '18px' }}>18px</option>
+              <option value="20" style={{ fontSize: '20px' }}>20px</option>
+              <option value="24" style={{ fontSize: '24px' }}>24px</option>
+              <option value="28" style={{ fontSize: '28px' }}>28px</option>
+              <option value="32" style={{ fontSize: '32px' }}>32px</option>
+              <option value="36" style={{ fontSize: '36px' }}>36px</option>
+              <option value="48" style={{ fontSize: '48px' }}>48px</option>
+            </select>
+            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
+              <ChevronDown size={16} />
+            </div>
+          </div>
         </div>
 
         {/* Core formatting */}
@@ -3769,42 +3811,6 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           </button>
         </div>
 
-        {/* Typography (font size only) */}
-        <div className={`${toolbarGroupClass} gap-2`}>
-          <div className="relative">
-            <select
-              onChange={(e) => {
-                const fontSize = e.target.value;
-                if (fontSize === 'default') {
-                  editor.chain().focus().unsetFontSize().run();
-                } else {
-                  editor.chain().focus().setFontSize(fontSize).run();
-                }
-              }}
-              className="appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 pr-10 text-sm text-slate-800 outline-none"
-              title="Font Size"
-            >
-              <option value="default" style={{ fontSize: '14px' }}>
-                Size
-              </option>
-              <option value="10" style={{ fontSize: '10px' }}>10px</option>
-              <option value="12" style={{ fontSize: '12px' }}>12px</option>
-              <option value="14" style={{ fontSize: '14px' }}>14px</option>
-              <option value="16" style={{ fontSize: '16px' }}>16px</option>
-              <option value="18" style={{ fontSize: '18px' }}>18px</option>
-              <option value="20" style={{ fontSize: '20px' }}>20px</option>
-              <option value="24" style={{ fontSize: '24px' }}>24px</option>
-              <option value="28" style={{ fontSize: '28px' }}>28px</option>
-              <option value="32" style={{ fontSize: '32px' }}>32px</option>
-              <option value="36" style={{ fontSize: '36px' }}>36px</option>
-              <option value="48" style={{ fontSize: '48px' }}>48px</option>
-            </select>
-            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
-              <ChevronDown size={16} />
-            </div>
-          </div>
-        </div>
-
         {/* Colors */}
         <div className={`${toolbarGroupClass} gap-2`}>
           <ColorPicker
@@ -3817,6 +3823,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             isActive={editor.isActive('textStyle')}
             title="Text Color"
             defaultColor="#000000"
+            isOpen={openColorPicker === 'text'}
+            onOpen={() => setOpenColorPicker('text')}
+            onClose={() => setOpenColorPicker(null)}
           />
 
           <ColorPicker
@@ -3833,15 +3842,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             isActive={editor.isActive('highlight')}
             title="Highlight"
             defaultColor="#ffffff"
-          />
-
-          <input
-            type="color"
-            onChange={(e) => {
-              editor.chain().focus().setHighlight({ color: e.target.value }).run();
-            }}
-            className="h-9 w-12 rounded-lg border border-slate-200 shadow-inner cursor-pointer"
-            title="Background Color"
+            isOpen={openColorPicker === 'highlight'}
+            onOpen={() => setOpenColorPicker('highlight')}
+            onClose={() => setOpenColorPicker(null)}
           />
         </div>
 
