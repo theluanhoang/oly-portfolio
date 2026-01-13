@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import ProjectSection from '@/components/projects/ProjectSection';
 import ScrollIndicator from '@/components/projects/ScrollIndicator';
-import { LoadingSpinner } from '@/components/ui';
+import { ProjectSectionSkeleton } from '@/components/ui';
 import { useHorizontalScroll } from '@/hooks/useHorizontalScroll';
 import { useHeaderHeight } from '@/hooks/useHeaderHeight';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -114,7 +114,52 @@ export default function ProjectsPage() {
 
 
   if (loading) {
-    return <LoadingSpinner text={t('loading')} />;
+    const skeletonSections = Array.from({ length: 3 }); // Show 3 skeleton sections
+    
+    if (isMobile) {
+      return (
+        <div className="min-h-screen bg-background text-foreground">
+          <div className="max-w-[1512px] mx-auto px-4 pt-8 pb-8" style={{ paddingTop: `${headerHeight + 55}px` }}>
+            <div className="flex flex-col items-center md:gap-[10px] gap-[5px]">
+              {skeletonSections.map((_, index) => (
+                <ProjectSectionSkeleton key={index} sectionIndex={index} />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+        <div 
+          className="fixed w-full overflow-hidden z-0"
+          style={{ 
+            top: `calc(55px + ${headerHeight}px)`,
+            height: `calc(100vh - ${headerHeight}px)`,
+            left: 0,
+            right: 0
+          }}
+        >
+          <div className="max-w-[1512px] mx-auto h-full px-4 sm:px-[42px] relative">
+            <div className="relative h-full overflow-x-hidden">
+              <div
+                className="absolute top-0 left-0 flex gap-[10px]"
+                style={{
+                  width: 'max-content',
+                  minWidth: '100%',
+                  justifyContent: 'flex-start'
+                }}
+              >
+                {skeletonSections.map((_, index) => (
+                  <ProjectSectionSkeleton key={index} sectionIndex={index} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (sections.length === 0) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { LoadingSpinner } from '@/components/ui';
+import { ProductCardSkeleton } from '@/components/ui';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useTranslations } from 'next-intl';
 
@@ -40,7 +40,24 @@ export default function ProductsPage() {
   }, []);
 
   if (loading) {
-    return <LoadingSpinner text={t('loading')} />;
+    // Show skeleton cards while loading
+    const skeletonCount = 12; // Show 12 skeleton cards (2 rows on mobile, more on larger screens)
+    
+    return (
+      <div className="min-h-screen bg-white text-black">
+        <div className="max-w-[1512px] mx-auto px-4 sm:px-6 lg:px-10 py-12">
+          <h1 className="text-[28px] sm:text-[34px] lg:text-[40px] font-semibold leading-none tracking-[0.22em] uppercase mb-10">
+            {t('title')}
+          </h1>
+
+          <div className="grid gap-0 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 items-stretch">
+            {Array.from({ length: skeletonCount }).map((_, index) => (
+              <ProductCardSkeleton key={index} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
