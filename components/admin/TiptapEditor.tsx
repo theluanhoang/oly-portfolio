@@ -1256,6 +1256,9 @@ const ResizableImage = Image.extend({
                 const clearClickOutsideEvent = new CustomEvent('clearClickOutsideTimeout');
                 document.dispatchEvent(clearClickOutsideEvent);
 
+                // Focus editor first to ensure cursor is visible
+                view.focus();
+                
                 const { tr, doc } = view.state;
                 const nodeAtPos = doc.nodeAt(pos);
 
@@ -1291,6 +1294,9 @@ const ResizableImage = Image.extend({
       dom.addEventListener('click', (e) => {
         if (e.target !== img && !handles.includes(e.target as HTMLElement)) {
           e.stopPropagation();
+          // Focus editor first to ensure cursor is visible
+          view.focus();
+          
           const { tr, doc } = view.state;
           const pos = getPos();
           if (typeof pos === 'number') {
