@@ -46,7 +46,7 @@ http {
 
     server {
         listen 80;
-        server_name yourdomain.com www.yourdomain.com;
+        server_name olystudio.vn www.olystudio.vn;
         
         location /.well-known/acme-challenge/ {
             root /var/www/certbot;
@@ -59,7 +59,7 @@ http {
 
     server {
         listen 443 ssl http2;
-        server_name yourdomain.com www.yourdomain.com;
+        server_name olystudio.vn www.olystudio.vn;
 
         ssl_certificate /etc/nginx/ssl/cert.pem;
         ssl_certificate_key /etc/nginx/ssl/key.pem;

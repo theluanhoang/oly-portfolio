@@ -50,7 +50,7 @@ Vào **GitHub Repository → Settings → Secrets and variables → Actions → 
 
 | Secret Name | Description | Example | Required |
 |------------|-------------|---------|----------|
-| `EC2_HOST` | EC2 Public IP hoặc Domain | `54.123.45.67` hoặc `your-domain.com` | ✅ Yes |
+| `EC2_HOST` | EC2 Public IP hoặc Domain | `54.123.45.67` hoặc `olystudio.vn` | ✅ Yes |
 | `EC2_USER` | EC2 Username | `ubuntu` (cho Ubuntu) hoặc `ec2-user` (cho Amazon Linux) | ✅ Yes |
 | `EC2_SSH_KEY` | Private SSH Key | Nội dung file `.pem` key | ✅ Yes |
 | `EC2_SSH_PORT` | SSH Port | `22` (default) | ❌ No |
@@ -67,7 +67,8 @@ Vào **GitHub Repository → Settings → Secrets and variables → Actions → 
 | `ADMIN_USERNAME` | Admin username | `admin` | ✅ Yes |
 | `ADMIN_PASSWORD` | Admin password | `your_secure_password` | ✅ Yes |
 | `NGINX_PORT` | Nginx port | `80` | ❌ No (default: 80) |
-| `NEXT_PUBLIC_APP_URL` | Public app URL (optional) | `https://your-domain.com` | ❌ No |
+| `NEXT_PUBLIC_APP_URL` | Public app URL (optional) | `https://olystudio.vn` | ❌ No |
+| `NEXT_PUBLIC_BASE_URL` | Base URL cho email links | `https://olystudio.vn` | ❌ No |
 
 ### 2.3. Tạo SSH Key cho GitHub Actions
 
