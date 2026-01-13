@@ -17,18 +17,18 @@ ENV ADMIN_PASSWORD="dummy"
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN --mount=type=cache,target=/root/.npm \
-    npx prisma generate
+    npx prisma generate >/dev/null 2>&1
 RUN --mount=type=cache,target=/root/.npm \
-    npm run build
-RUN npm prune --omit=dev && \
-    find .next/standalone -name "*.map" -delete 2>/dev/null || true && \
-    find .next/standalone -type f -name "*.d.ts" -delete 2>/dev/null || true && \
-    find .next/standalone -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "*.test.js" -o -name "*.spec.js" -o -name ".cache" -o -name "docs" -o -name "examples" \) -exec rm -rf {} + 2>/dev/null || true && \
-    find .next/standalone -type f \( -name "*.test.js" -o -name "*.spec.js" -o -name "*.md" -o -name "CHANGELOG*" -o -name "LICENSE*" -o -name "README*" \) -delete 2>/dev/null || true && \
-    find .next/standalone/node_modules -type d \( -name "test" -o -name "__tests__" -o -name ".cache" -o -name "docs" -o -name "examples" -o -name "*.test.js" -o -name "*.spec.js" \) -exec rm -rf {} + 2>/dev/null || true && \
-    find .next/standalone/node_modules -type f \( -name "*.map" -o -name "*.md" -o -name "*.d.ts" -o -name "CHANGELOG*" -o -name "LICENSE*" -o -name "README*" \) -delete 2>/dev/null || true && \
-    find .next/standalone/node_modules -type f -name "*.ts" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
-    find .next/standalone/node_modules -type f -name "*.tsx" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true
+    npm run build >/dev/null 2>&1
+RUN npm prune --omit=dev >/dev/null 2>&1 && \
+    find .next/standalone -name "*.map" -delete >/dev/null 2>&1 || true && \
+    find .next/standalone -type f -name "*.d.ts" -delete >/dev/null 2>&1 || true && \
+    find .next/standalone -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "*.test.js" -o -name "*.spec.js" -o -name ".cache" -o -name "docs" -o -name "examples" \) -exec rm -rf {} + >/dev/null 2>&1 || true && \
+    find .next/standalone -type f \( -name "*.test.js" -o -name "*.spec.js" -o -name "*.md" -o -name "CHANGELOG*" -o -name "LICENSE*" -o -name "README*" \) -delete >/dev/null 2>&1 || true && \
+    find .next/standalone/node_modules -type d \( -name "test" -o -name "__tests__" -o -name ".cache" -o -name "docs" -o -name "examples" -o -name "*.test.js" -o -name "*.spec.js" \) -exec rm -rf {} + >/dev/null 2>&1 || true && \
+    find .next/standalone/node_modules -type f \( -name "*.map" -o -name "*.md" -o -name "*.d.ts" -o -name "CHANGELOG*" -o -name "LICENSE*" -o -name "README*" \) -delete >/dev/null 2>&1 || true && \
+    find .next/standalone/node_modules -type f -name "*.ts" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete >/dev/null 2>&1 || true && \
+    find .next/standalone/node_modules -type f -name "*.tsx" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete >/dev/null 2>&1 || true
 FROM base AS prisma-cli
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
@@ -39,26 +39,26 @@ RUN npm pkg delete scripts.postinstall || true
 RUN --mount=type=cache,target=/root/.npm \
     npm install --omit=dev --prefer-offline --no-audit --ignore-scripts prisma dotenv
 RUN rm -rf /root/.npm || true
-RUN find /app/node_modules -type f -name "*.map" -delete 2>/dev/null || true && \
-    find /app/node_modules -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "docs" -o -name "examples" \) -exec rm -rf {} + 2>/dev/null || true && \
-    find /app/node_modules -type f \( -name "*.md" -o -name "CHANGELOG*" -o -name "LICENSE*" -o -name "README*" -o -name "*.txt" \) -delete 2>/dev/null || true && \
-    find /app/node_modules -type f -name "*.ts" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
-    find /app/node_modules -type f -name "*.tsx" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
-    find /app/node_modules -type f -name "*.js.map" -delete 2>/dev/null || true
+RUN find /app/node_modules -type f -name "*.map" -delete >/dev/null 2>&1 || true && \
+    find /app/node_modules -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "docs" -o -name "examples" \) -exec rm -rf {} + >/dev/null 2>&1 || true && \
+    find /app/node_modules -type f \( -name "*.md" -o -name "CHANGELOG*" -o -name "LICENSE*" -o -name "README*" -o -name "*.txt" \) -delete >/dev/null 2>&1 || true && \
+    find /app/node_modules -type f -name "*.ts" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete >/dev/null 2>&1 || true && \
+    find /app/node_modules -type f -name "*.tsx" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete >/dev/null 2>&1 || true && \
+    find /app/node_modules -type f -name "*.js.map" -delete >/dev/null 2>&1 || true
 COPY docker/copy-prisma-deps.sh /app/copy-prisma-deps.sh
 RUN chmod +x /app/copy-prisma-deps.sh && \
     mkdir -p /app/prisma-minimal && \
-    /app/copy-prisma-deps.sh /app /app/prisma-minimal && \
-    find /app/prisma-minimal -type f -name "*.map" -delete 2>/dev/null || true && \
-    find /app/prisma-minimal -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "docs" -o -name "examples" -o -name ".cache" \) -exec rm -rf {} + 2>/dev/null || true && \
-    find /app/prisma-minimal -type f \( -name "*.md" -o -name "CHANGELOG*" -o -name "LICENSE*" -o -name "README*" \) -delete 2>/dev/null || true && \
-    find /app/prisma-minimal -type f -name "*.ts" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
-    find /app/prisma-minimal -type f -name "*.tsx" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
-    find /app/prisma-minimal -type f -name "*.d.ts" -delete 2>/dev/null || true && \
-    rm -rf /app/prisma-minimal/node_modules/.cache /app/prisma-minimal/node_modules/.npm 2>/dev/null || true && \
-    find /app/prisma-minimal/node_modules -type d -name ".cache" -exec rm -rf {} + 2>/dev/null || true && \
-    find /app/prisma-minimal/node_modules -type f -name "*.js.map" -delete 2>/dev/null || true && \
-    find /app/prisma-minimal/node_modules -type f \( -name "*.json" ! -name "package.json" -o -name "*.lock" -o -name "*.log" \) -delete 2>/dev/null || true && \
+    /app/copy-prisma-deps.sh /app /app/prisma-minimal >/dev/null 2>&1 && \
+    find /app/prisma-minimal -type f -name "*.map" -delete >/dev/null 2>&1 || true && \
+    find /app/prisma-minimal -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "docs" -o -name "examples" -o -name ".cache" \) -exec rm -rf {} + >/dev/null 2>&1 || true && \
+    find /app/prisma-minimal -type f \( -name "*.md" -o -name "CHANGELOG*" -o -name "LICENSE*" -o -name "README*" \) -delete >/dev/null 2>&1 || true && \
+    find /app/prisma-minimal -type f -name "*.ts" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete >/dev/null 2>&1 || true && \
+    find /app/prisma-minimal -type f -name "*.tsx" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete >/dev/null 2>&1 || true && \
+    find /app/prisma-minimal -type f -name "*.d.ts" -delete >/dev/null 2>&1 || true && \
+    rm -rf /app/prisma-minimal/node_modules/.cache /app/prisma-minimal/node_modules/.npm >/dev/null 2>&1 || true && \
+    find /app/prisma-minimal/node_modules -type d -name ".cache" -exec rm -rf {} + >/dev/null 2>&1 || true && \
+    find /app/prisma-minimal/node_modules -type f -name "*.js.map" -delete >/dev/null 2>&1 || true && \
+    find /app/prisma-minimal/node_modules -type f \( -name "*.json" ! -name "package.json" -o -name "*.lock" -o -name "*.log" \) -delete >/dev/null 2>&1 || true && \
     chown -R nextjs:nodejs /app/prisma-minimal
 FROM base AS runner
 ENV NODE_ENV=production
@@ -68,18 +68,18 @@ RUN addgroup --system --gid 1001 nodejs && \
 WORKDIR /app
 RUN mkdir -p ./public/uploads && chown -R nextjs:nodejs /app
 COPY --from=builder /app/public ./public
-RUN rm -rf ./public/uploads/* 2>/dev/null || true && \
-    find ./public -name "*.map" -delete 2>/dev/null || true && \
-    find ./public -type f \( -name "*.svg" ! -path "*/assets/*" -o -name "next.svg" -o -name "vercel.svg" \) -delete 2>/dev/null || true && \
+RUN rm -rf ./public/uploads/* >/dev/null 2>&1 || true && \
+    find ./public -name "*.map" -delete >/dev/null 2>&1 || true && \
+    find ./public -type f \( -name "*.svg" ! -path "*/assets/*" -o -name "next.svg" -o -name "vercel.svg" \) -delete >/dev/null 2>&1 || true && \
     chown -R nextjs:nodejs ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-RUN find .next -name "*.map" -delete 2>/dev/null || true && \
-    find .next -type f -name "*.d.ts" -delete 2>/dev/null || true && \
-    find .next -type d -name ".cache" -exec rm -rf {} + 2>/dev/null || true && \
-    find .next/node_modules -type f -name "*.ts" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
-    find .next/node_modules -type f -name "*.tsx" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete 2>/dev/null || true && \
-    find .next/node_modules -type f \( -name "*.json" ! -name "package.json" -o -name "*.lock" -o -name "*.log" \) -delete 2>/dev/null || true && \
+RUN find .next -name "*.map" -delete >/dev/null 2>&1 || true && \
+    find .next -type f -name "*.d.ts" -delete >/dev/null 2>&1 || true && \
+    find .next -type d -name ".cache" -exec rm -rf {} + >/dev/null 2>&1 || true && \
+    find .next/node_modules -type f -name "*.ts" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete >/dev/null 2>&1 || true && \
+    find .next/node_modules -type f -name "*.tsx" ! -path "*/dist/*" ! -path "*/lib/*" ! -path "*/build/*" -delete >/dev/null 2>&1 || true && \
+    find .next/node_modules -type f \( -name "*.json" ! -name "package.json" -o -name "*.lock" -o -name "*.log" \) -delete >/dev/null 2>&1 || true && \
     chown -R nextjs:nodejs .next
 COPY --from=builder /app/prisma ./prisma
 RUN chown -R nextjs:nodejs ./prisma
