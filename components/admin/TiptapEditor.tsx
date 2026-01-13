@@ -1329,6 +1329,39 @@ const ResizableImage = Image.extend({
             return null;
           }
           
+          const MAX_SEARCH_RADIUS = 50;
+          
+          const candidates: Array<{ pos: number; distance: number }> = [];
+          
+          for (let offset = 0; offset <= MAX_SEARCH_RADIUS; offset++) {
+            const positions = offset === 0 
+              ? [clampedPos]
+              : [clampedPos - offset, clampedPos + offset];
+            
+            for (const pos of positions) {
+              if (pos < 0 || pos > doc.content.size) continue;
+              if (pos > nodeStart && pos < nodeEnd) continue;
+              
+              try {
+                const $pos = doc.resolve(pos);
+                const parent = $pos.parent;
+                const index = $pos.index();
+                
+                if (parent.canReplace(index, index, Fragment.from(dragState.node))) {
+                  const distance = Math.abs(clampedPos - pos);
+                  candidates.push({ pos, distance });
+                }
+              } catch {
+                continue;
+              }
+            }
+          }
+          
+          if (candidates.length > 0) {
+            candidates.sort((a, b) => a.distance - b.distance);
+            return candidates[0].pos;
+          }
+          
           const currentDocSize = doc.content.size;
           const needsRebuild = !cachedImageNodes || 
                                cachedDocSize !== currentDocSize || 
@@ -1336,8 +1369,6 @@ const ResizableImage = Image.extend({
           
           if (needsRebuild) {
             cachedImageNodes = [];
-            // Include ALL image nodes (kể cả ảnh đang drag) để tính gap chính xác.
-            // Các gap rơi trong vùng ảnh đang kéo sẽ được lọc ở bước sau.
             doc.descendants((node, pos) => {
               if (node.type.name === 'image') {
                 const size = node.nodeSize;
@@ -1389,33 +1420,6 @@ const ResizableImage = Image.extend({
                   return bestGap;
                 }
               } catch {
-                // fall through to fallback
-              }
-            }
-          }
-          
-          // Fallback: scan around clampedPos for any valid insertion point
-          const MAX_SEARCH_RADIUS = 15;
-          
-          for (let offset = 0; offset <= MAX_SEARCH_RADIUS; offset++) {
-            const positions = offset === 0 
-              ? [clampedPos]
-              : [clampedPos - offset, clampedPos + offset];
-            
-            for (const pos of positions) {
-              if (pos < 0 || pos > doc.content.size) continue;
-              if (pos > nodeStart && pos < nodeEnd) continue;
-              
-              try {
-                const $pos = doc.resolve(pos);
-                const parent = $pos.parent;
-                const index = $pos.index();
-                
-                if (parent.canReplace(index, index, Fragment.from(dragState.node))) {
-                  return pos;
-                }
-              } catch {
-                continue;
               }
             }
           }
