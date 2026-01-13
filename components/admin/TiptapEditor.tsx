@@ -67,6 +67,7 @@ interface ColorPickerProps {
   isOpen: boolean;
   onOpen: () => void;
   onClose: () => void;
+  showColorBar?: boolean;
 }
 
 function ColorPicker({
@@ -80,7 +81,8 @@ function ColorPicker({
   showColorIndicator = false,
   isOpen,
   onOpen,
-  onClose
+  onClose,
+  showColorBar = false
 }: ColorPickerProps) {
   const [pickerPosition, setPickerPosition] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -176,6 +178,12 @@ function ColorPicker({
           <span className={getIconClassName()} style={getIconStyle()}>
             {icon}
           </span>
+          {showColorBar && (
+            <div
+              className="absolute bottom-1 left-1/2 transform -translate-x-1/2 h-0.5 w-4 rounded"
+              style={{ backgroundColor: currentColor }}
+            />
+          )}
         </button>
       </div>
       
@@ -3814,7 +3822,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         {/* Colors */}
         <div className={`${toolbarGroupClass} gap-2`}>
           <ColorPicker
-            icon={<tiptapIcons.TextColor width={16} height={16} fill={textColor} />}
+            icon={<tiptapIcons.TextColor width={16} height={16} />}
             currentColor={textColor}
             onColorChange={(color) => {
               setTextColor(color);
@@ -3826,6 +3834,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             isOpen={openColorPicker === 'text'}
             onOpen={() => setOpenColorPicker('text')}
             onClose={() => setOpenColorPicker(null)}
+            showColorBar={true}
           />
 
           <ColorPicker
@@ -3845,6 +3854,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             isOpen={openColorPicker === 'highlight'}
             onOpen={() => setOpenColorPicker('highlight')}
             onClose={() => setOpenColorPicker(null)}
+            showColorBar={true}
           />
         </div>
 
