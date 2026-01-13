@@ -19,7 +19,7 @@ import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Extension, type CommandProps, type Editor } from '@tiptap/core';
-import { Fragment, type Node as PMNode } from 'prosemirror-model';
+import { Fragment, type Node as PMNode, DOMParser } from 'prosemirror-model';
 import { TextSelection } from 'prosemirror-state';
 import type { EditorView, NodeView } from 'prosemirror-view';
 import { X, ChevronDown, Menu, Search, Copy, Pencil, Unlink, Image as ImageIcon, Upload, Globe, Grid3x3, LayoutGrid, Columns } from 'lucide-react';
@@ -2241,7 +2241,6 @@ interface ExtractIframesResult {
 }
 
 // Extract all iframes from HTML and return them along with the remaining HTML
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const extractIframesFromHTML = (html: string): ExtractIframesResult => {
   if (!html) return { iframes: [], remainingHTML: html };
 
@@ -2483,6 +2482,8 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
   const [imageCaptionDialogPosition, setImageCaptionDialogPosition] = useState<{ top: number; left: number } | null>(null);
   const [imageLinkDialogPosition, setImageLinkDialogPosition] = useState<{ top: number; left: number } | null>(null);
   const [imageReplaceDialogPosition, setImageReplaceDialogPosition] = useState<{ top: number; left: number } | null>(null);
+  const [showIframeDialog, setShowIframeDialog] = useState(false);
+  const [iframeInput, setIframeInput] = useState('');
   
   const editor = useEditor({
     immediatelyRender: false,
@@ -2544,9 +2545,79 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       }
     },
     editorProps: {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      handlePaste(_view: EditorView, _event: ClipboardEvent) {
-        // Paste handling logic can be added here if needed
+      handlePaste(view: EditorView, event: ClipboardEvent) {
+        const clipboardData = event.clipboardData;
+        if (!clipboardData) {
+          return false;
+        }
+
+        const html = clipboardData.getData('text/html');
+        if (html) {
+          const { iframes, remainingHTML } = extractIframesFromHTML(html);
+          
+          if (iframes.length > 0) {
+            event.preventDefault();
+            
+            const { state, dispatch } = view;
+            const { tr } = state;
+            const { from, to } = state.selection;
+            
+            if (from !== to) {
+              tr.delete(from, to);
+            }
+            
+            let insertPos = from;
+            iframes.forEach((iframeAttrs) => {
+              const iframeNode = state.schema.nodes.iframe.create(iframeAttrs);
+              tr.insert(insertPos, iframeNode);
+              insertPos += iframeNode.nodeSize;
+            });
+            
+            if (remainingHTML && remainingHTML.trim()) {
+              const tempDiv = document.createElement('div');
+              tempDiv.innerHTML = remainingHTML;
+              
+              const domParser = DOMParser.fromSchema(state.schema);
+              try {
+                const parsedContent = domParser.parse(tempDiv);
+                if (parsedContent.content.size > 0) {
+                  tr.insert(insertPos, parsedContent.content);
+                }
+              } catch (error) {
+                const text = tempDiv.textContent || remainingHTML;
+                if (text.trim()) {
+                  const textNode = state.schema.text(text);
+                  tr.insert(insertPos, textNode);
+                }
+              }
+            }
+            
+            dispatch(tr);
+            return true;
+          }
+        }
+        
+        const text = clipboardData.getData('text/plain');
+        if (text) {
+          const iframeAttrs = parseIframeInput(text);
+          if (iframeAttrs && iframeAttrs.src) {
+            event.preventDefault();
+            
+            const { state, dispatch } = view;
+            const { tr } = state;
+            const { from, to } = state.selection;
+            
+            if (from !== to) {
+              tr.delete(from, to);
+            }
+            
+            const iframeNode = state.schema.nodes.iframe.create(iframeAttrs);
+            tr.insert(from, iframeNode);
+            dispatch(tr);
+            return true; // Handled
+          }
+        }
+        
         return false;
       },
     },
@@ -3241,6 +3312,68 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             </div>
         )}
 
+        {/* Iframe Dialog */}
+        {showIframeDialog && (
+          <div 
+            className="fixed inset-0 flex items-center justify-center z-9999 pointer-events-none"
+          >
+            <div 
+              className={`${popoverCardClass} p-6 w-[500px] mx-4 pointer-events-auto`}
+            >
+              <h3 className="text-lg font-semibold mb-4">Insert YouTube Video / Iframe</h3>
+              <div className="mb-4">
+                <textarea
+                  value={iframeInput}
+                  onChange={(e) => setIframeInput(e.target.value)}
+                  placeholder="Enter YouTube URL or iframe embed HTML"
+                  className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[120px] resize-y"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  You can paste a YouTube URL (e.g., https://www.youtube.com/watch?v=...) or iframe HTML code
+                </p>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowIframeDialog(false);
+                    setIframeInput('');
+                  }}
+                  className="px-4 py-2 text-gray-600 rounded hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!iframeInput.trim()) {
+                      return;
+                    }
+
+                    const attrs = parseIframeInput(iframeInput.trim());
+
+                    if (!attrs || !attrs.src) {
+                      alert('Could not parse YouTube URL or iframe embed code. Please check the input.');
+                      return;
+                    }
+
+                    // Ensure src is not null
+                    const nodeAttrs = { ...attrs, src: attrs.src || null };
+                    // @ts-expect-error - setIframe is a custom command from Iframe extension
+                    editor.chain().focus().setIframe(nodeAttrs).run();
+                    
+                    setShowIframeDialog(false);
+                    setIframeInput('');
+                  }}
+                  className="px-4 py-2 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
           <div className="relative image-dropdown-container">
             <button
@@ -3378,22 +3511,8 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           <button
             type="button"
             onClick={() => {
-              const input = window.prompt('Enter YouTube URL or iframe embed HTML:');
-              if (!input) {
-                return;
-              }
-
-              const attrs = parseIframeInput(input);
-
-              if (!attrs || !attrs.src) {
-                alert('Could not parse YouTube URL or iframe embed code. Please check the input.');
-                return;
-              }
-
-              // Ensure src is not null
-              const nodeAttrs = { ...attrs, src: attrs.src || null };
-              // @ts-expect-error - setIframe is a custom command from Iframe extension
-              editor.chain().focus().setIframe(nodeAttrs).run();
+              setIframeInput('');
+              setShowIframeDialog(true);
             }}
             className={`${toolbarButtonClass()} w-auto px-3 gap-2`}
             aria-label="Insert YouTube Video"
