@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
@@ -76,12 +77,15 @@ function ColorPicker({
   showColorIndicator = false
 }: ColorPickerProps) {
   const [showPicker, setShowPicker] = useState(false);
+  const [pickerPosition, setPickerPosition] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (showPicker && !target.closest('.color-picker-container')) {
+      if (showPicker && !target.closest('.color-picker-container') && !target.closest('.color-picker-popup')) {
         setShowPicker(false);
+        setPickerPosition(null);
       }
     };
 
@@ -92,6 +96,51 @@ function ColorPicker({
       };
     }
   }, [showPicker]);
+
+  const handleButtonClick = () => {
+    if (!showPicker && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const pickerWidth = 320;
+      const pickerHeight = 250;
+      const spacing = 4;
+      
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      let top: number;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      if (spaceBelow >= pickerHeight + spacing || spaceBelow >= spaceAbove) {
+        top = rect.bottom + spacing;
+      } else {
+        top = rect.top - pickerHeight - spacing;
+      }
+      
+      top = Math.max(8, Math.min(top, viewportHeight - pickerHeight - 8));
+      
+      let left: number;
+      const spaceRight = viewportWidth - rect.left;
+      const spaceLeft = rect.left;
+      
+      if (spaceRight >= pickerWidth) {
+        left = rect.left;
+      } else if (spaceLeft >= pickerWidth) {
+        left = rect.right - pickerWidth;
+      } else {
+        left = Math.max(8, Math.min(rect.left, viewportWidth - pickerWidth - 8));
+      }
+      
+      setPickerPosition({
+        top,
+        left,
+      });
+      setShowPicker(true);
+    } else {
+      setShowPicker(false);
+      setPickerPosition(null);
+    }
+  };
 
   const getButtonStyle = () => {
     return {
@@ -109,27 +158,39 @@ function ColorPicker({
   };
 
   return (
-    <div className="relative color-picker-container">
-      <button
-        type="button"
-        onClick={() => setShowPicker(!showPicker)}
-        className="px-3 py-2 h-10 text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center relative"
-        title={title}
-        style={getButtonStyle()}
-      >
-        <span className={getIconClassName()} style={getIconStyle()}>
-          {icon}
-        </span>
-      </button>
+    <>
+      <div className="relative color-picker-container">
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={handleButtonClick}
+          className="px-3 py-2 h-10 text-xs tracking-[1px] uppercase transition-colors flex items-center justify-center relative"
+          title={title}
+          style={getButtonStyle()}
+        >
+          <span className={getIconClassName()} style={getIconStyle()}>
+            {icon}
+          </span>
+        </button>
+      </div>
       
-      {showPicker && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-[#e0e0e0] shadow-lg z-50 p-3" style={{ width: '320px' }}>
+      {showPicker && pickerPosition && typeof window !== 'undefined' ? createPortal(
+        <div 
+          className="fixed bg-white border border-[#e0e0e0] shadow-lg z-[9999] p-3 color-picker-popup" 
+          style={{ 
+            width: '320px',
+            top: `${pickerPosition.top}px`,
+            left: `${pickerPosition.left}px`,
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           {onRemove && (
             <button
               type="button"
               onClick={() => {
                 onRemove();
                 setShowPicker(false);
+                setPickerPosition(null);
               }}
               className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded mb-2"
             >
@@ -150,6 +211,7 @@ function ColorPicker({
                 onClick={() => {
                   onColorChange(color);
                   setShowPicker(false);
+                  setPickerPosition(null);
                 }}
                 className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 ${
                   currentColor === color ? 'border-black scale-110' : 'border-gray-200'
@@ -159,9 +221,10 @@ function ColorPicker({
               />
             ))}
           </div>
-        </div>
-      )}
-    </div>
+        </div>,
+        document.body
+      ) : null}
+    </>
   );
 }
 
@@ -2867,8 +2930,6 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           const editorContentContainer = editorDom.closest('.ProseMirror')?.parentElement;
           
           if (editorContentContainer) {
-            const containerRect = editorContentContainer.getBoundingClientRect();
-            
             const { selection } = state;
             const { $from } = selection;
             const linkMark = $from.marks().find(mark => mark.type.name === 'link') ||
@@ -2880,13 +2941,39 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
               setLinkPopoverUrl(href);
               
               const popoverWidth = 320;
-              const spacing = 30;
-              const left = linkRect.left - containerRect.left;
-              const top = linkRect.bottom - containerRect.top + spacing;
+              const popoverHeight = 100;
+              const spacing = 8;
+              
+              const viewportWidth = window.innerWidth;
+              const viewportHeight = window.innerHeight;
+              
+              let top: number;
+              const spaceBelow = viewportHeight - linkRect.bottom;
+              const spaceAbove = linkRect.top;
+              
+              if (spaceBelow >= popoverHeight + spacing || spaceBelow >= spaceAbove) {
+                top = linkRect.bottom + spacing;
+              } else {
+                top = linkRect.top - popoverHeight - spacing;
+              }
+              
+              top = Math.max(8, Math.min(top, viewportHeight - popoverHeight - 8));
+              
+              let left: number;
+              const spaceRight = viewportWidth - linkRect.left;
+              const spaceLeft = linkRect.left;
+              
+              if (spaceRight >= popoverWidth) {
+                left = linkRect.left;
+              } else if (spaceLeft >= popoverWidth) {
+                left = linkRect.right - popoverWidth;
+              } else {
+                left = Math.max(8, Math.min(linkRect.left, viewportWidth - popoverWidth - 8));
+              }
               
               setLinkPopoverPosition({
-                top: Math.max(10, top),
-                left: Math.max(10, Math.min(left, containerRect.width - popoverWidth - 10)),
+                top,
+                left,
               });
               
               setShowLinkPopover(true);
@@ -3207,20 +3294,38 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
               const startCoords = view.coordsAtPos(from);
               const endCoords = view.coordsAtPos(to);
               
-              const editorDom = view.dom;
-              const editorContentContainer = editorDom.closest('.ProseMirror')?.parentElement;
+              const dialogWidth = 500;
+              const dialogHeight = 200; // Approximate height
+              const spacing = 8;
               
-              if (editorContentContainer) {
-                const containerRect = editorContentContainer.getBoundingClientRect();
-                const spacing = 30;
-                
-                const left = startCoords.left - containerRect.left;
-                const top = endCoords.bottom - containerRect.top + spacing;
-                
-                setLinkDialogPosition({ top, left });
+              const viewportWidth = window.innerWidth;
+              const viewportHeight = window.innerHeight;
+              
+              let top: number;
+              const spaceBelow = viewportHeight - endCoords.bottom;
+              const spaceAbove = startCoords.top;
+              
+              if (spaceBelow >= dialogHeight + spacing || spaceBelow >= spaceAbove) {
+                top = endCoords.bottom + spacing;
               } else {
-                setLinkDialogPosition(null);
+                top = startCoords.top - dialogHeight - spacing;
               }
+              
+              top = Math.max(8, Math.min(top, viewportHeight - dialogHeight - 8));
+              
+              let left: number;
+              const spaceRight = viewportWidth - startCoords.left;
+              const spaceLeft = startCoords.left;
+              
+              if (spaceRight >= dialogWidth) {
+                left = startCoords.left;
+              } else if (spaceLeft >= dialogWidth) {
+                left = endCoords.right - dialogWidth;
+              } else {
+                left = Math.max(8, Math.min(startCoords.left, viewportWidth - dialogWidth - 8));
+              }
+              
+              setLinkDialogPosition({ top, left });
               
               setShowLinkDialog(true);
             }}
@@ -3757,9 +3862,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         )}
 
         {/* Image Alt Text Dialog */}
-        {showImageAltDialog && selectedImagePos !== null && selectedImageNode && imageAltDialogPosition && (
+        {showImageAltDialog && selectedImagePos !== null && selectedImageNode && imageAltDialogPosition && typeof window !== 'undefined' ? createPortal(
           <div 
-            className={`absolute ${popoverCardClass} p-6 w-[500px] z-50 image-alt-dialog`}
+            className={`fixed ${popoverCardClass} p-6 w-[500px] z-50 image-alt-dialog`}
             style={{
               top: `${imageAltDialogPosition.top}px`,
               left: `${imageAltDialogPosition.left}px`,
@@ -3814,13 +3919,14 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                   Apply
                 </button>
               </div>
-          </div>
-        )}
+          </div>,
+          document.body
+        ) : null}
 
         {/* Image Caption Dialog */}
-        {showImageCaptionDialog && selectedImagePos !== null && selectedImageNode && imageCaptionDialogPosition && (
+        {showImageCaptionDialog && selectedImagePos !== null && selectedImageNode && imageCaptionDialogPosition && typeof window !== 'undefined' ? createPortal(
           <div 
-            className={`absolute ${popoverCardClass} p-6 w-[500px] z-50 image-caption-dialog`}
+            className={`fixed ${popoverCardClass} p-6 w-[500px] z-50 image-caption-dialog`}
             style={{
               top: `${imageCaptionDialogPosition.top}px`,
               left: `${imageCaptionDialogPosition.left}px`,
@@ -3862,8 +3968,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                   Apply
                 </button>
               </div>
-          </div>
-        )}
+          </div>,
+          document.body
+        ) : null}
 
         {/* Image Link Dialog */}
         {showImageLinkDialog && selectedImagePos !== null && selectedImageNode && imageLinkDialogPosition && (
@@ -4025,9 +4132,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         )}
         
         {/* Link Popover */}
-        {showLinkPopover && linkPopoverUrl && (
+        {showLinkPopover && linkPopoverUrl && typeof window !== 'undefined' ? createPortal(
           <div 
-            className={`link-popover absolute ${popoverCardClass} z-50`}
+            className={`link-popover fixed ${popoverCardClass} z-50`}
             style={{
               top: `${linkPopoverPosition.top}px`,
               left: `${linkPopoverPosition.left}px`,
@@ -4106,7 +4213,23 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                     const selectedText = editor.state.doc.textBetween(linkFrom, linkTo, ' ');
                     setLinkText(selectedText);
                     setLinkUrl(linkPopoverUrl);
-                    setLinkDialogPosition(linkPopoverPosition);
+                    
+                    const dialogWidth = 500;
+                    const dialogHeight = 200;
+                    const viewportWidth = window.innerWidth;
+                    const viewportHeight = window.innerHeight;
+                    
+                    let top = linkPopoverPosition.top;
+                    let left = linkPopoverPosition.left;
+                    
+                    if (top + dialogHeight > viewportHeight - 8) {
+                      top = Math.max(8, viewportHeight - dialogHeight - 8);
+                    }
+                    if (left + dialogWidth > viewportWidth - 8) {
+                      left = Math.max(8, viewportWidth - dialogWidth - 8);
+                    }
+                    
+                    setLinkDialogPosition({ top, left });
                     setLinkEditRange({ from: linkFrom, to: linkTo });
                     setShowLinkPopover(false);
                     setShowLinkDialog(true);
@@ -4129,13 +4252,14 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                 <Unlink size={18} className="text-gray-600" />
               </button>
             </div>
-          </div>
-        )}
+          </div>,
+          document.body
+        ) : null}
 
         
-        {showLinkDialog && linkDialogPosition && (
+        {showLinkDialog && linkDialogPosition && typeof window !== 'undefined' ? createPortal(
           <div 
-            className={`absolute ${popoverCardClass} p-6 w-[500px] z-50`}
+            className={`fixed ${popoverCardClass} p-6 w-[500px] z-50`}
             style={{
               top: `${linkDialogPosition.top}px`,
               left: `${linkDialogPosition.left}px`,
@@ -4229,8 +4353,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                 Apply
               </button>
             </div>
-          </div>
-        )}
+          </div>,
+          document.body
+        ) : null}
       </div>
 
       {/* Image Layout Dropdown */}
