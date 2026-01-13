@@ -86,6 +86,77 @@ html {
   min-height: 400px;
 }
 
+/* Ensure table is visible in editor - match both with and without class */
+.tiptap-editor-container .ProseMirror table,
+.tiptap-editor-container .ProseMirror table.tiptap-table,
+.ProseMirror table,
+.ProseMirror table.tiptap-table {
+  display: table !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  border: 1px solid #000 !important;
+  border-collapse: collapse !important;
+  width: 100% !important;
+  margin: 1.5em 0 !important;
+  table-layout: fixed !important;
+}
+
+.tiptap-editor-container .ProseMirror table:first-child,
+.tiptap-editor-container .ProseMirror table.tiptap-table:first-child,
+.ProseMirror table:first-child,
+.ProseMirror table.tiptap-table:first-child {
+  margin-top: 0 !important;
+}
+
+.tiptap-editor-container .ProseMirror table td,
+.tiptap-editor-container .ProseMirror table th,
+.tiptap-editor-container .ProseMirror table.tiptap-table td,
+.tiptap-editor-container .ProseMirror table.tiptap-table th,
+.ProseMirror table td,
+.ProseMirror table th,
+.ProseMirror table.tiptap-table td,
+.ProseMirror table.tiptap-table th {
+  display: table-cell !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  border: 1px solid #ddd !important;
+  padding: 8px !important;
+  min-width: 1em !important;
+  min-height: 1.5em !important;
+  vertical-align: top !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+}
+
+.tiptap-editor-container .ProseMirror table th,
+.tiptap-editor-container .ProseMirror table.tiptap-table th,
+.ProseMirror table th,
+.ProseMirror table.tiptap-table th {
+  font-weight: bold !important;
+  text-align: left !important;
+  background-color: #f5f5f5 !important;
+}
+
+.tiptap-editor-container .ProseMirror table tr,
+.tiptap-editor-container .ProseMirror table.tiptap-table tr,
+.ProseMirror table tr,
+.ProseMirror table.tiptap-table tr {
+  display: table-row !important;
+  visibility: visible !important;
+}
+
+.tiptap-editor-container .ProseMirror table tbody,
+.tiptap-editor-container .ProseMirror table thead,
+.tiptap-editor-container .ProseMirror table.tiptap-table tbody,
+.tiptap-editor-container .ProseMirror table.tiptap-table thead,
+.ProseMirror table tbody,
+.ProseMirror table thead,
+.ProseMirror table.tiptap-table tbody,
+.ProseMirror table.tiptap-table thead {
+  display: table-row-group !important;
+  visibility: visible !important;
+}
+
 .ProseMirror img {
   max-width: 100%;
   height: auto;
@@ -265,33 +336,102 @@ html {
   text-align: justify;
 }
 
-.ProseMirror .tiptap-table {
-  border-collapse: collapse;
-  margin: 0 0 1.5em 0;
-  margin-top: 1.5em;
-  table-layout: fixed;
-  width: 100%;
-  overflow: hidden;
+/* Table styles - ensure they work in both editor and preview */
+/* Match all tables, not just those with tiptap-table class */
+.ProseMirror table,
+.ProseMirror table.tiptap-table,
+.ProseMirror .tiptap-table,
+.tiptap-editor-container .ProseMirror table,
+.tiptap-editor-container .ProseMirror table.tiptap-table,
+.tiptap-editor-container .ProseMirror .tiptap-table {
+  border-collapse: collapse !important;
+  margin: 0 0 1.5em 0 !important;
+  margin-top: 1.5em !important;
+  table-layout: fixed !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  border: 1px solid #000 !important;
+  display: table !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
-.ProseMirror .tiptap-table:first-child {
-  margin-top: 0;
+.ProseMirror table.tiptap-table:first-child,
+.ProseMirror .tiptap-table:first-child,
+.tiptap-editor-container .ProseMirror table.tiptap-table:first-child,
+.tiptap-editor-container .ProseMirror .tiptap-table:first-child {
+  margin-top: 0 !important;
 }
 
+.ProseMirror table td,
+.ProseMirror table th,
+.ProseMirror table.tiptap-table td,
+.ProseMirror table.tiptap-table th,
 .ProseMirror .tiptap-table td,
-.ProseMirror .tiptap-table th {
-  min-width: 1em;
-  border: 1px solid #ddd;
-  padding: 8px;
-  vertical-align: top;
-  box-sizing: border-box;
-  position: relative;
+.ProseMirror .tiptap-table th,
+.tiptap-editor-container .ProseMirror table td,
+.tiptap-editor-container .ProseMirror table th,
+.tiptap-editor-container .ProseMirror table.tiptap-table td,
+.tiptap-editor-container .ProseMirror table.tiptap-table th,
+.tiptap-editor-container .ProseMirror .tiptap-table td,
+.tiptap-editor-container .ProseMirror .tiptap-table th {
+  min-width: 1em !important;
+  min-height: 1.5em !important;
+  height: auto !important;
+  border: 1px solid #ddd !important;
+  padding: 8px !important;
+  vertical-align: top !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  display: table-cell !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
-.ProseMirror .tiptap-table th {
-  font-weight: bold;
-  text-align: left;
-  background-color: #f5f5f5;
+.ProseMirror table.tiptap-table td:empty,
+.ProseMirror table.tiptap-table th:empty,
+.ProseMirror .tiptap-table td:empty,
+.ProseMirror .tiptap-table th:empty,
+.tiptap-editor-container .ProseMirror table.tiptap-table td:empty,
+.tiptap-editor-container .ProseMirror table.tiptap-table th:empty {
+  min-height: 1.5em !important;
+}
+
+.ProseMirror table.tiptap-table td:empty::before,
+.ProseMirror table.tiptap-table th:empty::before,
+.ProseMirror .tiptap-table td:empty::before,
+.ProseMirror .tiptap-table th:empty::before {
+  content: '\200b'; /* Zero-width space to maintain cell height */
+  display: inline-block;
+}
+
+.ProseMirror table.tiptap-table th,
+.ProseMirror .tiptap-table th,
+.tiptap-editor-container .ProseMirror table.tiptap-table th,
+.tiptap-editor-container .ProseMirror .tiptap-table th {
+  font-weight: bold !important;
+  text-align: left !important;
+  background-color: #f5f5f5 !important;
+}
+
+.ProseMirror table.tiptap-table tr,
+.ProseMirror .tiptap-table tr,
+.tiptap-editor-container .ProseMirror table.tiptap-table tr,
+.tiptap-editor-container .ProseMirror .tiptap-table tr {
+  display: table-row !important;
+  visibility: visible !important;
+}
+
+.ProseMirror table.tiptap-table tbody,
+.ProseMirror table.tiptap-table thead,
+.ProseMirror .tiptap-table tbody,
+.ProseMirror .tiptap-table thead,
+.tiptap-editor-container .ProseMirror table.tiptap-table tbody,
+.tiptap-editor-container .ProseMirror table.tiptap-table thead,
+.tiptap-editor-container .ProseMirror .tiptap-table tbody,
+.tiptap-editor-container .ProseMirror .tiptap-table thead {
+  display: table-row-group !important;
+  visibility: visible !important;
 }
 
 .ProseMirror .tiptap-table .selectedCell:after {
@@ -314,6 +454,24 @@ html {
   width: 4px;
   background-color: #adf;
   pointer-events: none;
+  display: none !important; /* Hide resize handles */
+}
+
+/* Disable column resizing cursor and interaction */
+.ProseMirror table.tiptap-table,
+.ProseMirror .tiptap-table,
+.tiptap-editor-container .ProseMirror table {
+  cursor: default !important;
+}
+
+.ProseMirror table.tiptap-table td,
+.ProseMirror table.tiptap-table th,
+.ProseMirror .tiptap-table td,
+.ProseMirror .tiptap-table th,
+.tiptap-editor-container .ProseMirror table td,
+.tiptap-editor-container .ProseMirror table th {
+  cursor: text !important;
+  user-select: text !important;
 }
 
 .ProseMirror .placeholder {

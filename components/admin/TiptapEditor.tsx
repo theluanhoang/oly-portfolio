@@ -23,7 +23,7 @@ import { Extension, type CommandProps, type Editor } from '@tiptap/core';
 import { Fragment, type Node as PMNode, DOMParser } from 'prosemirror-model';
 import { TextSelection } from 'prosemirror-state';
 import type { EditorView, NodeView } from 'prosemirror-view';
-import { X, ChevronDown, Menu, Search, Copy, Pencil, Unlink, Image as ImageIcon, Upload, Globe, Grid3x3, LayoutGrid, Columns } from 'lucide-react';
+import { X, ChevronDown, Menu, Search, Copy, Pencil, Unlink, Image as ImageIcon, Upload, Globe, Grid3x3, LayoutGrid, Columns, Trash2, Plus, Minus } from 'lucide-react';
 import { tiptapIcons } from './tiptapIcons';
 import { Iframe, type IframeAttributes } from './Iframe';
 import { ImageGallery } from './ImageGallery';
@@ -2553,6 +2553,15 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
   const [imageReplaceDialogPosition, setImageReplaceDialogPosition] = useState<{ top: number; left: number } | null>(null);
   const [showIframeDialog, setShowIframeDialog] = useState(false);
   const [iframeInput, setIframeInput] = useState('');
+  const [showTablePopover, setShowTablePopover] = useState(false);
+  const [tableGridSize, setTableGridSize] = useState({ rows: 10, cols: 10 });
+  const [selectedTableGridSize, setSelectedTableGridSize] = useState({ rows: 2, cols: 2 });
+  const [tablePopoverPosition, setTablePopoverPosition] = useState<{ top: number; left: number } | null>(null);
+  const tableButtonRef = useRef<HTMLButtonElement>(null);
+  const [canMergeCells, setCanMergeCells] = useState(false);
+  const [canSplitCell, setCanSplitCell] = useState(false);
+  const [showTableToolbar, setShowTableToolbar] = useState(false);
+  const [tableToolbarPosition, setTableToolbarPosition] = useState<{ top: number; left: number } | null>(null);
   
   const editor = useEditor({
     immediatelyRender: false,
@@ -2591,9 +2600,10 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         multicolor: true,
       }),
       Table.configure({
-        resizable: true,
+        resizable: false,
         HTMLAttributes: {
           class: 'tiptap-table',
+          style: 'border: 1px solid #000; border-collapse: collapse; width: 100%;',
         },
       }),
       TableRow,
@@ -2863,6 +2873,14 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       
+      // Check if clicking inside table popover - use more specific selector
+      const tablePopover = target.closest('.rounded-lg.border.border-slate-200.bg-white.shadow-md');
+      const isInsideTablePopover = tablePopover && (
+        tablePopover.querySelector('.flex.flex-col.gap-1') ||
+        target.closest('.flex.flex-col.gap-1') ||
+        target.closest('[class*="table-col"]')
+      );
+      
       if (
         target.closest('.resizable-image-wrapper') || 
         target.closest('[title*="Image Layout"]') ||
@@ -2872,13 +2890,22 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         target.closest('.image-alt-dialog') ||
         target.closest('.image-caption-dialog') ||
         target.closest('.image-link-dialog') ||
-        target.closest('.image-replace-dialog')
+        target.closest('.image-replace-dialog') ||
+        target.closest('[title="Insert Table"]') ||
+        isInsideTablePopover
       ) {
         if (clickTimeout) {
           clearTimeout(clickTimeout);
           clickTimeout = null;
         }
         return;
+      }
+      
+      // Close table popover if clicking outside
+      if (showTablePopover) {
+        setShowTablePopover(false);
+        setTableGridSize({ rows: 10, cols: 10 });
+        setSelectedTableGridSize({ rows: 2, cols: 2 });
       }
       
       if (clickTimeout) {
@@ -2910,7 +2937,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         clearTimeout(clickTimeout);
       }
     };
-  }, []);
+  }, [showTablePopover]);
 
 
   useEffect(() => {
@@ -3062,8 +3089,112 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       editor.on('update', updateTextColor);
       editor.on('transaction', updateTextColor);
       
+      // Update table merge/split state and calculate toolbar position
+      const updateTableActions = () => {
+        if (editor.isActive('table')) {
+          setCanMergeCells(editor.can().mergeCells());
+          setCanSplitCell(editor.can().splitCell());
+          
+          // Calculate toolbar position using portal approach like ColorPicker
+          const { view } = editor;
+          const { selection } = view.state;
+          const { $anchor } = selection;
+          
+          try {
+            const coords = view.coordsAtPos($anchor.pos);
+            const editorDom = view.dom;
+            const editorContentContainer = editorDom.closest('.ProseMirror')?.parentElement;
+            
+            if (editorContentContainer && coords) {
+              // Find the table cell element to get its bounding rect
+              let cellElement: HTMLElement | null = null;
+              
+              // Try to find the cell element in DOM
+              const allCells = editorDom.querySelectorAll('td, th');
+              for (const cell of Array.from(allCells)) {
+                const cellRect = cell.getBoundingClientRect();
+                // Check if cursor position is within this cell
+                if (coords.left >= cellRect.left && coords.left <= cellRect.right &&
+                    coords.top >= cellRect.top && coords.top <= cellRect.bottom) {
+                  cellElement = cell as HTMLElement;
+                  break;
+                }
+              }
+              
+              // Fallback: use coords if cell not found
+              const cellRect = cellElement?.getBoundingClientRect() || {
+                left: coords.left,
+                right: coords.right,
+                top: coords.top,
+                bottom: coords.bottom,
+              };
+              
+              const toolbarWidth = 450; // Approximate width of toolbar
+              const toolbarHeight = 50; // Approximate height
+              const spacing = 8;
+              
+              const viewportWidth = window.innerWidth;
+              const viewportHeight = window.innerHeight;
+              
+              // Calculate top position
+              let top: number;
+              const spaceBelow = viewportHeight - coords.bottom;
+              const spaceAbove = coords.top;
+              
+              if (spaceBelow >= toolbarHeight + spacing || spaceBelow >= spaceAbove) {
+                top = coords.bottom + spacing;
+              } else {
+                top = coords.top - toolbarHeight - spacing;
+              }
+              
+              top = Math.max(8, Math.min(top, viewportHeight - toolbarHeight - 8));
+              
+              // Calculate left position - align with cell edge based on viewport position
+              let left: number;
+              const viewportCenter = viewportWidth / 2;
+              const cellCenter = (cellRect.left + cellRect.right) / 2;
+              
+              // If cell is on the left side of viewport, align toolbar with left edge of cell
+              // If cell is on the right side, align toolbar with right edge of cell
+              if (cellCenter < viewportCenter) {
+                // Left side: align with left edge of cell
+                left = cellRect.left;
+                // Ensure toolbar doesn't go off screen
+                if (left + toolbarWidth > viewportWidth) {
+                  left = viewportWidth - toolbarWidth - 8;
+                }
+              } else {
+                // Right side: align with right edge of cell
+                left = cellRect.right - toolbarWidth;
+                // Ensure toolbar doesn't go off screen
+                if (left < 8) {
+                  left = 8;
+                }
+              }
+              
+              setTableToolbarPosition({ top, left });
+              setShowTableToolbar(true);
+            }
+          } catch {
+            // Silent fail, hide toolbar
+            setShowTableToolbar(false);
+            setTableToolbarPosition(null);
+          }
+        } else {
+          setCanMergeCells(false);
+          setCanSplitCell(false);
+          setShowTableToolbar(false);
+          setTableToolbarPosition(null);
+        }
+      };
+      
+      editor.on('selectionUpdate', updateTableActions);
+      editor.on('update', updateTableActions);
+      editor.on('transaction', updateTableActions);
+      
       updateHighlightColor();
       updateTextColor();
+      updateTableActions();
       
       return () => {
         editor.off('selectionUpdate', updateHighlightColor);
@@ -3073,6 +3204,10 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         editor.off('selectionUpdate', updateTextColor);
         editor.off('update', updateTextColor);
         editor.off('transaction', updateTextColor);
+        
+        editor.off('selectionUpdate', updateTableActions);
+        editor.off('update', updateTableActions);
+        editor.off('transaction', updateTableActions);
         
         editorDom.removeEventListener('click', clickHandler);
         document.removeEventListener('click', handleOutsideClick);
@@ -3712,81 +3847,136 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
 
         {/* Table */}
         <div className={`${toolbarGroupClass} gap-1`} title="Table tools">
-          <button
-            type="button"
-            onClick={() => {
-              const rows = parseInt(window.prompt('Number of rows:', '3') || '3', 10);
-              const cols = parseInt(window.prompt('Number of columns:', '3') || '3', 10);
-              if (rows > 0 && cols > 0) {
-                editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
-              }
-            }}
-            className={`${toolbarButtonClass()} w-auto px-3 gap-2`}
-            title="Insert Table"
-          >
-            <tiptapIcons.Table size={16} />
-            <span className="text-xs font-semibold text-slate-800">Table</span>
-          </button>
-          {editor.isActive('table') && (
-            <>
-              <button
-                type="button"
-                onClick={() => editor.chain().focus().addColumnBefore().run()}
-                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
-                title="Add Column Before"
+          <div className="relative">
+            <button
+              type="button"
+              ref={tableButtonRef}
+              onClick={() => {
+                if (!showTablePopover && tableButtonRef.current) {
+                  const rect = tableButtonRef.current.getBoundingClientRect();
+                  const popoverWidth = 250;
+                  const popoverHeight = 280;
+                  const spacing = 4;
+                  
+                  const viewportWidth = window.innerWidth;
+                  const viewportHeight = window.innerHeight;
+                  
+                  // Calculate top position
+                  let top: number;
+                  const spaceBelow = viewportHeight - rect.bottom;
+                  const spaceAbove = rect.top;
+                  
+                  if (spaceBelow >= popoverHeight + spacing || spaceBelow >= spaceAbove) {
+                    top = rect.bottom + spacing;
+                  } else {
+                    top = rect.top - popoverHeight - spacing;
+                  }
+                  
+                  top = Math.max(8, Math.min(top, viewportHeight - popoverHeight - 8));
+                  
+                  // Calculate left position
+                  let left: number;
+                  const spaceRight = viewportWidth - rect.left;
+                  const spaceLeft = rect.left;
+                  
+                  if (spaceRight >= popoverWidth) {
+                    left = rect.left;
+                  } else if (spaceLeft >= popoverWidth) {
+                    left = rect.right - popoverWidth;
+                  } else {
+                    left = Math.max(8, Math.min(rect.left, viewportWidth - popoverWidth - 8));
+                  }
+                  
+                  setTablePopoverPosition({ top, left });
+                  setShowTablePopover(true);
+                } else {
+                  setShowTablePopover(false);
+                  setTablePopoverPosition(null);
+                }
+              }}
+              className={`${toolbarButtonClass(showTablePopover)} w-auto px-3 gap-2`}
+              title="Insert Table"
+            >
+              <tiptapIcons.Table size={16} />
+              <span className="text-xs font-semibold text-slate-800">Table</span>
+            </button>
+            
+            {showTablePopover && tablePopoverPosition && typeof window !== 'undefined' ? createPortal(
+              <div 
+                className={`fixed z-50 ${popoverCardClass} p-3`}
+                style={{
+                  top: `${tablePopoverPosition.top}px`,
+                  left: `${tablePopoverPosition.left}px`,
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
               >
-                +Col
-              </button>
-              <button
-                type="button"
-                onClick={() => editor.chain().focus().addColumnAfter().run()}
-                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
-                title="Add Column After"
-              >
-                Col+
-              </button>
-              <button
-                type="button"
-                onClick={() => editor.chain().focus().deleteColumn().run()}
-                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
-                title="Delete Column"
-              >
-                -Col
-              </button>
-              <button
-                type="button"
-                onClick={() => editor.chain().focus().addRowBefore().run()}
-                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
-                title="Add Row Before"
-              >
-                +Row
-              </button>
-              <button
-                type="button"
-                onClick={() => editor.chain().focus().addRowAfter().run()}
-                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
-                title="Add Row After"
-              >
-                Row+
-              </button>
-              <button
-                type="button"
-                onClick={() => editor.chain().focus().deleteRow().run()}
-                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
-                title="Delete Row"
-              >
-                -Row
-              </button>
-              <button
-                type="button"
-                onClick={() => editor.chain().focus().deleteTable().run()}
-                className={`${toolbarButtonClass()} w-auto px-3 text-[11px]`}
-                title="Delete Table"
-              >
-                ×Table
-              </button>
-            </>
-          )}
+                <div className="flex flex-col gap-1">
+                  {Array.from({ length: tableGridSize.rows }).map((_, rowIndex) => {
+                    const row = rowIndex + 1;
+                    return (
+                      <div key={`table-row-${row}`} className="flex gap-1">
+                        {Array.from({ length: tableGridSize.cols }).map((_, colIndex) => {
+                          const col = colIndex + 1;
+                          const isSelected = col <= selectedTableGridSize.cols && row <= selectedTableGridSize.rows;
+                          return (
+                            <div
+                              key={`table-col-${col}`}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation(); // Prevent event bubbling to handleClickOutside
+                                
+                                if (!editor || editor.isDestroyed) {
+                                  return;
+                                }
+                                
+                                const rows = selectedTableGridSize.rows;
+                                const cols = selectedTableGridSize.cols;
+                                
+                                setShowTablePopover(false);
+                                setTablePopoverPosition(null);
+                                setTableGridSize({ rows: 10, cols: 10 });
+                                setSelectedTableGridSize({ rows: 2, cols: 2 });
+                                
+                                if (editor && !editor.isDestroyed) {
+                                  editor.chain().focus().insertTable({ 
+                                    rows, 
+                                    cols, 
+                                    withHeaderRow: false 
+                                  }).run();
+                                }
+                              }}
+                              onMouseOver={() => {
+                                if (row === tableGridSize.rows && row < 10) {
+                                  setTableGridSize(prev => ({ ...prev, rows: Math.min(row + 1, 10) }));
+                                }
+                                if (col === tableGridSize.cols && col < 10) {
+                                  setTableGridSize(prev => ({ ...prev, cols: Math.min(col + 1, 10) }));
+                                }
+                                
+                                setSelectedTableGridSize({ rows: row, cols: col });
+                              }}
+                              className={`cursor-pointer border border-gray-300 rounded-[2px] p-1 transition-colors ${
+                                isSelected 
+                                  ? 'bg-slate-900 border-slate-900' 
+                                  : 'bg-white hover:bg-slate-100'
+                              }`}
+                            >
+                              <div className="w-4 h-4 rounded-[2px] border border-gray-300"></div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                  
+                  <div className="mt-2 text-center text-sm text-slate-700 font-medium">
+                    {selectedTableGridSize.rows} × {selectedTableGridSize.cols}
+                  </div>
+                </div>
+              </div>,
+              document.body
+            ) : null}
+          </div>
         </div>
 
         {/* Clear Formatting */}
@@ -3801,8 +3991,165 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       </div>
 
       {/* Editor Content */}
-      <div className="bg-white min-h-[400px] max-h-[600px] p-6 relative overflow-y-auto">
+      <div className="bg-white min-h-[400px] max-h-[600px] p-6 relative overflow-y-auto tiptap-editor-container">
         <EditorContent editor={editor} />
+        
+        {/* Table Toolbar - using portal like ColorPicker */}
+        {showTableToolbar && tableToolbarPosition && typeof window !== 'undefined' && editor && editor.isActive('table') ? createPortal(
+          <div 
+            className="fixed flex items-center gap-2 rounded-md border border-slate-200 bg-white p-1 shadow-md z-50"
+            style={{
+              top: `${tableToolbarPosition.top}px`,
+              left: `${tableToolbarPosition.left}px`,
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+              {/* Add Column Before */}
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().addColumnBefore().run()}
+                disabled={!editor.can().addColumnBefore()}
+                className={`${toolbarButtonClass(false, !editor.can().addColumnBefore())} w-9 h-9 relative group`}
+                title="Chèn cột trước"
+                aria-label="Insert Column Before"
+              >
+                <Columns size={16} className="rotate-90" />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Chèn cột trước
+                </span>
+              </button>
+              
+              {/* Add Column After */}
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().addColumnAfter().run()}
+                disabled={!editor.can().addColumnAfter()}
+                className={`${toolbarButtonClass(false, !editor.can().addColumnAfter())} w-9 h-9 relative group`}
+                title="Chèn cột sau"
+                aria-label="Insert Column After"
+              >
+                <Columns size={16} className="-rotate-90" />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Chèn cột sau
+                </span>
+              </button>
+              
+              {/* Delete Column */}
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().deleteColumn().run()}
+                disabled={!editor.can().deleteColumn()}
+                className={`${toolbarButtonClass(false, !editor.can().deleteColumn())} w-9 h-9 relative group`}
+                title="Xóa cột"
+                aria-label="Delete Column"
+              >
+                <Minus size={16} />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Xóa cột
+                </span>
+              </button>
+              
+              {/* Separator */}
+              <div className="mx-1 h-4 w-px bg-slate-300" />
+              
+              {/* Add Row Above */}
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().addRowBefore().run()}
+                disabled={!editor.can().addRowBefore()}
+                className={`${toolbarButtonClass(false, !editor.can().addRowBefore())} w-9 h-9 relative group`}
+                title="Chèn hàng phía trên"
+                aria-label="Insert Row Above"
+              >
+                <Plus size={16} className="rotate-90" />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Chèn hàng phía trên
+                </span>
+              </button>
+              
+              {/* Add Row Below */}
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().addRowAfter().run()}
+                disabled={!editor.can().addRowAfter()}
+                className={`${toolbarButtonClass(false, !editor.can().addRowAfter())} w-9 h-9 relative group`}
+                title="Chèn hàng phía dưới"
+                aria-label="Insert Row Below"
+              >
+                <Plus size={16} className="-rotate-90" />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Chèn hàng phía dưới
+                </span>
+              </button>
+              
+              {/* Delete Row */}
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().deleteRow().run()}
+                disabled={!editor.can().deleteRow()}
+                className={`${toolbarButtonClass(false, !editor.can().deleteRow())} w-9 h-9 relative group`}
+                title="Xóa hàng"
+                aria-label="Delete Row"
+              >
+                <Minus size={16} className="rotate-90" />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Xóa hàng
+                </span>
+              </button>
+              
+              {/* Separator */}
+              <div className="mx-1 h-4 w-px bg-slate-300" />
+              
+              {/* Merge Cells */}
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().mergeCells().run()}
+                disabled={!canMergeCells}
+                className={`${toolbarButtonClass(canMergeCells, !canMergeCells)} w-9 h-9 relative group`}
+                title="Gộp ô"
+                aria-label="Merge Cells"
+              >
+                <Grid3x3 size={16} />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Gộp ô
+                </span>
+              </button>
+              
+              {/* Split Cell */}
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().splitCell().run()}
+                disabled={!canSplitCell}
+                className={`${toolbarButtonClass(canSplitCell, !canSplitCell)} w-9 h-9 relative group`}
+                title="Tách ô"
+                aria-label="Split Cell"
+              >
+                <LayoutGrid size={16} />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Tách ô
+                </span>
+              </button>
+              
+              {/* Separator */}
+              <div className="mx-1 h-4 w-px bg-slate-300" />
+              
+              {/* Delete Table */}
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().deleteTable().run()}
+                disabled={!editor.can().deleteTable()}
+                className={`${toolbarButtonClass(false, !editor.can().deleteTable())} w-9 h-9 relative group`}
+                title="Xóa bảng"
+                aria-label="Delete Table"
+              >
+                <Trash2 size={16} />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Xóa bảng
+                </span>
+              </button>
+          </div>,
+          document.body
+        ) : null}
         
         {/* Image Toolbar */}
         {showImageToolbar && selectedImagePos !== null && selectedImageNode && imageToolbarPos && (
