@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, useState, useCallback, useImperativeHandle } from 'react';
+import { forwardRef, useState, useCallback, useEffect, useRef } from 'react';
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
@@ -27,10 +27,42 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
   const textareaId = `textarea-${name}`;
   const hasError = !!error;
   const [value, setValue] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
+  const [, setIsFocused] = useState(false);
   const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(null);
+  const [minHeight, setMinHeight] = useState<number | undefined>(undefined);
+  const placeholderRef = useRef<HTMLDivElement | null>(null);
 
   const propsClassName = 'className' in props ? (props.className as string) || '' : '';
+
+  useEffect(() => {
+    if (!multilinePlaceholder || !placeholder || !textareaRef) {
+      return;
+    }
+
+    const measureHeight = () => {
+      if (placeholderRef.current && textareaRef) {
+        const textareaWidth = textareaRef.offsetWidth;
+        if (placeholderRef.current) {
+          placeholderRef.current.style.width = `${textareaWidth - 32}px`; // Subtract padding (16px * 2)
+        }
+        
+        const placeholderHeight = placeholderRef.current.scrollHeight;
+        const padding = 24;
+        const calculatedMinHeight = placeholderHeight + padding;
+        setMinHeight(calculatedMinHeight);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      requestAnimationFrame(measureHeight);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [multilinePlaceholder, placeholder, textareaRef]);
+
+  const minHeightStyle = minHeight !== undefined 
+    ? { minHeight: `${minHeight}px` }
+    : {};
 
   const textareaClassName = `w-full min-h-[44px] px-4 py-3 rounded-lg border bg-white text-[#333] focus:outline-none transition-colors resize-none ${
     hasError
@@ -38,12 +70,13 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
       : 'border-black focus:border-black'
   } ${propsClassName}`;
 
-  const { className: _unused, onChange, onFocus, onBlur, value: propsValue, ...textareaProps } = props as { 
+  const { className: _unused, onChange, onFocus, onBlur, value: propsValue, style: propsStyle, ...textareaProps } = props as { 
     className?: string; 
     onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
     onFocus?: (e: React.FocusEvent<HTMLTextAreaElement>) => void;
     onBlur?: (e: React.FocusEvent<HTMLTextAreaElement>) => void;
     value?: string;
+    style?: React.CSSProperties;
     [key: string]: unknown;
   };
 
@@ -101,6 +134,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
           placeholder={multilinePlaceholder ? '' : placeholder}
           required={required}
           className={textareaClassName}
+          style={{ ...minHeightStyle, ...propsStyle }}
           aria-invalid={hasError}
           aria-describedby={hasError ? `${textareaId}-error` : undefined}
           onChange={handleChange}
@@ -110,18 +144,31 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
           {...textareaProps}
         />
         {showPlaceholder && placeholder && (
-          <div 
-            className="absolute top-3 left-4 text-gray-400 pointer-events-none whitespace-pre-line leading-relaxed"
-            style={{ 
-              color: '#9ca3af',
-              fontSize: 'inherit',
-              fontFamily: 'inherit',
-              lineHeight: 'inherit',
-              maxWidth: 'calc(100% - 2rem)'
-            }}
-          >
-            {placeholder}
-          </div>
+          <>
+            <div 
+              ref={placeholderRef}
+              className="absolute top-3 left-4 right-4 text-gray-400 pointer-events-none whitespace-pre-line leading-relaxed invisible"
+              style={{ 
+                color: '#9ca3af',
+                fontSize: 'inherit',
+                fontFamily: 'inherit',
+                lineHeight: 'inherit'
+              }}
+            >
+              {placeholder}
+            </div>
+            <div 
+              className="absolute top-3 left-4 right-4 text-gray-400 pointer-events-none whitespace-pre-line leading-relaxed"
+              style={{ 
+                color: '#9ca3af',
+                fontSize: 'inherit',
+                fontFamily: 'inherit',
+                lineHeight: 'inherit'
+              }}
+            >
+              {placeholder}
+            </div>
+          </>
         )}
       </div>
       {hasError && (
