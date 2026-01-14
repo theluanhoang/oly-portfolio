@@ -63,7 +63,6 @@ function ConvergeText({
               transitionDuration: `${baseDuration}ms`,
               transitionTimingFunction: 'ease-in-out',
               letterSpacing: '2.08px',
-              fontFamily: 'Gayathri'
             }}
           >
             {char === ' ' ? '\u00A0' : char}
@@ -115,7 +114,7 @@ function ConvergeTextSplit({
               transitionDuration: `${baseDuration}ms`,
               transitionTimingFunction: 'ease-in-out',
               letterSpacing: '2.08px',
-              fontFamily: 'Gayathri'
+              fontFamily: 'var(--font-gayathri), sans-serif'
             }}
           >
             {char === ' ' ? '\u00A0' : char}
@@ -139,7 +138,7 @@ function ConvergeTextSplit({
               transitionDuration: `${baseDuration}ms`,
               transitionTimingFunction: 'ease-in-out',
               letterSpacing: '2.08px',
-              fontFamily: 'Gayathri'
+              fontFamily: 'var(--font-gayathri), sans-serif'
             }}
           >
             {char === ' ' ? '\u00A0' : char}
