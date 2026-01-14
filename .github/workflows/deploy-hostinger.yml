@@ -45,8 +45,8 @@ jobs:
             ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }}
             ${{ env.DOCKER_IMAGE_NAME }}:latest
           platforms: linux/amd64
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # =====================
       # Create .env file from secrets

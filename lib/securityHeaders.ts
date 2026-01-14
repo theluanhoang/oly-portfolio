@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export function getSecurityHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
-    'X-Frame-Options': 'DENY',
+    'X-Frame-Options': 'SAMEORIGIN',
     'X-Content-Type-Options': 'nosniff',
     'X-XSS-Protection': '1; mode=block',
     'Referrer-Policy': 'strict-origin-when-cross-origin',

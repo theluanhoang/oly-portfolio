@@ -26,18 +26,18 @@ const RATE_LIMIT_CONFIG = {
 } as const;
 
 const API_RATE_LIMIT_CONFIG = {
-  maxRequests: 100,
+  maxRequests: 200,
   windowMs: 60 * 1000,
-  blockDurationMs: 15 * 60 * 1000,
-  burstLimit: 20,
+  blockDurationMs: 10 * 60 * 1000,
+  burstLimit: 50,
   burstWindowMs: 10 * 1000,
 } as const;
 
 const API_GET_RATE_LIMIT_CONFIG = {
-  maxRequests: 300,
+  maxRequests: 500,
   windowMs: 60 * 1000,
   blockDurationMs: 5 * 60 * 1000,
-  burstLimit: 50,
+  burstLimit: 100,
   burstWindowMs: 10 * 1000,
 } as const;
 
@@ -50,8 +50,15 @@ const API_AUTH_RATE_LIMIT_CONFIG = {
 } as const;
 
 function getClientIdentifier(request: NextRequest): string {
+  // Try multiple headers for better IP detection behind proxies/CDN
   const forwarded = request.headers.get('x-forwarded-for');
-  const ip = forwarded ? forwarded.split(',')[0].trim() : request.headers.get('x-real-ip') || 'unknown';
+  const realIp = request.headers.get('x-real-ip');
+  const cfConnectingIp = request.headers.get('cf-connecting-ip');
+  const trueClientIp = request.headers.get('true-client-ip');
+  
+  const ip = cfConnectingIp || trueClientIp || realIp || 
+             (forwarded ? forwarded.split(',')[0].trim() : null) || 
+             'unknown';
   return ip;
 }
 
