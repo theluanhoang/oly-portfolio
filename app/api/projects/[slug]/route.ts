@@ -115,6 +115,8 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
         slug: projectData.slug || slug,
         heroImage: projectData.heroImage || '',
         gallery: projectData.gallery || [],
+        heroImageAssetId: projectData.heroImageAssetId ?? null,
+        galleryAssetIds: projectData.galleryAssetIds || [],
         displayOrder: projectData.displayOrder !== undefined ? Number(projectData.displayOrder) : existingProject.displayOrder,
         categoryId: projectData.categoryId !== undefined ? (projectData.categoryId || null) : existingProject.categoryId,
         subCategoryId: projectData.subCategoryId !== undefined ? (projectData.subCategoryId || null) : existingProject.subCategoryId,

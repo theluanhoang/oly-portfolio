@@ -17,9 +17,9 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const productData = await request.json();
     
-    if (!productData.title || !productData.slug || !productData.category || !productData.material || !productData.year || !productData.thumbnail) {
+    if (!productData.title || !productData.slug || !productData.category || !productData.material || !productData.year || !productData.thumbnailAssetId) {
       return Response.json(
-        { error: 'Missing required fields: title, slug, category, material, year, thumbnail' },
+        { error: 'Missing required fields: title, slug, category, material, year, thumbnailAssetId' },
         { status: 400 }
       );
     }
@@ -54,6 +54,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         material: productData.material || '',
         year: productData.year || '',
         thumbnail: productData.thumbnail || '',
+        thumbnailAssetId: productData.thumbnailAssetId,
         descriptions: productData.descriptions || [],
         content: productData.content || '',
       },

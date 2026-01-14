@@ -37,6 +37,7 @@ export default function EditProductPage() {
       material: '',
       year: '',
       thumbnail: '',
+      thumbnailAssetId: '',
       descriptions: [],
       content: '',
     },
@@ -46,7 +47,7 @@ export default function EditProductPage() {
   const { handleSubmit, trigger, setValue, watch, formState: { errors }, control, reset } = methods;
   const content = watch('content');
   const title = watch('title');
-  const thumbnail = watch('thumbnail');
+  const thumbnail = watch('thumbnail'); // preview URL
   const previousTitleRef = useRef('');
 
   const { fields, append, remove } = useFieldArray({
@@ -72,6 +73,7 @@ export default function EditProductPage() {
           material: product.material || '',
           year: product.year || '',
           thumbnail: product.thumbnail || '',
+          thumbnailAssetId: product.thumbnailAssetId || '',
           descriptions: product.descriptions || [],
           content: product.content || '',
         });
@@ -109,7 +111,7 @@ export default function EditProductPage() {
 
   const handleNext = async () => {
     if (currentStep === 1) {
-      const isValid = await trigger(['title', 'slug', 'category', 'material', 'year', 'thumbnail']);
+      const isValid = await trigger(['title', 'slug', 'category', 'material', 'year', 'thumbnailAssetId']);
       if (isValid) {
         setCurrentStep(2);
       }
@@ -127,7 +129,7 @@ export default function EditProductPage() {
     setSaveMessage(null);
     
     try {
-      if (!data.thumbnail) {
+      if (!data.thumbnailAssetId) {
         throw new Error('Vui lòng upload ảnh đại diện');
       }
 
@@ -137,7 +139,8 @@ export default function EditProductPage() {
         category: data.category,
         material: data.material,
         year: data.year,
-        thumbnail: data.thumbnail,
+        thumbnailAssetId: data.thumbnailAssetId,
+        thumbnail: data.thumbnail || '',
         descriptions: data.descriptions || [],
         content: data.content || '',
       };
@@ -275,8 +278,11 @@ export default function EditProductPage() {
                   </h3>
                   <SingleImageUpload
                     value={thumbnail}
-                    onChange={(url) => setValue('thumbnail', url, { shouldValidate: true })}
-                    error={errors.thumbnail?.message as string | undefined}
+                    onChange={({ url, assetId }) => {
+                      setValue('thumbnail', url, { shouldValidate: false }); // preview only
+                      setValue('thumbnailAssetId', assetId, { shouldValidate: true });
+                    }}
+                    error={errors.thumbnailAssetId?.message as string | undefined}
                   />
                 </div>
 

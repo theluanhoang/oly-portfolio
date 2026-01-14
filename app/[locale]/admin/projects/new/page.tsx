@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm, FormProvider, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import TiptapEditor from '@/components/admin/TiptapEditor';
@@ -61,10 +61,13 @@ export default function NewProjectPage() {
   const subCategoryInputRef = useRef<HTMLInputElement>(null);
 
   const methods = useForm<ProjectSchema>({
-    resolver: zodResolver(projectSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(projectSchema) as any,
     defaultValues: {
       slug: '',
       gallery: [],
+      galleryAssetIds: [],
+      heroImageAssetId: null,
       categoryId: null,
       subCategoryId: null,
       translations: {
@@ -324,15 +327,22 @@ export default function NewProjectPage() {
   };
 
   const gallery = useGalleryUpload({
-    onUploadSuccess: (urls) => {
+    onUploadSuccess: ({ urls, assetIds }) => {
       const currentGallery = watch('gallery') || [];
-      setValue('gallery', [...currentGallery, ...urls], { shouldValidate: true });
+      setValue('gallery', [...currentGallery, ...urls], { shouldValidate: false });
+      setValue('galleryAssetIds', [...(watch('galleryAssetIds') || []), ...assetIds], {
+        shouldValidate: true,
+      });
+      if (!watch('heroImageAssetId') && assetIds.length > 0) {
+        setValue('heroImageAssetId', assetIds[0], { shouldValidate: false });
+      }
     },
     onError: (error) => {
       setSaveMessage({ type: 'error', text: error });
     },
-    onReorder: (urls) => {
-      setValue('gallery', urls, { shouldValidate: true });
+    onReorder: ({ urls, assetIds }) => {
+      setValue('gallery', urls, { shouldValidate: false });
+      setValue('galleryAssetIds', assetIds, { shouldValidate: true });
     },
   });
 
@@ -362,7 +372,7 @@ export default function NewProjectPage() {
   const handleNext = async () => {
     if (currentStep === 1) {
       const slugValid = await trigger('slug');
-      const galleryValid = await trigger('gallery');
+      const galleryValid = await trigger('galleryAssetIds');
       const viFieldsValid = await trigger([
         'translations.vi.title' as keyof ProjectSchema,
         'translations.vi.location' as keyof ProjectSchema,
@@ -411,7 +421,7 @@ export default function NewProjectPage() {
     }, { shouldValidate: true });
   };
 
-  const onSubmit = async (data: ProjectSchema) => {
+  const onSubmit: SubmitHandler<ProjectSchema> = async (data) => {
     setIsSaving(true);
     setSaveMessage(null);
     
@@ -482,11 +492,23 @@ export default function NewProjectPage() {
       }
 
       const projectData = {
-        slug: data.slug || generateSlug(data.translations.vi?.title || data.translations.en?.title || 'project'),
-        heroImage: galleryUrlStrings.length > 0 && gallery.heroImageIndex < galleryUrlStrings.length 
-          ? galleryUrlStrings[gallery.heroImageIndex] 
-          : (galleryUrlStrings.length > 0 ? galleryUrlStrings[0] : ''),
+        slug:
+          data.slug ||
+          generateSlug(
+            data.translations.vi?.title ||
+              data.translations.en?.title ||
+              'project',
+          ),
+        heroImage:
+          galleryUrlStrings.length > 0 &&
+          gallery.heroImageIndex < galleryUrlStrings.length
+            ? galleryUrlStrings[gallery.heroImageIndex]
+            : galleryUrlStrings.length > 0
+              ? galleryUrlStrings[0]
+              : '',
         gallery: galleryUrlStrings,
+        heroImageAssetId: watch('heroImageAssetId') ?? null,
+        galleryAssetIds: watch('galleryAssetIds') || [],
         categoryId: finalCategoryId,
         subCategoryId: finalSubCategoryId,
         translations: data.translations,
@@ -521,6 +543,8 @@ export default function NewProjectPage() {
       methods.reset({
         slug: '',
         gallery: [],
+        galleryAssetIds: [],
+        heroImageAssetId: null,
         categoryId: null,
         subCategoryId: null,
         translations: {
@@ -533,10 +557,10 @@ export default function NewProjectPage() {
           },
           en: {
             title: '',
-        location: '',
-        area: '',
-        year: '',
-        content: '',
+            location: '',
+            area: '',
+            year: '',
+            content: '',
           },
         },
       });
@@ -846,7 +870,8 @@ export default function NewProjectPage() {
                   onClick={gallery.handleClick}
                   onRemove={(index) => {
                     gallery.handleGalleryUrlRemove(index, (urls) => {
-                      setValue('gallery', urls, { shouldValidate: true });
+                      setValue('gallery', urls, { shouldValidate: false });
+                      setValue('galleryAssetIds', gallery.getGalleryAssetIds(), { shouldValidate: true });
                     });
                   }}
                   onSetHero={gallery.handleSetHeroImage}

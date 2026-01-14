@@ -15,6 +15,10 @@ model Project {
   slug         String   @unique
   heroImage    String
   gallery      String[] @default([])
+  // New (storage-agnostic): reference images via MediaAsset IDs.
+  // Kept alongside legacy URL fields (heroImage, gallery) for backward compatibility + data migration.
+  heroImageAssetId String?
+  galleryAssetIds  String[] @default([])
   displayOrder   Int      @default(0)
   categoryId   String?
   subCategoryId String?
@@ -125,12 +129,34 @@ model Product {
   material     String
   year         String
   thumbnail    String
+  // New (storage-agnostic): reference image via MediaAsset ID.
+  // Kept alongside legacy URL field (thumbnail) for backward compatibility + data migration.
+  thumbnailAssetId String?
   descriptions String[] @default([])
   content      String   @default("")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@map("products")
+}
+
+model MediaAsset {
+  id        String   @id @default(cuid())
+  provider  String   // e.g. "cloudinary" | "local"
+  key       String   // cloudinary: public_id; local: storage key/path
+  version   String?  // cloudinary version or local version/hash
+
+  mimeType  String?
+  width     Int?
+  height    Int?
+  bytes     Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([provider])
+  @@index([key])
+  @@map("media_assets")
 }
 
 model User {

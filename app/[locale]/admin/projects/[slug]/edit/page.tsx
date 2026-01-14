@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useRouter } from '@/i18n/routing';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm, FormProvider, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import TiptapEditor from '@/components/admin/TiptapEditor';
@@ -68,7 +68,8 @@ export default function EditProjectPage() {
   const subCategoryInputRef = useRef<HTMLInputElement>(null);
 
   const methods = useForm<ProjectSchema>({
-    resolver: zodResolver(projectSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(projectSchema) as any,
     defaultValues: {
       slug: '',
       gallery: [],
@@ -332,15 +333,22 @@ export default function EditProjectPage() {
   };
 
   const gallery = useGalleryUpload({
-    onUploadSuccess: (urls) => {
+    onUploadSuccess: ({ urls, assetIds }) => {
       const currentGallery = watch('gallery') || [];
-      setValue('gallery', [...currentGallery, ...urls], { shouldValidate: true });
+      setValue('gallery', [...currentGallery, ...urls], { shouldValidate: false });
+      setValue('galleryAssetIds', [...(watch('galleryAssetIds') || []), ...assetIds], {
+        shouldValidate: true,
+      });
+      if (!watch('heroImageAssetId') && assetIds.length > 0) {
+        setValue('heroImageAssetId', assetIds[0], { shouldValidate: false });
+      }
     },
     onError: (error) => {
       setSaveMessage({ type: 'error', text: error });
     },
-    onReorder: (urls) => {
-      setValue('gallery', urls, { shouldValidate: true });
+    onReorder: ({ urls, assetIds }) => {
+      setValue('gallery', urls, { shouldValidate: false });
+      setValue('galleryAssetIds', assetIds, { shouldValidate: true });
     },
   });
 
@@ -390,6 +398,8 @@ export default function EditProjectPage() {
         reset({
           slug: project.slug || '',
           gallery: project.gallery || [],
+          galleryAssetIds: project.galleryAssetIds || [],
+          heroImageAssetId: project.heroImageAssetId || null,
           categoryId: project.categoryId || null,
           subCategoryId: project.subCategoryId || null,
           translations: translationsData,
@@ -476,7 +486,7 @@ export default function EditProjectPage() {
     }, { shouldValidate: true });
   };
 
-  const onSubmit = async (data: ProjectSchema) => {
+  const onSubmit: SubmitHandler<ProjectSchema> = async (data) => {
     setIsSaving(true);
     setSaveMessage(null);
     
@@ -885,7 +895,8 @@ export default function EditProjectPage() {
                   onClick={gallery.handleClick}
                   onRemove={(index) => {
                     gallery.handleGalleryUrlRemove(index, (urls) => {
-                      setValue('gallery', urls, { shouldValidate: true });
+                      setValue('gallery', urls, { shouldValidate: false });
+                      setValue('galleryAssetIds', gallery.getGalleryAssetIds(), { shouldValidate: true });
                     });
                   }}
                   onSetHero={gallery.handleSetHeroImage}

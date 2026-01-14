@@ -40,9 +40,11 @@ export const projectSchema = z.object({
     .min(1, 'Slug là bắt buộc')
     .max(200, 'Slug không được vượt quá 200 ký tự')
     .regex(/^[a-z0-9-]+$/, 'Slug chỉ được chứa chữ thường, số và dấu gạch ngang'),
-  gallery: z
-    .array(z.string())
-    .min(1, 'Vui lòng upload ít nhất một ảnh'),
+  // Legacy (URLs). Kept optional because we now store storage-agnostic asset references.
+  gallery: z.array(z.string()).optional().default([]),
+  // New canonical fields.
+  galleryAssetIds: z.array(z.string()).min(1, 'Vui lòng upload ít nhất một ảnh'),
+  heroImageAssetId: z.string().optional().nullable(),
   categoryId: z.string().optional().nullable(),
   subCategoryId: z.string().optional().nullable(),
   translations: z.record(z.string(), projectTranslationSchema).refine(
@@ -53,7 +55,8 @@ export const projectSchema = z.object({
 
 export const projectStep1Schema = projectSchema.pick({
   slug: true,
-  gallery: true,
+  galleryAssetIds: true,
+  heroImageAssetId: true,
   categoryId: true,
   subCategoryId: true,
 }).extend({

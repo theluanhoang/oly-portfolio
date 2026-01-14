@@ -24,9 +24,10 @@ export const productSchema = z.object({
     .string()
     .min(1, 'Năm là bắt buộc')
     .regex(/^\d{4}$/, 'Năm phải là 4 chữ số'),
-  thumbnail: z
-    .string()
-    .min(1, 'Vui lòng upload ảnh đại diện'),
+  // Legacy (URL). Kept optional because we now store storage-agnostic asset references.
+  thumbnail: z.string().optional().default(''),
+  // New canonical field.
+  thumbnailAssetId: z.string().min(1, 'Vui lòng upload ảnh đại diện'),
   descriptions: z
     .array(z.string())
     .optional()

@@ -99,6 +99,7 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
         material: productData.material || '',
         year: productData.year || '',
         thumbnail: productData.thumbnail || '',
+        thumbnailAssetId: productData.thumbnailAssetId ?? null,
         descriptions: productData.descriptions || [],
         content: productData.content || '',
       },

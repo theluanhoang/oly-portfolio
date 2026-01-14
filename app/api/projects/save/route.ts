@@ -58,6 +58,8 @@ export async function POST(request: NextRequest): Promise<Response> {
         slug: projectData.slug,
         heroImage: projectData.heroImage || '',
         gallery: projectData.gallery || [],
+        heroImageAssetId: projectData.heroImageAssetId ?? null,
+        galleryAssetIds: projectData.galleryAssetIds || [],
         categoryId: projectData.categoryId || null,
         subCategoryId: projectData.subCategoryId || null,
         translations: {

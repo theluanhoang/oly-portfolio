@@ -24,16 +24,11 @@ import React from "react";
 
 import { Input } from "@/components/forms";
 import { Button } from "@/components/ui";
+import type { UploadProgressItem } from "@/hooks/useGalleryUpload";
 
 interface GalleryItem {
   url: string;
   originalName?: string;
-}
-
-interface UploadProgressItem {
-  status: 'uploading' | 'success' | 'error';
-  progress?: number;
-  error?: string;
 }
 
 interface GalleryUploadProps {
@@ -156,41 +151,75 @@ export default function GalleryUpload({
 
       {Object.keys(uploadProgress).length > 0 && (
         <div className="mt-4 space-y-2">
-          {Object.entries(uploadProgress).map(([filename, progress]) => (
-            <div key={filename} className="text-xs text-[#666] bg-[#f5f5f5] p-3 border border-[#e0e0e0]">
-              <div className="flex justify-between items-center mb-1">
-                <span className="truncate font-medium">{filename}</span>
-                <span className="ml-2 flex items-center gap-1">
-                  {progress.status === 'uploading' && (
-                    <>
-                      <Upload className="w-3 h-3 animate-pulse" />
-                      <span>Đang upload...</span>
-                    </>
-                  )}
-                  {progress.status === 'success' && (
-                    <>
-                      <Check className="w-3 h-3 text-green-600" />
-                      <span>Thành công</span>
-                    </>
-                  )}
-                  {progress.status === 'error' && (
-                    <>
-                      <X className="w-3 h-3 text-red-600" />
-                      <span>{progress.error}</span>
-                    </>
-                  )}
-                </span>
-              </div>
-              {progress.status === 'uploading' && (
-                <div className="w-full bg-[#e0e0e0] h-1.5 mt-2">
-                  <div
-                    className="bg-[#333] h-1.5 transition-all"
-                    style={{ width: `${progress.progress}%` }}
-                  ></div>
+          {Object.entries(uploadProgress).map(([filename, progress]) => {
+            const sizeInfo = progress.originalSize
+              ? progress.compressedSize && progress.compressedSize < progress.originalSize
+                ? `${(progress.compressedSize / 1024).toFixed(1)}KB / ${(progress.originalSize / 1024).toFixed(1)}KB`
+                : `${(progress.originalSize / 1024).toFixed(1)}KB`
+              : null;
+
+            return (
+              <div key={filename} className="text-xs text-[#666] bg-[#f5f5f5] p-3 border border-[#e0e0e0]">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="truncate font-medium">{filename}</span>
+                  <span className="ml-2 flex items-center gap-1">
+                    {progress.status === 'compressing' && (
+                      <>
+                        <Upload className="w-3 h-3 animate-pulse" />
+                        <span>Đang tối ưu...</span>
+                      </>
+                    )}
+                    {progress.status === 'uploading' && (
+                      <>
+                        <Upload className="w-3 h-3 animate-pulse" />
+                        <span>
+                          Đang upload...
+                          {progress.speed && ` (${progress.speed} KB/s)`}
+                        </span>
+                      </>
+                    )}
+                    {progress.status === 'success' && (
+                      <>
+                        <Check className="w-3 h-3 text-green-600" />
+                        <span>
+                          Thành công
+                          {progress.timeElapsed && ` (${(progress.timeElapsed / 1000).toFixed(1)}s)`}
+                        </span>
+                      </>
+                    )}
+                    {progress.status === 'error' && (
+                      <>
+                        <X className="w-3 h-3 text-red-600" />
+                        <span>{progress.error}</span>
+                      </>
+                    )}
+                  </span>
                 </div>
-              )}
-            </div>
-          ))}
+                {(progress.status === 'uploading' || progress.status === 'compressing') && (
+                  <>
+                    <div className="w-full bg-[#e0e0e0] h-1.5 mt-2">
+                      <div
+                        className="bg-[#333] h-1.5 transition-all"
+                        style={{ width: `${progress.progress || 0}%` }}
+                      ></div>
+                    </div>
+                    {sizeInfo && (
+                      <div className="mt-1 text-[#999]">
+                        {progress.compressedSize && progress.compressedSize < progress.originalSize! ? (
+                          <span>
+                            Đã giảm: {sizeInfo} 
+                            ({Math.round((1 - progress.compressedSize / progress.originalSize!) * 100)}%)
+                          </span>
+                        ) : (
+                          <span>Kích thước: {sizeInfo}</span>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
