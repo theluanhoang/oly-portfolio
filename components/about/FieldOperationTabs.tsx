@@ -43,7 +43,7 @@ export default function FieldOperationTabs() {
                 }`}
               >
                 <p
-                  className={`text-black text-justify text-[12px] font-semibold leading-[20px] ${
+                  className={`text-text-dark text-justify text-[12px] font-normal leading-[20px] ${
                     tab.key !== 'furniture' ? 'min-[1122px]:mb-0 mb-[62px]' : ''
                   }`}
                 >
