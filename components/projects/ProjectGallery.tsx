@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 interface ProjectGalleryProps {
   images?: string[];
@@ -84,11 +85,13 @@ export default function ProjectGallery({ images = [] }: ProjectGalleryProps) {
     return (
       <section className="w-full bg-background">
         <div className="w-full overflow-hidden">
-          <img
+          <OptimizedImage
             src={images[0]}
             alt="Project gallery"
-            className="w-full h-auto object-cover"
-            loading="eager"
+            className="w-full h-auto"
+            objectFit="cover"
+            priority="eager"
+            progressive={true}
           />
         </div>
       </section>
@@ -100,11 +103,13 @@ export default function ProjectGallery({ images = [] }: ProjectGalleryProps) {
       <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-12">
         {/* Main Image với arrows */}
         <div className="relative w-full mb-6 md:mb-8 overflow-hidden rounded-lg group">
-          <img
+          <OptimizedImage
             src={images[selectedImage]}
             alt={`Project image ${selectedImage + 1}`}
-            className="w-full h-auto object-cover transition-opacity duration-300"
-            loading={selectedImage === 0 ? 'eager' : 'lazy'}
+            className="w-full h-auto transition-opacity duration-300"
+            objectFit="cover"
+            priority={selectedImage === 0 ? 'eager' : 'lazy'}
+            progressive={true}
           />
           
           {/* Arrow Left */}
@@ -160,11 +165,13 @@ export default function ProjectGallery({ images = [] }: ProjectGalleryProps) {
                       : 'opacity-70 hover:opacity-100 hover:scale-105'
                   }`}
                 >
-                  <img
+                  <OptimizedImage
                     src={image}
                     alt={`Thumbnail ${actualIndex + 1}`}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
+                    className="w-full h-full"
+                    objectFit="cover"
+                    priority="lazy"
+                    progressive={true}
                   />
                 </button>
               );
@@ -180,11 +187,13 @@ export default function ProjectGallery({ images = [] }: ProjectGalleryProps) {
                   +{remainingImages}
                 </div>
                 {images[thumbnailStartIndex + maxThumbnails - 1] && (
-                  <img
+                  <OptimizedImage
                     src={images[thumbnailStartIndex + maxThumbnails - 1]}
                     alt="Remaining images"
-                    className="w-full h-full object-cover opacity-30"
-                    loading="lazy"
+                    className="w-full h-full opacity-30"
+                    objectFit="cover"
+                    priority="lazy"
+                    progressive={true}
                   />
                 )}
               </button>

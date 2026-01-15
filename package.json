@@ -18,7 +18,13 @@
     "test:ddos:quick": "bash scripts/test-ddos-quick.sh",
     "test:auth": "tsx __tests__/api/auth-authorization.test.ts",
     "test:auth:security": "bash scripts/test-auth-security.sh",
-    "test:security": "bash scripts/test-auth-security.sh"
+    "test:security": "bash scripts/test-auth-security.sh",
+    "test:image": "tsx __tests__/lib/image-optimization.test.ts",
+    "test:image:quality": "tsx scripts/compare-image-quality.ts",
+    "test:image:large": "tsx scripts/generate-large-images.ts",
+    "test:image:validation": "tsx __tests__/lib/image-upload-validation.test.ts",
+    "test:image:queue": "tsx __tests__/lib/image-processing-queue.test.ts",
+    "test:image:generate": "tsx scripts/generate-test-images.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -59,6 +65,7 @@
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "react-hook-form": "^7.68.0",
+    "sharp": "^0.34.5",
     "zod": "^4.1.13"
   },
   "devDependencies": {

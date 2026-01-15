@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 interface ProjectGalleryGridProps {
   images: string[];
@@ -91,11 +92,13 @@ export default function ProjectGalleryGrid({ images, maxImages = 8 }: ProjectGal
                     key={`${image}-${pageIdx}-${index}`}
                     className="relative max-w-[210px] aspect-square overflow-hidden"
                   >
-                    <img
+                    <OptimizedImage
                       src={image}
                       alt={`Gallery image ${pageIdx * visibleCount + index + 1}`}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
+                      className="w-full h-full"
+                      objectFit="cover"
+                      priority="lazy"
+                      progressive={true}
                     />
                   </div>
                 ))}

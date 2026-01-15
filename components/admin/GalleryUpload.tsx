@@ -31,9 +31,11 @@ interface GalleryItem {
 }
 
 interface UploadProgressItem {
-  status: 'uploading' | 'success' | 'error';
+  status: 'compressing' | 'uploading' | 'success' | 'error';
   progress?: number;
   error?: string;
+  originalSizeMB?: number;
+  compressedSizeMB?: number;
 }
 
 interface GalleryUploadProps {
@@ -106,7 +108,7 @@ export default function GalleryUpload({
         Gallery Ảnh
       </h2>
       <p className="text-xs text-[#666] mb-4">
-        Kéo thả ảnh vào đây hoặc click để chọn. Ảnh đầu tiên sẽ được dùng làm hero image. Hỗ trợ JPEG, PNG, WebP, GIF (tối đa 10MB mỗi ảnh).
+        Kéo thả ảnh vào đây hoặc click để chọn. Ảnh đầu tiên sẽ được dùng làm hero image. Hỗ trợ JPEG, PNG, WebP, GIF (tối đa 50MB mỗi ảnh). Ảnh lớn sẽ được tự động nén để tối ưu upload.
       </p>
 
       <Input
@@ -148,7 +150,7 @@ export default function GalleryUpload({
               Kéo thả ảnh vào đây hoặc click để chọn
             </p>
             <p className="text-[#666] text-sm">
-              Hỗ trợ JPEG, PNG, WebP, GIF • Tối đa 10MB mỗi ảnh
+              Hỗ trợ JPEG, PNG, WebP, GIF • Tối đa 50MB mỗi ảnh • Tự động nén tối ưu
             </p>
           </div>
         )}
@@ -161,6 +163,12 @@ export default function GalleryUpload({
               <div className="flex justify-between items-center mb-1">
                 <span className="truncate font-medium">{filename}</span>
                 <span className="ml-2 flex items-center gap-1">
+                  {progress.status === 'compressing' && (
+                    <>
+                      <Upload className="w-3 h-3 animate-pulse" />
+                      <span>Đang nén...</span>
+                    </>
+                  )}
                   {progress.status === 'uploading' && (
                     <>
                       <Upload className="w-3 h-3 animate-pulse" />
@@ -181,12 +189,20 @@ export default function GalleryUpload({
                   )}
                 </span>
               </div>
-              {progress.status === 'uploading' && (
+              {(progress.status === 'compressing' || progress.status === 'uploading') && (
                 <div className="w-full bg-[#e0e0e0] h-1.5 mt-2">
                   <div
-                    className="bg-[#333] h-1.5 transition-all"
-                    style={{ width: `${progress.progress}%` }}
+                    className={`h-1.5 transition-all ${
+                      progress.status === 'compressing' ? 'bg-blue-500' : 'bg-[#333]'
+                    }`}
+                    style={{ width: `${progress.progress || 0}%` }}
                   ></div>
+                </div>
+              )}
+              {progress.status === 'success' && progress.originalSizeMB && progress.compressedSizeMB && (
+                <div className="text-xs text-[#666] mt-1">
+                  {progress.originalSizeMB.toFixed(2)}MB → {progress.compressedSizeMB.toFixed(2)}MB
+                  {' '}({((1 - progress.compressedSizeMB / progress.originalSizeMB) * 100).toFixed(1)}% giảm)
                 </div>
               )}
             </div>

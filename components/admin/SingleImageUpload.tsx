@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Image as ImageIcon, Upload, X } from 'lucide-react';
 import { Input } from '@/components/forms';
 import { Button } from '@/components/ui';
+import { prepareImageForUpload } from '@/lib/utils/imageUtils';
 
 interface SingleImageUploadProps {
   value?: string;
@@ -27,9 +28,19 @@ export default function SingleImageUpload({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      onChange('');
-      return;
+    try {
+      const { validateImageUploadClient } = await import('@/lib/validations/imageUploadValidationClient');
+      const validation = validateImageUploadClient(file);
+      
+      if (!validation.valid) {
+        console.error('Validation error:', validation.error);
+        if (e.target) {
+          e.target.value = '';
+        }
+        return;
+      }
+    } catch (error) {
+      console.error('Error validating file:', error);
     }
 
     await uploadFile(file);
@@ -43,8 +54,13 @@ export default function SingleImageUpload({
     setUploadProgress(0);
 
     try {
+      const originalSizeMB = file.size / (1024 * 1024);
+      const fileToUpload = originalSizeMB > 0.5 
+        ? await prepareImageForUpload(file).catch(() => file) // Fallback to original if compression fails
+        : file;
+
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', fileToUpload);
 
       const xhr = new XMLHttpRequest();
 
@@ -205,7 +221,7 @@ export default function SingleImageUpload({
                 Kéo thả ảnh vào đây hoặc click để chọn
               </p>
               <p className="text-[#666] text-sm">
-                Hỗ trợ JPEG, PNG, WebP, GIF • Tối đa 10MB
+                Hỗ trợ JPEG, PNG, WebP, GIF • Tối đa 50MB
               </p>
               {uploading && (
                 <div className="mt-4 w-full max-w-xs">

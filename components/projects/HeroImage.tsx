@@ -1,4 +1,5 @@
 import React from 'react';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 interface HeroImageProps {
   src: string;
@@ -8,11 +9,13 @@ interface HeroImageProps {
 export default function HeroImage({ src, alt }: HeroImageProps) {
   return (
     <div className="w-full overflow-hidden">
-      <img
+      <OptimizedImage
         src={src}
         alt={alt}
-        className="w-full h-auto object-cover"
-        loading="eager"
+        className="w-full h-auto"
+        objectFit="cover"
+        priority="eager"
+        progressive={true}
       />
     </div>
   );

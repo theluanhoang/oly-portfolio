@@ -2,6 +2,7 @@
 
 import { Link } from "@/i18n/routing";
 import { useTranslations } from 'next-intl';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 interface Project {
   slug: string;
@@ -46,11 +47,13 @@ export default function MoreProjects({
               {/* Image - Left side */}
               <div className="relative max-w-[141px] shrink-0 aspect-141/153 overflow-hidden">
                 {project.heroImage ? (
-                  <img
+                  <OptimizedImage
                     src={project.heroImage}
                     alt={project.title}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    loading="lazy"
+                    className="w-full h-full transition-transform duration-300 group-hover:scale-105"
+                    objectFit="cover"
+                    priority="lazy"
+                    progressive={true}
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-200 flex items-center justify-center">

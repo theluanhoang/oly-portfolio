@@ -3,6 +3,7 @@
 import type { UniqueIdentifier } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import { useRef, useState } from "react";
+import { prepareImageForUpload } from "@/lib/utils/imageUtils";
 
 interface GalleryItem {
   url: string;
@@ -10,9 +11,11 @@ interface GalleryItem {
 }
 
 interface UploadProgressItem {
-  status: 'uploading' | 'success' | 'error';
+  status: 'compressing' | 'uploading' | 'success' | 'error';
   progress?: number;
   error?: string;
+  originalSizeMB?: number;
+  compressedSizeMB?: number;
 }
 
 interface UseGalleryUploadOptions {
@@ -58,7 +61,30 @@ export function useGalleryUpload({ onUploadSuccess, onError, onReorder }: UseGal
 
     const fileArray = Array.from(files);
     
-    const imageFiles = fileArray.filter((file: File) => {
+    // Client-side validation before upload
+    // Use client-only validation module (no server dependencies)
+    const { validateImageUploadClient } = await import('@/lib/validations/imageUploadValidationClient');
+    
+    const validatedFiles: File[] = [];
+    const validationErrors: string[] = [];
+    
+    for (const file of fileArray) {
+      const validation = validateImageUploadClient(file);
+      if (validation.valid) {
+        validatedFiles.push(file);
+      } else {
+        validationErrors.push(`${file.name}: ${validation.error}`);
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      onError?.(`Lỗi validation:\n${validationErrors.join('\n')}`);
+      if (validatedFiles.length === 0) {
+        return; // No valid files
+      }
+    }
+
+    const imageFiles = validatedFiles.filter((file: File) => {
       return file.type.startsWith('image/');
     });
 
@@ -79,14 +105,61 @@ export function useGalleryUpload({ onUploadSuccess, onError, onReorder }: UseGal
     setIsDragging(false);
 
     try {
-      const uploadPromises = newFiles.map(async (file: File): Promise<GalleryItem> => {
-        const formData = new FormData();
-        formData.append('file', file);
+      // Upload files with concurrency limit to avoid server overload
+      // For large files (47MB), upload sequentially to avoid memory issues
+      const CONCURRENCY_LIMIT = 3; // Upload max 3 files at a time
+      const uploadedItems: GalleryItem[] = [];
+      const errors: string[] = [];
 
-        setUploadProgress((prev) => ({
-          ...prev,
-          [file.name]: { status: 'uploading', progress: 0 },
-        }));
+      // Helper function to compress and upload a single file
+      const uploadSingleFile = async (file: File): Promise<GalleryItem | null> => {
+        const originalSizeMB = file.size / (1024 * 1024);
+        let fileToUpload = file;
+
+        // Compress image if needed (prepareImageForUpload handles the logic)
+        if (originalSizeMB > 0.5) {
+          try {
+            setUploadProgress((prev) => ({
+              ...prev,
+              [file.name]: { 
+                status: 'compressing', 
+                progress: 0,
+                originalSizeMB: originalSizeMB,
+              },
+            }));
+
+            fileToUpload = await prepareImageForUpload(file);
+            const compressedSizeMB = fileToUpload.size / (1024 * 1024);
+
+            setUploadProgress((prev) => ({
+              ...prev,
+              [file.name]: { 
+                status: 'uploading', 
+                progress: 0,
+                originalSizeMB: originalSizeMB,
+                compressedSizeMB: compressedSizeMB,
+              },
+            }));
+          } catch (compressionError) {
+            console.warn(`Failed to compress ${file.name}, using original:`, compressionError);
+            setUploadProgress((prev) => ({
+              ...prev,
+              [file.name]: { 
+                status: 'uploading', 
+                progress: 0,
+                originalSizeMB: originalSizeMB,
+              },
+            }));
+          }
+        } else {
+          setUploadProgress((prev) => ({
+            ...prev,
+            [file.name]: { status: 'uploading', progress: 0 },
+          }));
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileToUpload);
 
         try {
           const response = await fetch('/api/upload', {
@@ -112,27 +185,51 @@ export function useGalleryUpload({ onUploadSuccess, onError, onReorder }: UseGal
             ...prev,
             [file.name]: { status: 'error', error: errorMessage },
           }));
-          throw error;
+          errors.push(`${file.name}: ${errorMessage}`);
+          return null;
         }
-      });
+      };
 
-      const uploadedItems = await Promise.all(uploadPromises);
+      // Upload files in batches with concurrency limit
+      for (let i = 0; i < newFiles.length; i += CONCURRENCY_LIMIT) {
+        const batch = newFiles.slice(i, i + CONCURRENCY_LIMIT);
+        const batchResults = await Promise.all(
+          batch.map(file => uploadSingleFile(file))
+        );
+        
+        // Filter out null results (failed uploads)
+        const successfulUploads = batchResults.filter(
+          (item): item is GalleryItem => item !== null
+        );
+        
+        uploadedItems.push(...successfulUploads);
+        
+        // Update gallery URLs incrementally
+        if (successfulUploads.length > 0) {
+          setGalleryUrls((prev) => {
+            const updated = [...prev, ...successfulUploads];
+            if (prev.length === 0 && updated.length > 0) {
+              setHeroImageIndex(0);
+            }
+            return updated;
+          });
+          
+          setUploadedFileNames((prev) => {
+            const newSet = new Set(prev);
+            successfulUploads.forEach(item => newSet.add(item.originalName));
+            return newSet;
+          });
+        }
+      }
+
+      // Show errors if any
+      if (errors.length > 0 && uploadedItems.length === 0) {
+        throw new Error(`Tất cả upload đều thất bại:\n${errors.join('\n')}`);
+      } else if (errors.length > 0) {
+        onError?.(`Một số file upload thất bại:\n${errors.join('\n')}`);
+      }
+
       const newUrls = uploadedItems.map(item => item.url);
-      
-      setGalleryUrls((prev) => {
-        const updated = [...prev, ...uploadedItems];
-        if (prev.length === 0 && updated.length > 0) {
-          setHeroImageIndex(0);
-        }
-        return updated;
-      });
-      
-      setUploadedFileNames((prev) => {
-        const newSet = new Set(prev);
-        uploadedItems.forEach(item => newSet.add(item.originalName));
-        return newSet;
-      });
-
       onUploadSuccess?.(newUrls);
     } catch (error) {
       console.error('Error uploading files:', error);

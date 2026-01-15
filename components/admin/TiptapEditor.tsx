@@ -28,6 +28,7 @@ import { tiptapIcons } from './tiptapIcons';
 import { Iframe, type IframeAttributes } from './Iframe';
 import { ImageGallery } from './ImageGallery';
 import { ImageToolbar } from './ImageToolbar';
+import { prepareImageForUpload } from '@/lib/utils/imageUtils';
 
 const COLOR_PALETTE = [
   '#000000', '#404040', '#808080', '#C0C0C0', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF',
@@ -3697,8 +3698,13 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                       setShowImageDropdown(false);
 
                       const uploadAndInsert = async (file: File) => {
+                        const originalSizeMB = file.size / (1024 * 1024);
+                        const fileToUpload = originalSizeMB > 0.5 
+                          ? await prepareImageForUpload(file).catch(() => file)
+                          : file;
+
                         const formData = new FormData();
-                        formData.append('file', file);
+                        formData.append('file', fileToUpload);
 
                         const response = await fetch('/api/upload', {
                           method: 'POST',
@@ -4422,8 +4428,13 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                       const file = (e.target as HTMLInputElement).files?.[0];
                       if (!file) return;
                       
+                      const originalSizeMB = file.size / (1024 * 1024);
+                      const fileToUpload = originalSizeMB > 0.5 
+                        ? await prepareImageForUpload(file).catch(() => file)
+                        : file;
+
                       const formData = new FormData();
-                      formData.append('file', file);
+                      formData.append('file', fileToUpload);
                       
                       try {
                         const response = await fetch('/api/upload', {
