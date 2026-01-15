@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
@@ -87,13 +87,141 @@ export default function NewProjectPage() {
     mode: 'onChange',
   });
 
-  const { handleSubmit, trigger, setValue, watch, formState: { errors } } = methods;
+  const { handleSubmit, trigger, setValue, watch, getValues, formState: { errors } } = methods;
   const translations = watch('translations');
   const currentTranslation = translations[currentLocale] || translations.vi || translations.en;
   const viTitle = translations?.vi?.title || '';
   const enTitle = translations?.en?.title || '';
   const selectedCategoryId = watch('categoryId');
   const selectedSubCategoryId = watch('subCategoryId');
+
+  // Copy giá trị location sang tab đích nếu tab đích còn trống khi chuyển tab
+  const prevLocaleRef = useRef(currentLocale);
+  
+  useEffect(() => {
+    const prevLocale = prevLocaleRef.current;
+    if (prevLocale !== currentLocale) {
+      const currentTranslations = getValues('translations') || {};
+      const sourceData = currentTranslations[prevLocale] || {};
+      const targetData = currentTranslations[currentLocale] || {};
+      
+      // Chỉ copy location nếu target còn trống và source có giá trị
+      const sourceLocation = sourceData.location;
+      const targetLocation = targetData.location;
+      if (sourceLocation && sourceLocation.trim() && (!targetLocation || !targetLocation.trim())) {
+        setValue('translations', {
+          ...currentTranslations,
+          [currentLocale]: {
+            ...targetData,
+            location: sourceLocation,
+          },
+        }, { shouldValidate: true, shouldDirty: true });
+        trigger(`translations.${currentLocale}.location` as keyof ProjectSchema);
+      }
+      
+      prevLocaleRef.current = currentLocale;
+    }
+  }, [currentLocale, getValues, setValue, trigger]);
+
+  // Đồng bộ area và year giữa các tab khi giá trị thay đổi (tối ưu performance)
+  const viArea = watch('translations.vi.area');
+  const enArea = watch('translations.en.area');
+  const viYear = watch('translations.vi.year');
+  const enYear = watch('translations.en.year');
+  
+  const prevValuesRef = useRef({ viArea: '', enArea: '', viYear: '', enYear: '' });
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isSyncingRef = useRef(false);
+  const isInitializedRef = useRef(false);
+
+  // Khởi tạo ref với giá trị ban đầu khi component mount
+  useEffect(() => {
+    if (!isInitializedRef.current) {
+      prevValuesRef.current = {
+        viArea: viArea || '',
+        enArea: enArea || '',
+        viYear: viYear || '',
+        enYear: enYear || '',
+      };
+      isInitializedRef.current = true;
+    }
+  }, [viArea, enArea, viYear, enYear]);
+
+  // Memoize sync function để tránh re-create
+  const syncField = useCallback((field: 'area' | 'year', viValue: string, enValue: string) => {
+    if (isSyncingRef.current) return;
+    
+    // Lấy giá trị trước đó
+    const prevVi = field === 'area' ? prevValuesRef.current.viArea : prevValuesRef.current.viYear;
+    const prevEn = field === 'area' ? prevValuesRef.current.enArea : prevValuesRef.current.enYear;
+    
+    const viChanged = viValue !== prevVi;
+    const enChanged = enValue !== prevEn;
+    
+    // Chỉ sync nếu có thay đổi và giá trị khác nhau
+    if ((viChanged || enChanged) && viValue !== enValue) {
+      const syncValue = viChanged ? viValue : enValue;
+      
+      // Chỉ sync nếu giá trị hợp lệ
+      if (syncValue !== undefined && syncValue !== null && syncValue !== '') {
+        isSyncingRef.current = true;
+        const currentTranslations = getValues('translations') || {};
+        const viData = currentTranslations.vi || {};
+        const enData = currentTranslations.en || {};
+        
+        setValue('translations', {
+          ...currentTranslations,
+          vi: { ...viData, [field]: syncValue },
+          en: { ...enData, [field]: syncValue },
+        }, { shouldValidate: true, shouldDirty: true });
+        
+        trigger([
+          `translations.vi.${field}` as keyof ProjectSchema,
+          `translations.en.${field}` as keyof ProjectSchema,
+        ]).then(() => {
+          isSyncingRef.current = false;
+          // Cập nhật ref sau khi sync xong
+          if (field === 'area') {
+            prevValuesRef.current.viArea = syncValue;
+            prevValuesRef.current.enArea = syncValue;
+          } else {
+            prevValuesRef.current.viYear = syncValue;
+            prevValuesRef.current.enYear = syncValue;
+          }
+        });
+        return; // Early return để không cập nhật ref ở dưới
+      }
+    }
+    
+    // Cập nhật ref với giá trị hiện tại
+    if (field === 'area') {
+      prevValuesRef.current.viArea = viValue;
+      prevValuesRef.current.enArea = enValue;
+    } else {
+      prevValuesRef.current.viYear = viValue;
+      prevValuesRef.current.enYear = enValue;
+    }
+  }, [getValues, setValue, trigger]);
+
+  // Gộp 2 useEffect thành 1 và thêm debounce để tối ưu performance
+  useEffect(() => {
+    // Clear timeout cũ nếu có
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+    
+    // Debounce để tránh sync quá nhiều lần khi user đang gõ (100ms là đủ để smooth)
+    syncTimeoutRef.current = setTimeout(() => {
+      syncField('area', viArea || '', enArea || '');
+      syncField('year', viYear || '', enYear || '');
+    }, 100);
+    
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [viArea, enArea, viYear, enYear, syncField]);
 
   const previousTitleRef = useRef<Record<string, string>>({});
 
