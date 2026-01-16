@@ -5,4 +5,5 @@ export { default as ComingSoonModal } from './ComingSoonModal';
 export { default as ProjectSectionSkeleton } from './ProjectSectionSkeleton';
 export { ProductCardSkeleton } from './ProductCardSkeleton';
 export { default as OptimizedImage } from './OptimizedImage';
+export { default as ConfirmDialog } from './ConfirmDialog';
 

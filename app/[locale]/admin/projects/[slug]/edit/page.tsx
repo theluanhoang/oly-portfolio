@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useRouter } from '@/i18n/routing';
 import { useForm, FormProvider } from 'react-hook-form';
@@ -11,7 +11,7 @@ import GalleryUpload from '@/components/admin/GalleryUpload';
 import { LocaleTabs } from '@/components/admin/LocaleTabs';
 import FormField from '@/components/forms/FormField';
 import { Header, StepIndicator } from '@/components/layout';
-import { Button } from '@/components/ui';
+import { Button, ConfirmDialog } from '@/components/ui';
 import { useGalleryUpload } from '@/hooks/useGalleryUpload';
 import { projectSchema, ProjectSchema, ProjectTranslationSchema } from '@/lib/validations/projectSchema';
 import type { ProjectTranslation } from '@/types/project';
@@ -56,6 +56,7 @@ export default function EditProjectPage() {
     isOpen: boolean;
     type: 'category' | 'subcategory';
     initialName: string;
+    itemId?: string;
   } | null>(null);
   const [modalTranslations, setModalTranslations] = useState({ vi: '', en: '' });
   const [categoryInput, setCategoryInput] = useState('');
@@ -64,6 +65,16 @@ export default function EditProjectPage() {
   const [subCategoryPopoverOpen, setSubCategoryPopoverOpen] = useState(false);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [isCreatingSubCategory, setIsCreatingSubCategory] = useState(false);
+  const [isUpdatingCategory, setIsUpdatingCategory] = useState(false);
+  const [isUpdatingSubCategory, setIsUpdatingSubCategory] = useState(false);
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
+  const [isDeletingSubCategory, setIsDeletingSubCategory] = useState(false);
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
+    isOpen: boolean;
+    type: 'category' | 'subcategory';
+    itemId: string;
+    itemName: string;
+  } | null>(null);
   const categoryInputRef = useRef<HTMLInputElement>(null);
   const subCategoryInputRef = useRef<HTMLInputElement>(null);
 
@@ -134,12 +145,32 @@ export default function EditProjectPage() {
     setValue('subCategoryId', null);
   }, [selectedCategoryId, setValue]);
 
-  const availableSubCategories = selectedCategoryId
-    ? subCategories.filter(sc => sc.categoryId === selectedCategoryId)
-    : [];
+  const reloadCategories = useCallback(async () => {
+    try {
+      const reloadRes = await fetch(`/api/admin/categories?includeSubCategories=true&locale=${currentLocale}`);
+      if (reloadRes.ok) {
+        const reloadData = await reloadRes.json();
+        setCategories(reloadData.items || []);
+        const allSubCategories: SubCategory[] = [];
+        (reloadData.items || []).forEach((cat: Category) => {
+          if (cat.subCategories) {
+            allSubCategories.push(...cat.subCategories);
+          }
+        });
+        setSubCategories(allSubCategories);
+      }
+    } catch (err) {
+      console.error('Error reloading categories:', err);
+    }
+  }, [currentLocale]);
 
-  // Get category/subcategory name by locale
-  const getCategoryName = (cat: Category, locale: string): string => {
+  const availableSubCategories = useMemo(() => {
+    return selectedCategoryId
+      ? subCategories.filter(sc => sc.categoryId === selectedCategoryId)
+      : [];
+  }, [selectedCategoryId, subCategories]);
+
+  const getCategoryName = useCallback((cat: Category, locale: string): string => {
     if (cat.translations) {
       const trans = cat.translations.find(t => t.locale === locale)
         || cat.translations.find(t => t.locale === 'vi')
@@ -148,9 +179,9 @@ export default function EditProjectPage() {
       return trans?.name || cat.name;
     }
     return cat.name;
-  };
+  }, []);
 
-  const getSubCategoryName = (sub: SubCategory, locale: string): string => {
+  const getSubCategoryName = useCallback((sub: SubCategory, locale: string): string => {
     if (sub.translations) {
       const trans = sub.translations.find(t => t.locale === locale)
         || sub.translations.find(t => t.locale === 'vi')
@@ -159,7 +190,7 @@ export default function EditProjectPage() {
       return trans?.name || sub.name;
     }
     return sub.name;
-  };
+  }, []);
 
   // Update category/subcategory input when locale changes
   useEffect(() => {
@@ -175,16 +206,25 @@ export default function EditProjectPage() {
         setSubCategoryInput(getSubCategoryName(sub, currentLocale));
       }
     }
-  }, [currentLocale, selectedCategoryId, selectedSubCategoryId, categories, subCategories]);
+  }, [currentLocale, selectedCategoryId, selectedSubCategoryId, categories, subCategories, getCategoryName, getSubCategoryName]);
 
-  const filteredCategories = categories.filter((cat) => {
-    const name = getCategoryName(cat, currentLocale);
-    return name.toLowerCase().includes(categoryInput.trim().toLowerCase());
-  });
-  const filteredSubCategories = availableSubCategories.filter((sub) => {
-    const name = getSubCategoryName(sub, currentLocale);
-    return name.toLowerCase().includes(subCategoryInput.trim().toLowerCase());
-  });
+  const filteredCategories = useMemo(() => {
+    const searchTerm = categoryInput.trim().toLowerCase();
+    if (!searchTerm) return categories;
+    return categories.filter((cat) => {
+      const name = getCategoryName(cat, currentLocale);
+      return name.toLowerCase().includes(searchTerm);
+    });
+  }, [categories, categoryInput, currentLocale, getCategoryName]);
+
+  const filteredSubCategories = useMemo(() => {
+    const searchTerm = subCategoryInput.trim().toLowerCase();
+    if (!searchTerm) return availableSubCategories;
+    return availableSubCategories.filter((sub) => {
+      const name = getSubCategoryName(sub, currentLocale);
+      return name.toLowerCase().includes(searchTerm);
+    });
+  }, [availableSubCategories, subCategoryInput, currentLocale, getSubCategoryName]);
 
   const handleAddCategory = () => {
     const name = categoryInput.trim();
@@ -203,7 +243,7 @@ export default function EditProjectPage() {
 
   const handleCreateCategory = async () => {
     if (!modalTranslations.vi.trim() || !modalTranslations.en.trim()) {
-      setSaveMessage({ type: 'error', text: 'Vui lòng nhập đầy đủ tên tiếng Việt và tiếng Anh' });
+      setSaveMessage({ type: 'error', text: t('category.nameRequired') });
       return;
     }
     try {
@@ -225,18 +265,7 @@ export default function EditProjectPage() {
       }
       
       // Reload categories to get full data including subcategories
-      const reloadRes = await fetch(`/api/admin/categories?includeSubCategories=true&locale=${currentLocale}`);
-      if (reloadRes.ok) {
-        const reloadData = await reloadRes.json();
-        setCategories(reloadData.items || []);
-        const allSubCategories: SubCategory[] = [];
-        (reloadData.items || []).forEach((cat: Category) => {
-          if (cat.subCategories) {
-            allSubCategories.push(...cat.subCategories);
-          }
-        });
-        setSubCategories(allSubCategories);
-      }
+      await reloadCategories();
       
       setValue('categoryId', json.id, { shouldValidate: true });
       // Set input to current locale translation
@@ -258,7 +287,7 @@ export default function EditProjectPage() {
     if (!name) return;
     const catId = selectedCategoryId;
     if (!catId) {
-      setSaveMessage({ type: 'error', text: 'Hãy chọn hoặc tạo thể loại trước khi thêm thể loại phụ' });
+      setSaveMessage({ type: 'error', text: t('category.selectCategoryFirst') });
       return;
     }
     const existing = availableSubCategories.find(
@@ -277,12 +306,12 @@ export default function EditProjectPage() {
 
   const handleCreateSubCategory = async () => {
     if (!modalTranslations.vi.trim() || !modalTranslations.en.trim()) {
-      setSaveMessage({ type: 'error', text: 'Vui lòng nhập đầy đủ tên tiếng Việt và tiếng Anh' });
+      setSaveMessage({ type: 'error', text: t('category.nameRequired') });
       return;
     }
     const catId = selectedCategoryId;
     if (!catId) {
-      setSaveMessage({ type: 'error', text: 'Hãy chọn hoặc tạo thể loại trước khi thêm thể loại phụ' });
+      setSaveMessage({ type: 'error', text: t('category.selectCategoryFirst') });
       return;
     }
     try {
@@ -305,6 +334,44 @@ export default function EditProjectPage() {
       }
       
       // Reload categories to get updated subcategories
+      await reloadCategories();
+      
+      setValue('subCategoryId', json.id, { shouldValidate: true });
+      const displayName = currentLocale === 'vi' ? modalTranslations.vi.trim() : modalTranslations.en.trim();
+      setSubCategoryInput(displayName);
+      setTranslationModal(null);
+      setModalTranslations({ vi: '', en: '' });
+    } catch (err) {
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to create subcategory' });
+    } finally {
+      setIsCreatingSubCategory(false);
+    }
+  };
+
+  const handleUpdateCategory = async () => {
+    if (!translationModal?.itemId) return;
+    if (!modalTranslations.vi.trim() || !modalTranslations.en.trim()) {
+      setSaveMessage({ type: 'error', text: t('category.nameRequired') });
+      return;
+    }
+    try {
+      setIsUpdatingCategory(true);
+      const res = await fetch(`/api/admin/categories/${translationModal.itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: generateSlug(modalTranslations.vi.trim()),
+          translations: {
+            vi: { name: modalTranslations.vi.trim() },
+            en: { name: modalTranslations.en.trim() },
+          },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to update category');
+      }
+      
       const reloadRes = await fetch(`/api/admin/categories?includeSubCategories=true&locale=${currentLocale}`);
       if (reloadRes.ok) {
         const reloadData = await reloadRes.json();
@@ -318,18 +385,192 @@ export default function EditProjectPage() {
         setSubCategories(allSubCategories);
       }
       
-      setValue('subCategoryId', json.id, { shouldValidate: true });
-      // Set input to current locale translation
-      const displayName = currentLocale === 'vi' ? modalTranslations.vi.trim() : modalTranslations.en.trim();
-      setSubCategoryInput(displayName);
+      if (selectedCategoryId === translationModal.itemId) {
+        const displayName = currentLocale === 'vi' ? modalTranslations.vi.trim() : modalTranslations.en.trim();
+        setCategoryInput(displayName);
+      }
+      
       setTranslationModal(null);
       setModalTranslations({ vi: '', en: '' });
+      setSaveMessage({ type: 'success', text: t('category.updateSuccess') });
     } catch (err) {
-      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to create subcategory' });
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to update category' });
     } finally {
-      setIsCreatingSubCategory(false);
+      setIsUpdatingCategory(false);
     }
   };
+
+  const handleUpdateSubCategory = async () => {
+    if (!translationModal?.itemId) return;
+    if (!modalTranslations.vi.trim() || !modalTranslations.en.trim()) {
+      setSaveMessage({ type: 'error', text: t('category.nameRequired') });
+      return;
+    }
+    const catId = selectedCategoryId;
+    if (!catId) {
+      setSaveMessage({ type: 'error', text: t('category.selectCategoryBeforeUpdate') });
+      return;
+    }
+    try {
+      setIsUpdatingSubCategory(true);
+      const res = await fetch(`/api/admin/subcategories/${translationModal.itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId: catId,
+          slug: generateSlug(modalTranslations.vi.trim()),
+          translations: {
+            vi: { name: modalTranslations.vi.trim() },
+            en: { name: modalTranslations.en.trim() },
+          },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to update subcategory');
+      }
+      
+      const reloadRes = await fetch(`/api/admin/categories?includeSubCategories=true&locale=${currentLocale}`);
+      if (reloadRes.ok) {
+        const reloadData = await reloadRes.json();
+        setCategories(reloadData.items || []);
+        const allSubCategories: SubCategory[] = [];
+        (reloadData.items || []).forEach((cat: Category) => {
+          if (cat.subCategories) {
+            allSubCategories.push(...cat.subCategories);
+          }
+        });
+        setSubCategories(allSubCategories);
+      }
+      
+      if (selectedSubCategoryId === translationModal.itemId) {
+        const displayName = currentLocale === 'vi' ? modalTranslations.vi.trim() : modalTranslations.en.trim();
+        setSubCategoryInput(displayName);
+      }
+      
+      setTranslationModal(null);
+      setModalTranslations({ vi: '', en: '' });
+      setSaveMessage({ type: 'success', text: t('category.updateSubSuccess') });
+    } catch (err) {
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to update subcategory' });
+    } finally {
+      setIsUpdatingSubCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = useCallback((categoryId: string, categoryName: string) => {
+    setDeleteConfirmDialog({
+      isOpen: true,
+      type: 'category',
+      itemId: categoryId,
+      itemName: categoryName,
+    });
+  }, []);
+
+  const handleDeleteSubCategory = useCallback((subCategoryId: string, subCategoryName: string) => {
+    setDeleteConfirmDialog({
+      isOpen: true,
+      type: 'subcategory',
+      itemId: subCategoryId,
+      itemName: subCategoryName,
+    });
+  }, []);
+
+  const performDeleteCategory = useCallback(async (categoryId: string) => {
+    try {
+      setIsDeletingCategory(true);
+      const res = await fetch(`/api/admin/categories/${categoryId}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to delete category');
+      }
+      
+      await reloadCategories();
+      
+      if (selectedCategoryId === categoryId) {
+        setCategoryInput('');
+        setValue('categoryId', null, { shouldValidate: true });
+        setSubCategoryInput('');
+        setValue('subCategoryId', null, { shouldValidate: true });
+      }
+      
+      setSaveMessage({ type: 'success', text: t('category.deleteSuccess') });
+    } catch (err) {
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to delete category' });
+    } finally {
+      setIsDeletingCategory(false);
+      setDeleteConfirmDialog(null);
+    }
+  }, [selectedCategoryId, reloadCategories, setValue, t]);
+
+  const performDeleteSubCategory = useCallback(async (subCategoryId: string) => {
+    try {
+      setIsDeletingSubCategory(true);
+      const res = await fetch(`/api/admin/subcategories/${subCategoryId}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to delete subcategory');
+      }
+      
+      await reloadCategories();
+      
+      if (selectedSubCategoryId === subCategoryId) {
+        setSubCategoryInput('');
+        setValue('subCategoryId', null, { shouldValidate: true });
+      }
+      
+      setSaveMessage({ type: 'success', text: t('category.deleteSubSuccess') });
+    } catch (err) {
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to delete subcategory' });
+    } finally {
+      setIsDeletingSubCategory(false);
+      setDeleteConfirmDialog(null);
+    }
+  }, [selectedSubCategoryId, reloadCategories, setValue, t]);
+
+  const handleEditCategory = useCallback((cat: Category) => {
+    const viTrans = cat.translations?.find(t => t.locale === 'vi')?.name || cat.name;
+    const enTrans = cat.translations?.find(t => t.locale === 'en')?.name || cat.name;
+    setModalTranslations({ vi: viTrans, en: enTrans });
+    setTranslationModal({ isOpen: true, type: 'category', initialName: getCategoryName(cat, currentLocale), itemId: cat.id });
+  }, [currentLocale, getCategoryName]);
+
+  const handleEditSubCategory = useCallback((subCat: SubCategory) => {
+    const viTrans = subCat.translations?.find(t => t.locale === 'vi')?.name || subCat.name;
+    const enTrans = subCat.translations?.find(t => t.locale === 'en')?.name || subCat.name;
+    setModalTranslations({ vi: viTrans, en: enTrans });
+    setTranslationModal({ isOpen: true, type: 'subcategory', initialName: getSubCategoryName(subCat, currentLocale), itemId: subCat.id });
+  }, [currentLocale, getSubCategoryName]);
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (!deleteConfirmDialog) return;
+    if (deleteConfirmDialog.type === 'category') {
+      performDeleteCategory(deleteConfirmDialog.itemId);
+    } else {
+      performDeleteSubCategory(deleteConfirmDialog.itemId);
+    }
+  }, [deleteConfirmDialog, performDeleteCategory, performDeleteSubCategory]);
+
+  const handleDeleteCancel = useCallback(() => {
+    setDeleteConfirmDialog(null);
+  }, []);
+
+  // Memoize dialog title and message
+  const deleteDialogTitle = useMemo(() => {
+    if (!deleteConfirmDialog) return '';
+    return deleteConfirmDialog.type === 'category' ? t('category.delete') : t('category.deleteSub');
+  }, [deleteConfirmDialog, t]);
+
+  const deleteDialogMessage = useMemo(() => {
+    if (!deleteConfirmDialog) return '';
+    return deleteConfirmDialog.type === 'category'
+      ? t('category.deleteConfirm', { name: deleteConfirmDialog.itemName })
+      : t('category.deleteSubConfirm', { name: deleteConfirmDialog.itemName });
+  }, [deleteConfirmDialog, t]);
 
   const gallery = useGalleryUpload({
     onUploadSuccess: (urls) => {
@@ -709,22 +950,55 @@ export default function EditProjectPage() {
                           <div className="absolute z-20 mt-1 w-full rounded-none border border-[#e0e0e0] bg-white shadow">
                             {filteredCategories.length > 0 ? (
                               filteredCategories.map((cat) => (
-                                <button
-                                  type="button"
+                                <div
                                   key={cat.id}
+                                  className="flex items-center justify-between group hover:bg-gray-100"
                                   onMouseDown={(e) => e.preventDefault()}
-                                  onClick={() => {
-                                    const name = getCategoryName(cat, currentLocale);
-                                    setCategoryInput(name);
-                                    setValue('categoryId', cat.id, { shouldValidate: true });
-                                    setCategoryPopoverOpen(false);
-                                    setSubCategoryInput('');
-                                    setValue('subCategoryId', null, { shouldValidate: true });
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
                                 >
-                                  {getCategoryName(cat, currentLocale)}
-                                </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const name = getCategoryName(cat, currentLocale);
+                                      setCategoryInput(name);
+                                      setValue('categoryId', cat.id, { shouldValidate: true });
+                                      setCategoryPopoverOpen(false);
+                                      setSubCategoryInput('');
+                                      setValue('subCategoryId', null, { shouldValidate: true });
+                                    }}
+                                    className="flex-1 text-left px-3 py-2 text-sm"
+                                  >
+                                    {getCategoryName(cat, currentLocale)}
+                                  </button>
+                                  <div className="flex items-center gap-1 pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditCategory(cat);
+                                      }}
+                                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                      title={t('fields.update')}
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                      </svg>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteCategory(cat.id, getCategoryName(cat, currentLocale));
+                                      }}
+                                      disabled={isDeletingCategory}
+                                      className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                                      title={t('fields.delete')}
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </div>
                               ))
                             ) : categoryInput.trim() === '' ? (
                               <div className="px-3 py-2 text-sm text-[#666]">
@@ -799,20 +1073,53 @@ export default function EditProjectPage() {
                           <div className="absolute z-20 mt-1 w-full rounded-none border border-[#e0e0e0] bg-white shadow">
                             {filteredSubCategories.length > 0 ? (
                               filteredSubCategories.map((subCat) => (
-                                <button
-                                  type="button"
+                                <div
                                   key={subCat.id}
+                                  className="flex items-center justify-between group hover:bg-gray-100"
                                   onMouseDown={(e) => e.preventDefault()}
-                                  onClick={() => {
-                                    const name = getSubCategoryName(subCat, currentLocale);
-                                    setSubCategoryInput(name);
-                                    setValue('subCategoryId', subCat.id, { shouldValidate: true });
-                                    setSubCategoryPopoverOpen(false);
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
                                 >
-                                  {getSubCategoryName(subCat, currentLocale)}
-                                </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const name = getSubCategoryName(subCat, currentLocale);
+                                      setSubCategoryInput(name);
+                                      setValue('subCategoryId', subCat.id, { shouldValidate: true });
+                                      setSubCategoryPopoverOpen(false);
+                                    }}
+                                    className="flex-1 text-left px-3 py-2 text-sm"
+                                  >
+                                    {getSubCategoryName(subCat, currentLocale)}
+                                  </button>
+                                  <div className="flex items-center gap-1 pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditSubCategory(subCat);
+                                      }}
+                                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                      title={t('fields.update')}
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                      </svg>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteSubCategory(subCat.id, getSubCategoryName(subCat, currentLocale));
+                                      }}
+                                      disabled={isDeletingSubCategory}
+                                      className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                                      title={t('fields.delete')}
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </div>
                               ))
                             ) : subCategoryInput.trim() === '' ? (
                               <div className="px-3 py-2 text-sm text-[#666]">
@@ -947,33 +1254,39 @@ export default function EditProjectPage() {
             <div className="bg-white border border-[#e0e0e0] w-full max-w-md shadow-lg">
               <div className="px-4 sm:px-6 md:px-6 py-3 sm:py-4 md:py-4 border-b border-[#e0e0e0]">
                 <h2 className="text-sm sm:text-base md:text-base font-semibold tracking-[1px] sm:tracking-[1.5px] md:tracking-[2px] uppercase text-[#333]">
-                  {translationModal.type === 'category' ? 'Thêm thể loại mới' : 'Thêm thể loại phụ mới'}
+                  {translationModal.itemId
+                    ? translationModal.type === 'category'
+                      ? t('category.update')
+                      : t('category.updateSub')
+                    : translationModal.type === 'category'
+                    ? t('category.addNew')
+                    : t('category.addNewSub')}
                 </h2>
               </div>
               <div className="px-4 sm:px-6 md:px-6 py-4 sm:py-5 md:py-5 space-y-4">
                 <div>
                   <label className="block text-xs font-medium uppercase tracking-[1px] text-[#555] mb-1">
-                    Tên tiếng Việt *
+                    {t('category.nameVi')} *
                   </label>
                   <input
                     type="text"
                     value={modalTranslations.vi}
                     onChange={(e) => setModalTranslations({ ...modalTranslations, vi: e.target.value })}
                     className="w-full border border-[#e0e0e0] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#333]"
-                    placeholder="Nhập tên tiếng Việt"
+                    placeholder={t('category.nameViPlaceholder')}
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium uppercase tracking-[1px] text-[#555] mb-1">
-                    Tên tiếng Anh *
+                    {t('category.nameEn')} *
                   </label>
                   <input
                     type="text"
                     value={modalTranslations.en}
                     onChange={(e) => setModalTranslations({ ...modalTranslations, en: e.target.value })}
                     className="w-full border border-[#e0e0e0] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#333]"
-                    placeholder="Enter English name"
+                    placeholder={t('category.nameEnPlaceholder')}
                     required
                   />
                 </div>
@@ -987,21 +1300,51 @@ export default function EditProjectPage() {
                     setTranslationModal(null);
                     setModalTranslations({ vi: '', en: '' });
                   }}
-                  disabled={isCreatingCategory || isCreatingSubCategory}
+                  disabled={isCreatingCategory || isCreatingSubCategory || isUpdatingCategory || isUpdatingSubCategory}
                 >
-                  Hủy
+                  {t('category.cancel')}
                 </Button>
                 <Button
                   type="button"
                   size="sm"
-                  onClick={translationModal.type === 'category' ? handleCreateCategory : handleCreateSubCategory}
-                  disabled={isCreatingCategory || isCreatingSubCategory || !modalTranslations.vi.trim() || !modalTranslations.en.trim()}
+                  onClick={
+                    translationModal.itemId
+                      ? (translationModal.type === 'category' ? handleUpdateCategory : handleUpdateSubCategory)
+                      : (translationModal.type === 'category' ? handleCreateCategory : handleCreateSubCategory)
+                  }
+                  disabled={
+                    isCreatingCategory ||
+                    isCreatingSubCategory ||
+                    isUpdatingCategory ||
+                    isUpdatingSubCategory ||
+                    !modalTranslations.vi.trim() ||
+                    !modalTranslations.en.trim()
+                  }
                 >
-                  {isCreatingCategory || isCreatingSubCategory ? 'Đang tạo...' : 'Tạo'}
+                  {isCreatingCategory || isCreatingSubCategory
+                    ? t('category.creating')
+                    : isUpdatingCategory || isUpdatingSubCategory
+                    ? t('category.updating')
+                    : translationModal.itemId
+                    ? t('category.updateButton')
+                    : t('category.create')}
                 </Button>
               </div>
             </div>
           </div>
+        )}
+
+        {deleteConfirmDialog && (
+          <ConfirmDialog
+            isOpen={deleteConfirmDialog.isOpen}
+            title={deleteDialogTitle}
+            message={deleteDialogMessage}
+            confirmText={t('fields.delete')}
+            cancelText={t('category.cancel')}
+            variant="danger"
+            onConfirm={handleDeleteConfirm}
+            onCancel={handleDeleteCancel}
+          />
         )}
       </div>
     </div>

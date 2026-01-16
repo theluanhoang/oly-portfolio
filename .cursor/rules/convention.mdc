@@ -1,0 +1,10 @@
+---
+name: convention
+description: This is a new rule
+---
+
+# Overview
+
+Don't create any comments or icons in generated code. 
+I run code in docker, so if you want to migration schema, please do it in docker. (Ex: docker compose exec app npm run dev)
+If you want to run command with npm, please use nvm to choose node version 22 (Ex: nvm use 22 && npm i)
