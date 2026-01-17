@@ -100,7 +100,7 @@ export default function ProjectGalleryGrid({ images, maxImages = 8, projectTitle
                   return (
                     <div
                       key={`${image}-${pageIdx}-${index}`}
-                      className="relative max-w-[210px] aspect-square overflow-hidden"
+                      className="relative max-w-[210px] aspect-square overflow-hidden w-full h-full"
                     >
                       <OptimizedImage
                         src={image}

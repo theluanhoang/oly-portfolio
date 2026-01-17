@@ -45,7 +45,7 @@ export default function MoreProjects({
           >
             <div className="flex gap-[27px]">
               {/* Image - Left side */}
-              <div className="relative max-w-[141px] shrink-0 aspect-141/153 overflow-hidden">
+              <div className="relative max-w-[141px] shrink-0 aspect-141/153 overflow-hidden w-full h-full">
                 {project.heroImage ? (
                   <OptimizedImage
                     src={project.heroImage}

@@ -127,10 +127,10 @@ export default function OptimizedImage({
 
   return (
     <div
-      className={`relative overflow-hidden ${className}`}
+      className={`relative overflow-hidden w-full h-full ${className}`}
       style={{
         width: width ? `${width}px` : '100%',
-        height: height ? `${height}px` : 'auto',
+        height: height ? `${height}px` : '100%',
         aspectRatio: width && height ? `${width}/${height}` : undefined,
       }}
     >

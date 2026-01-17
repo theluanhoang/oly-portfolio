@@ -32,7 +32,7 @@ export default function ProjectImage({ src, alt, gridPosition, slug, title, cate
 
   if (isPlaceholder) {
     return (
-      <div className={`project relative overflow-hidden bg-gray-100 flex items-center justify-center ${gridPosition}`}>
+      <div className={`project relative overflow-hidden bg-gray-100 flex items-center justify-center h-full w-full ${gridPosition}`}>
         <div className="text-center px-4">
           <p className="text-gray-400 text-sm font-normal uppercase tracking-wider">{t('comingSoon')}</p>
         </div>
@@ -43,7 +43,7 @@ export default function ProjectImage({ src, alt, gridPosition, slug, title, cate
   return (
     <Link 
       href={href} 
-      className={`project relative overflow-hidden cursor-pointer hover:z-10 block group ${gridPosition}`}
+      className={`project relative overflow-hidden cursor-pointer hover:z-10 block group h-full w-full ${gridPosition}`}
     >
       <OptimizedImage
         src={imageSrc}

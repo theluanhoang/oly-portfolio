@@ -84,11 +84,11 @@ export default function ProjectGallery({ images = [] }: ProjectGalleryProps) {
   if (isSingleImage) {
     return (
       <section className="w-full bg-background">
-        <div className="w-full overflow-hidden">
+        <div className="w-full h-full overflow-hidden">
           <OptimizedImage
             src={images[0]}
             alt="Project gallery"
-            className="w-full h-auto"
+            className="w-full h-full"
             objectFit="cover"
             priority="eager"
             progressive={true}
@@ -102,11 +102,11 @@ export default function ProjectGallery({ images = [] }: ProjectGalleryProps) {
     <section className="w-full bg-background py-8 md:py-12">
       <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-12">
         {/* Main Image với arrows */}
-        <div className="relative w-full mb-6 md:mb-8 overflow-hidden rounded-lg group">
+        <div className="relative w-full mb-6 md:mb-8 overflow-hidden rounded-lg group aspect-video">
           <OptimizedImage
             src={images[selectedImage]}
             alt={`Project image ${selectedImage + 1}`}
-            className="w-full h-auto transition-opacity duration-300"
+            className="w-full h-full transition-opacity duration-300"
             objectFit="cover"
             priority={selectedImage === 0 ? 'eager' : 'lazy'}
             progressive={true}
