@@ -53,11 +53,22 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
+    const maxDisplayOrderResult = await prisma.project.findFirst({
+      orderBy: { displayOrder: 'desc' },
+      select: { displayOrder: true },
+    });
+    const nextDisplayOrder = maxDisplayOrderResult 
+      ? maxDisplayOrderResult.displayOrder + 1 
+      : 0;
+
     const project = await prisma.project.create({
       data: {
         slug: projectData.slug,
         heroImage: projectData.heroImage || '',
         gallery: projectData.gallery || [],
+        displayOrder: projectData.displayOrder !== undefined 
+          ? Number(projectData.displayOrder) 
+          : nextDisplayOrder,
         categoryId: projectData.categoryId || null,
         subCategoryId: projectData.subCategoryId || null,
         translations: {
