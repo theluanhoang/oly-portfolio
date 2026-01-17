@@ -131,6 +131,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   }
 
   const allProjects = await getProjects(locale);
+  const hasMoreProjects = allProjects.length > 1;
   const galleryImages = project.gallery && project.gallery.length > 0 
     ? project.gallery 
     : project.heroImage 
@@ -229,43 +230,60 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           </section>
         )}
 
-        {/* Project Info Section - Left aligned */}
-        <div className="lg:mt-[82px] mt-[25px]">
+        {/* Project Info Section - Centered if no more projects, left aligned if has more projects */}
+        <div className={`lg:mt-[82px] mt-[25px] ${hasMoreProjects ? '' : 'max-w-4xl mx-auto'}`}>
           <ProjectInfo project={project} />
         </div>
         
-        {/* Two Column Layout */}
+        {/* Two Column Layout or Full Width */}
         <section className="relative bg-background md:mt-[45px] mt-[25px]">
           <div className="relative">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-[112px]">
-              {/* Main Content */}
-              <article className="lg:col-span-2">
-                <ProjectContent content={project.content} />
-                
-                <div className="mt-12 lg:mb-[88px] mb-[100px]">
-                  <ProjectGalleryGrid 
-                    images={galleryImages} 
-                    maxImages={8}
-                    projectTitle={project.title}
-                  />
-                </div>
-              </article>
+            {hasMoreProjects ? (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-[112px]">
+                {/* Main Content */}
+                <article className="lg:col-span-2">
+                  <ProjectContent content={project.content} />
+                  
+                  <div className="mt-12 lg:mb-[88px] mb-[100px]">
+                    <ProjectGalleryGrid 
+                      images={galleryImages} 
+                      maxImages={8}
+                      projectTitle={project.title}
+                    />
+                  </div>
+                </article>
 
-              {/* Sidebar - Related Projects */}
-              <aside className="lg:col-span-1" aria-label="Related projects">
-                <MoreProjects 
-                  projects={allProjects.map(p => ({
-                    slug: p.slug,
-                    title: p.title,
-                    heroImage: p.heroImage,
-                    category: p.category,
-                    location: p.location,
-                    year: p.year,
-                  }))}
-                  currentSlug={slug}
-                />
-              </aside>
-            </div>
+                {/* Sidebar - Related Projects */}
+                <aside className="lg:col-span-1" aria-label="Related projects">
+                  <MoreProjects 
+                    projects={allProjects.map(p => ({
+                      slug: p.slug,
+                      title: p.title,
+                      heroImage: p.heroImage,
+                      category: p.category,
+                      location: p.location,
+                      year: p.year,
+                    }))}
+                    currentSlug={slug}
+                  />
+                </aside>
+              </div>
+            ) : (
+              <div className="max-w-4xl mx-auto">
+                {/* Main Content - Full Width */}
+                <article>
+                  <ProjectContent content={project.content} />
+                  
+                  <div className="mt-12 lg:mb-[88px] mb-[100px]">
+                    <ProjectGalleryGrid 
+                      images={galleryImages} 
+                      maxImages={8}
+                      projectTitle={project.title}
+                    />
+                  </div>
+                </article>
+              </div>
+            )}
           </div>
         </section>
       </main>
