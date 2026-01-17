@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
+import { useRouter } from '@/i18n/routing';
 import dynamicImport from 'next/dynamic';
 import GalleryUpload from '@/components/admin/GalleryUpload';
 import { DefaultLoading } from '@/lib/performance/dynamic-imports';
@@ -46,6 +47,7 @@ interface SubCategory {
 }
 
 export default function NewProjectPage() {
+  const router = useRouter();
   const t = useTranslations('Admin.projects');
   const [currentStep, setCurrentStep] = useState(1);
   const [currentLocale, setCurrentLocale] = useState('vi');
@@ -880,35 +882,9 @@ export default function NewProjectPage() {
       
       setSaveMessage({ type: 'success', text: t('new.success') });
       
-      methods.reset({
-        slug: '',
-        gallery: [],
-        categoryId: null,
-        subCategoryId: null,
-        translations: {
-          vi: {
-            title: '',
-            location: '',
-            area: '',
-            year: '',
-            content: '',
-          },
-          en: {
-            title: '',
-        location: '',
-        area: '',
-        year: '',
-        content: '',
-          },
-        },
-      });
-      gallery.reset();
-      setCurrentStep(1);
-      setCurrentLocale('vi');
-      
       setTimeout(() => {
-        setSaveMessage(null);
-      }, 3000);
+        router.push('/admin/projects');
+      }, 1500);
       
     } catch (error) {
       console.error('Error saving project:', error);
