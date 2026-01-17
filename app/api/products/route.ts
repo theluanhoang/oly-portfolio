@@ -29,14 +29,26 @@ export async function GET(request: Request): Promise<Response> {
           },
           {
             category: {
-              contains: searchValue,
-              mode: Prisma.QueryMode.insensitive,
+              translations: {
+                some: {
+                  name: {
+                    contains: searchValue,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+              },
             },
           },
           {
             material: {
-              contains: searchValue,
-              mode: Prisma.QueryMode.insensitive,
+              translations: {
+                some: {
+                  name: {
+                    contains: searchValue,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+              },
             },
           },
           {
@@ -62,8 +74,14 @@ export async function GET(request: Request): Promise<Response> {
     if (categoryFilter.length > 0) {
       andConditions.push({
         category: {
-          contains: categoryFilter,
-          mode: Prisma.QueryMode.insensitive,
+          translations: {
+            some: {
+              name: {
+                contains: categoryFilter,
+                mode: Prisma.QueryMode.insensitive,
+              },
+            },
+          },
         },
       });
     }
