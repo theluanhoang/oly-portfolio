@@ -71,6 +71,7 @@ jobs:
 
           NGINX_PORT=${{ secrets.NGINX_PORT || '80' }}
           NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL || '' }}
+          NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL || '' }}
 
           FROM_EMAIL=${{ secrets.FROM_EMAIL || '' }}
           FROM_NAME=${{ secrets.FROM_NAME || '' }}
