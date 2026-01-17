@@ -115,8 +115,17 @@ export default function NewProductPage() {
   const currentTranslation = translations[currentLocale] || translations.vi || translations.en;
   const viTitle = translations?.vi?.title || '';
   const enTitle = translations?.en?.title || '';
+  const viContent = translations?.vi?.content || '';
+  const enContent = translations?.en?.content || '';
   const thumbnail = watch('thumbnail');
   const previousTitleRef = useRef<Record<string, string>>({});
+  
+  // Check which tabs have content
+  const hasViContent = viContent.trim().length > 0;
+  const hasEnContent = enContent.trim().length > 0;
+  const hasBothContent = hasViContent && hasEnContent;
+  const hasNoContent = !hasViContent && !hasEnContent;
+  const missingContentTab = !hasViContent ? 'vi' : !hasEnContent ? 'en' : null;
 
   const { fields, append, remove } = useFieldArray({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -594,6 +603,14 @@ export default function NewProductPage() {
     }
   };
 
+  const handleStep2Next = () => {
+    if (missingContentTab) {
+      // Switch to the tab that's missing content
+      setCurrentLocale(missingContentTab);
+      scrollToFormTop();
+    }
+  };
+
   const onSubmit = async (data: ProductSchema) => {
     setIsSaving(true);
     setSaveMessage(null);
@@ -749,10 +766,10 @@ export default function NewProductPage() {
                           }}
                           onFocus={() => setCategoryPopoverOpen(true)}
                           onBlur={() => setTimeout(() => setCategoryPopoverOpen(false), 150)}
-                          placeholder={t('fields.selectCategory')}
+                        placeholder={t('fields.selectCategory')}
                           className="w-full h-[44px] border border-black px-4 pr-10 rounded-lg bg-white text-[#333] outline-none focus:outline-none focus:border-black transition-colors"
                           disabled={loadingCategories}
-                          required
+                        required
                         />
                         {selectedCategoryId && (
                           <button
@@ -876,10 +893,10 @@ export default function NewProductPage() {
                           }}
                           onFocus={() => setMaterialPopoverOpen(true)}
                           onBlur={() => setTimeout(() => setMaterialPopoverOpen(false), 150)}
-                          placeholder={t('fields.selectMaterial')}
+                        placeholder={t('fields.selectMaterial')}
                           className="w-full h-[44px] border border-black px-4 pr-10 rounded-lg bg-white text-[#333] outline-none focus:outline-none focus:border-black transition-colors"
                           disabled={loadingMaterials}
-                          required
+                        required
                         />
                         {selectedMaterialId && (
                           <button
@@ -1076,9 +1093,19 @@ export default function NewProductPage() {
                   <Button type="button" variant="secondary" onClick={handleBack}>
                     {t('new.back')}
                   </Button>
+                  {hasBothContent ? (
                   <Button type="submit" disabled={isSaving}>
                     {isSaving ? t('new.saving') : t('new.save')}
                   </Button>
+                  ) : (
+                    <Button 
+                      type="button" 
+                      onClick={handleStep2Next}
+                      disabled={hasNoContent || isSaving}
+                    >
+                      {t('new.next')}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

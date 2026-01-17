@@ -119,8 +119,17 @@ export default function EditProductPage() {
   const currentTranslation = translations[currentLocale] || translations.vi || translations.en;
   const viTitle = translations?.vi?.title || '';
   const enTitle = translations?.en?.title || '';
+  const viContent = translations?.vi?.content || '';
+  const enContent = translations?.en?.content || '';
   const thumbnail = watch('thumbnail');
   const previousTitleRef = useRef<Record<string, string>>({});
+  
+  // Check which tabs have content
+  const hasViContent = viContent.trim().length > 0;
+  const hasEnContent = enContent.trim().length > 0;
+  const hasBothContent = hasViContent && hasEnContent;
+  const hasNoContent = !hasViContent && !hasEnContent;
+  const missingContentTab = !hasViContent ? 'vi' : !hasEnContent ? 'en' : null;
 
   const { fields, append, remove } = useFieldArray({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -673,6 +682,14 @@ export default function EditProductPage() {
     }
   };
 
+  const handleStep2Next = () => {
+    if (missingContentTab) {
+      // Switch to the tab that's missing content
+      setCurrentLocale(missingContentTab);
+      scrollToFormTop();
+    }
+  };
+
   const onSubmit = async (data: ProductSchema) => {
     setIsSaving(true);
     setSaveMessage(null);
@@ -1140,9 +1157,19 @@ export default function EditProductPage() {
                   <Button type="button" variant="secondary" onClick={handleBack}>
                     {t('new.back')}
                   </Button>
+                  {hasBothContent ? (
                   <Button type="submit" disabled={isSaving}>
                     {isSaving ? t('edit.updating') : t('edit.update')}
                   </Button>
+                  ) : (
+                    <Button 
+                      type="button" 
+                      onClick={handleStep2Next}
+                      disabled={hasNoContent || isSaving}
+                    >
+                      {t('new.next')}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
