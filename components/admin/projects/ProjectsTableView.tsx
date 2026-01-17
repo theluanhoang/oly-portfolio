@@ -104,7 +104,13 @@ export function ProjectsTableView({
       headerKey: 'created',
       sortable: true,
       sortKey: 'createdAt',
-      render: (project) => new Date(project.createdAt).toLocaleDateString(),
+      render: (project) => {
+        const date = new Date(project.createdAt);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      },
       className: 'text-[#666]',
       responsive: { hidden: 'md' },
     },

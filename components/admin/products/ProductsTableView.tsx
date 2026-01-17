@@ -105,7 +105,13 @@ export function ProductsTableView({
       headerKey: 'created',
       sortable: true,
       sortKey: 'createdAt',
-      render: (product) => new Date(product.createdAt).toLocaleDateString(),
+      render: (product) => {
+        const date = new Date(product.createdAt);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      },
       className: 'text-[#666]',
       responsive: { hidden: 'md' },
     },
