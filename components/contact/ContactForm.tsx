@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Input, Select, Textarea, BudgetInput } from '@/components/forms';
 import Button from '@/components/ui/Button';
 
@@ -19,12 +19,20 @@ type ContactFormData = {
   notes?: string;
 };
 
+type Category = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
 export default function ContactForm() {
   const t = useTranslations('ContactPage');
+  const locale = useLocale();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [areaValue, setAreaValue] = useState('');
   const [budgetValue, setBudgetValue] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const contactFormSchema = useMemo(
     () =>
@@ -72,6 +80,25 @@ export default function ContactForm() {
     mode: 'onBlur',
     reValidateMode: 'onBlur',
   });
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`/api/categories?locale=${locale}`);
+        const result = await response.json();
+        
+        if (response.ok && result.items) {
+          setCategories(result.items);
+        } else {
+          console.error('Failed to fetch categories:', result.error);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+
+    fetchCategories();
+  }, [locale]);
 
   useEffect(() => {
     const checkAutofill = () => {
@@ -221,12 +248,12 @@ export default function ContactForm() {
   const categoryOptions = useMemo(
     () => [
       { value: '', label: t('form.categories.select') },
-      { value: 'residential', label: t('form.categories.residential') },
-      { value: 'commercial', label: t('form.categories.commercial') },
-      { value: 'office', label: t('form.categories.office') },
-      { value: 'other', label: t('form.categories.other') },
+      ...categories.map((category) => ({
+        value: category.slug,
+        label: category.name,
+      })),
     ],
-    [t]
+    [t, categories]
   );
 
   return (
