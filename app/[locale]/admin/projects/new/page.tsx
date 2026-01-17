@@ -950,7 +950,7 @@ export default function NewProjectPage() {
                       <FormField
                         key={`title-${currentLocale}`}
                         name={`translations.${currentLocale}.title`}
-                        label={t('fields.title')}
+                        label={`${t('fields.title')} (${LOCALE_LABELS[currentLocale].label})`}
                         placeholder="NARROW HOUSE"
                         required
                       />
@@ -1220,7 +1220,7 @@ export default function NewProjectPage() {
                       <FormField
                         key={`location-${currentLocale}`}
                         name={`translations.${currentLocale}.location`}
-                        label={t('fields.location')}
+                        label={`${t('fields.location')} (${LOCALE_LABELS[currentLocale].label})`}
                         placeholder="TP. Hồ Chí Minh"
                         required
                       />
@@ -1230,7 +1230,7 @@ export default function NewProjectPage() {
                       <FormField
                         key={`area-${currentLocale}`}
                         name={`translations.${currentLocale}.area`}
-                        label={t('fields.area')}
+                        label={`${t('fields.area')} (${LOCALE_LABELS[currentLocale].label})`}
                         placeholder="58 m²"
                         required
                       />
@@ -1240,7 +1240,7 @@ export default function NewProjectPage() {
                       <FormField
                         key={`year-${currentLocale}`}
                         name={`translations.${currentLocale}.year`}
-                        label={t('fields.year')}
+                        label={`${t('fields.year')} (${LOCALE_LABELS[currentLocale].label})`}
                         placeholder="2018"
                         required
                       />
@@ -1289,7 +1289,9 @@ export default function NewProjectPage() {
                   <h2 className="text-lg font-normal tracking-[2px] uppercase text-[#333] mb-6 border-b border-[#e0e0e0] pb-2">
                     {t('new.content')}
                   </h2>
-
+                  <label className="block text-base font-bold text-black tracking-[0.16px] leading-normal mb-2 font-montserrat">
+                    {t('new.content')} ({LOCALE_LABELS[currentLocale].label})
+                  </label>
                   <TiptapEditor
                     key={`content-${currentLocale}`}
                     content={currentTranslation?.content || ''}
