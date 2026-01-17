@@ -32,30 +32,30 @@ export default function ProjectInfo({ project }: ProjectInfoProps) {
         </h1>
 
         {/* Project Specifications */}
-        <div className="max-w-[330px] grid grid-cols-2 lg:gap-x-[34px] gap-x-[43px] text-foreground font-montserrat text-xs tracking-[1.68px] leading-5">
+        <div className="w-full grid grid-cols-[auto_1fr] lg:gap-x-[34px] gap-x-[43px] text-foreground font-montserrat text-xs tracking-[1.68px] leading-5">
           <div className="space-y-[5px]">
-            <div className="flex items-centerfont-normal">
+            <div className="flex items-center font-normal whitespace-nowrap">
               <span className="mr-4">•</span>
               <p>{t('categoryLabel')}</p>
             </div>
-            <div className="flex items-centerfont-normal">
+            <div className="flex items-center font-normal whitespace-nowrap">
               <span className="mr-4">•</span>
               <p>{t('locationLabel')}</p>
             </div>
-            <div className="flex items-centerfont-normal">
+            <div className="flex items-center font-normal whitespace-nowrap">
               <span className="mr-4">•</span>
               <p>{t('areaLabel')}</p>
             </div>
-            <div className="flex items-centerfont-normal">
+            <div className="flex items-center font-normal whitespace-nowrap">
               <span className="mr-4">•</span>
               <p>{t('yearLabel')}</p>
             </div>
           </div>
           <div className="space-y-[5px]">
-            <p className="font-normal">{category}</p>
-            <p className="font-normal">{location}</p>
-            <p className="font-normal">{area} m²</p>
-            <p className="font-normal">{year}</p>
+            <p className="font-normal whitespace-nowrap">{category}</p>
+            <p className="font-normal whitespace-nowrap">{location}</p>
+            <p className="font-normal whitespace-nowrap">{area} m²</p>
+            <p className="font-normal whitespace-nowrap">{year}</p>
           </div>
         </div>
       </div>
