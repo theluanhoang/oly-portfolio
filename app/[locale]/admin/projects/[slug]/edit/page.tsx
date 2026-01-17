@@ -117,8 +117,17 @@ export default function EditProjectPage() {
   const { handleSubmit, trigger, setValue, watch, formState: { errors }, reset } = methods;
   const translations = watch('translations');
   const currentTranslation = translations[currentLocale] || translations.vi || translations.en;
+  const viContent = translations?.vi?.content || '';
+  const enContent = translations?.en?.content || '';
   const selectedCategoryId = watch('categoryId');
   const selectedSubCategoryId = watch('subCategoryId');
+  
+  // Check which tabs have content
+  const hasViContent = viContent.trim().length > 0;
+  const hasEnContent = enContent.trim().length > 0;
+  const hasBothContent = hasViContent && hasEnContent;
+  const hasNoContent = !hasViContent && !hasEnContent;
+  const missingContentTab = !hasViContent ? 'vi' : !hasEnContent ? 'en' : null;
 
   // Load categories and subcategories with all translations
   useEffect(() => {
@@ -731,6 +740,14 @@ export default function EditProjectPage() {
     }
   };
 
+  const handleStep2Next = () => {
+    if (missingContentTab) {
+      // Switch to the tab that's missing content
+      setCurrentLocale(missingContentTab);
+      scrollToFormTop();
+    }
+  };
+
   const updateTranslation = (locale: string, field: string, value: string) => {
     const currentTranslations = watch('translations') || {};
     const localeTranslation = currentTranslations[locale] || {};
@@ -1256,9 +1273,19 @@ export default function EditProjectPage() {
                   <Button type="button" variant="secondary" onClick={handleBack}>
                     {t('new.back')}
                   </Button>
-                  <Button type="submit" disabled={isSaving}>
-                    {isSaving ? t('edit.updating') : t('edit.update')}
-                  </Button>
+                  {hasBothContent ? (
+                    <Button type="submit" disabled={isSaving}>
+                      {isSaving ? t('edit.updating') : t('edit.update')}
+                    </Button>
+                  ) : (
+                    <Button 
+                      type="button" 
+                      onClick={handleStep2Next}
+                      disabled={hasNoContent || isSaving}
+                    >
+                      {t('new.next')}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
