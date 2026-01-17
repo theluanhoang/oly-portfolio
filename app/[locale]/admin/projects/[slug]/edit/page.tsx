@@ -674,6 +674,12 @@ export default function EditProjectPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, reset, t]);
 
+  useEffect(() => {
+    if (currentStep === 2) {
+      setCurrentLocale('vi');
+    }
+  }, [currentStep]);
+
   const handleNext = async () => {
     if (currentStep === 1) {
       const slugValid = await trigger('slug');

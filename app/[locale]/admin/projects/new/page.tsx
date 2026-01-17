@@ -723,6 +723,12 @@ export default function NewProjectPage() {
     }
   }, [viTitle, enTitle, setValue, watch]);
 
+  useEffect(() => {
+    if (currentStep === 2) {
+      setCurrentLocale('vi');
+    }
+  }, [currentStep]);
+
   const handleNext = async () => {
     if (currentStep === 1) {
       const slugValid = await trigger('slug');
