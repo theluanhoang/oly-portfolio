@@ -35,7 +35,9 @@ export default function Header({ isFixed = false }: HeaderProps) {
 
   const handleSignOut = async () => {
     setIsDropdownOpen(false);
-    const baseUrl = getBaseUrl();
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : getBaseUrl();
     const callbackUrl = `${baseUrl}/${locale}/admin/login`;
     await signOut({ callbackUrl });
   };
