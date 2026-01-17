@@ -8,6 +8,16 @@ export async function getProducts(locale?: string) {
       },
       include: {
         translations: true,
+        category: {
+          include: {
+            translations: true,
+          }
+        },
+        material: {
+          include: {
+            translations: true,
+          }
+        }
       },
     });
 
@@ -17,11 +27,23 @@ export async function getProducts(locale?: string) {
         ? product.translations.find(t => t.locale === locale) 
         : product.translations.find(t => t.locale === 'vi') || product.translations[0];
 
+      const categoryTranslation = product.category?.translations.find(t => t.locale === locale)
+        || product.category?.translations.find(t => t.locale === 'vi')
+        || product.category?.translations.find(t => t.locale === 'en')
+        || product.category?.translations[0];
+
+      const materialTranslation = product.material?.translations.find(t => t.locale === locale)
+        || product.material?.translations.find(t => t.locale === 'vi')
+        || product.material?.translations.find(t => t.locale === 'en')
+        || product.material?.translations[0];
+
       return {
         ...product,
         title: translation?.title || '',
         descriptions: translation?.descriptions || [],
         content: translation?.content || '',
+        category: categoryTranslation?.name || '',
+        material: materialTranslation?.name || '',
       };
     });
   } catch (error) {
@@ -36,6 +58,16 @@ export async function getProductBySlug(slug: string, locale?: string) {
       where: { slug },
       include: {
         translations: true,
+        category: {
+          include: {
+            translations: true,
+          }
+        },
+        material: {
+          include: {
+            translations: true,
+          }
+        }
       },
     });
     
@@ -48,11 +80,23 @@ export async function getProductBySlug(slug: string, locale?: string) {
       ? product.translations.find(t => t.locale === locale) 
       : product.translations.find(t => t.locale === 'vi') || product.translations[0];
 
+    const categoryTranslation = product.category?.translations.find(t => t.locale === locale)
+      || product.category?.translations.find(t => t.locale === 'vi')
+      || product.category?.translations.find(t => t.locale === 'en')
+      || product.category?.translations[0];
+
+    const materialTranslation = product.material?.translations.find(t => t.locale === locale)
+      || product.material?.translations.find(t => t.locale === 'vi')
+      || product.material?.translations.find(t => t.locale === 'en')
+      || product.material?.translations[0];
+
     return {
       ...product,
       title: translation?.title || '',
       descriptions: translation?.descriptions || [],
       content: translation?.content || '',
+      category: categoryTranslation?.name || '',
+      material: materialTranslation?.name || '',
       translation,
       translations: product.translations,
     };

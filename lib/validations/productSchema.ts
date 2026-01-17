@@ -1,8 +1,4 @@
 import { z } from 'zod';
-import { PRODUCT_CATEGORIES, PRODUCT_MATERIALS } from '@/lib/constants/productConstants';
-
-export const productCategoryValues = PRODUCT_CATEGORIES.map(cat => cat.value) as [string, ...string[]];
-export const productMaterialValues = PRODUCT_MATERIALS.map(mat => mat.value) as [string, ...string[]];
 
 export const productTranslationSchema = z.object({
   title: z
@@ -22,12 +18,8 @@ export const productSchema = z.object({
     .min(1, 'Slug là bắt buộc')
     .max(200, 'Slug không được vượt quá 200 ký tự')
     .regex(/^[a-z0-9-]+$/, 'Slug chỉ được chứa chữ thường, số và dấu gạch ngang'),
-  category: z.enum(productCategoryValues, {
-    message: 'Vui lòng chọn danh mục',
-  }),
-  material: z.enum(productMaterialValues, {
-    message: 'Vui lòng chọn chất liệu',
-  }),
+  categoryId: z.string().min(1, 'Vui lòng chọn danh mục').nullable(),
+  materialId: z.string().min(1, 'Vui lòng chọn chất liệu').nullable(),
   year: z
     .string()
     .min(1, 'Năm là bắt buộc')

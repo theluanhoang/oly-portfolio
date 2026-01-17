@@ -17,9 +17,9 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const productData = await request.json();
     
-    if (!productData.slug || !productData.category || !productData.material || !productData.year || !productData.thumbnail) {
+    if (!productData.slug || !productData.categoryId || !productData.materialId || !productData.year || !productData.thumbnail) {
       return Response.json(
-        { error: 'Missing required fields: slug, category, material, year, thumbnail' },
+        { error: 'Missing required fields: slug, categoryId, materialId, year, thumbnail' },
         { status: 400 }
       );
     }
@@ -56,8 +56,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     const product = await prisma.product.create({
       data: {
         slug: productData.slug,
-        category: productData.category || '',
-        material: productData.material || '',
+        categoryId: productData.categoryId || null,
+        materialId: productData.materialId || null,
         year: productData.year || '',
         thumbnail: productData.thumbnail || '',
         translations: {
@@ -73,6 +73,16 @@ export async function POST(request: NextRequest): Promise<Response> {
       },
       include: {
         translations: true,
+        category: {
+          include: {
+            translations: true,
+          }
+        },
+        material: {
+          include: {
+            translations: true,
+          }
+        }
       },
     });
     

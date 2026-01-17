@@ -15,6 +15,16 @@ export async function GET(request: Request, { params }: RouteParams): Promise<Re
       where: { slug },
       include: {
         translations: true,
+        category: {
+          include: {
+            translations: true,
+          }
+        },
+        material: {
+          include: {
+            translations: true,
+          }
+        }
       },
     });
 
@@ -100,10 +110,10 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
       where: { slug },
       data: {
         slug: productData.slug || slug,
-        category: productData.category || '',
-        material: productData.material || '',
-        year: productData.year || '',
-        thumbnail: productData.thumbnail || '',
+        categoryId: productData.categoryId !== undefined ? (productData.categoryId || null) : existingProduct.categoryId,
+        materialId: productData.materialId !== undefined ? (productData.materialId || null) : existingProduct.materialId,
+        year: productData.year || existingProduct.year,
+        thumbnail: productData.thumbnail || existingProduct.thumbnail,
         translations: {
           create: Object
             .entries(productData.translations as Record<string, { title: string; descriptions?: string[]; content?: string }>)
@@ -117,6 +127,16 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
       },
       include: {
         translations: true,
+        category: {
+          include: {
+            translations: true,
+          }
+        },
+        material: {
+          include: {
+            translations: true,
+          }
+        }
       },
     });
 

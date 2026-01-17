@@ -120,13 +120,15 @@ model SubCategoryTranslation {
 model Product {
   id           String   @id @default(cuid())
   slug         String   @unique
-  category     String
-  material     String
+  categoryId   String?
+  materialId   String?
   year         String
   thumbnail    String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  category     ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  material     ProductMaterial? @relation(fields: [materialId], references: [id], onDelete: SetNull)
   translations ProductTranslation[]
 
   @@map("products")
@@ -164,6 +166,68 @@ model User {
   updatedAt        DateTime  @updatedAt
 
   @@map("users")
+}
+
+model ProductCategory {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  displayOrder Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  translations ProductCategoryTranslation[]
+  products     Product[]
+
+  @@map("product_categories")
+}
+
+model ProductCategoryTranslation {
+  id         String   @id @default(cuid())
+  categoryId String
+  locale     String   // 'en' hoặc 'vi'
+  
+  name       String
+  
+  category   ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@unique([categoryId, locale])
+  @@index([categoryId])
+  @@index([locale])
+  @@map("product_category_translations")
+}
+
+model ProductMaterial {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  displayOrder Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  translations ProductMaterialTranslation[]
+  products     Product[]
+
+  @@map("product_materials")
+}
+
+model ProductMaterialTranslation {
+  id         String   @id @default(cuid())
+  materialId String
+  locale     String   // 'en' hoặc 'vi'
+  
+  name       String
+  
+  material   ProductMaterial @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@unique([materialId, locale])
+  @@index([materialId])
+  @@index([locale])
+  @@map("product_material_translations")
 }
 
 model Translation {
