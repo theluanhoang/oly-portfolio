@@ -392,6 +392,16 @@
                 "validationSpecialChar": "Password must contain at least one special character"
             }
         },
+        "imageUpload": {
+            "thumbnail": "Thumbnail",
+            "dropImageHere": "Drop image here",
+            "dragDropOrClick": "Drag and drop image here or click to select",
+            "supportedFormats": "Supports JPEG, PNG, WebP, GIF • Max 50MB per image • Auto optimize compression",
+            "compressing": "Compressing...",
+            "uploading": "Uploading...",
+            "success": "Success",
+            "removeImage": "Remove image"
+        },
         "translations": {
             "title": "Manage Translations",
             "subtitle": "Manage and edit multilingual translations",

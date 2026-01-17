@@ -1,10 +1,19 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Image as ImageIcon, Upload, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Check, Image as ImageIcon, Upload, X } from 'lucide-react';
 import { Input } from '@/components/forms';
 import { Button } from '@/components/ui';
 import { prepareImageForUpload } from '@/lib/utils/imageUtils';
+
+interface UploadProgress {
+  status: 'compressing' | 'uploading' | 'success' | 'error';
+  progress?: number;
+  error?: string;
+  originalSizeMB?: number;
+  compressedSizeMB?: number;
+}
 
 interface SingleImageUploadProps {
   value?: string;
@@ -19,8 +28,9 @@ export default function SingleImageUpload({
   error,
   label,
 }: SingleImageUploadProps) {
+  const t = useTranslations('Admin.imageUpload');
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,13 +61,42 @@ export default function SingleImageUpload({
 
   const uploadFile = async (file: File) => {
     setUploading(true);
-    setUploadProgress(0);
+    const originalSizeMB = file.size / (1024 * 1024);
+    let fileToUpload = file;
 
     try {
-      const originalSizeMB = file.size / (1024 * 1024);
-      const fileToUpload = originalSizeMB > 0.5 
-        ? await prepareImageForUpload(file).catch(() => file) // Fallback to original if compression fails
-        : file;
+      // Compress image if needed (similar to useGalleryUpload)
+      if (originalSizeMB > 0.5) {
+        try {
+          setUploadProgress({
+            status: 'compressing',
+            progress: 0,
+            originalSizeMB: originalSizeMB,
+          });
+
+          fileToUpload = await prepareImageForUpload(file);
+          const compressedSizeMB = fileToUpload.size / (1024 * 1024);
+
+          setUploadProgress({
+            status: 'uploading',
+            progress: 0,
+            originalSizeMB: originalSizeMB,
+            compressedSizeMB: compressedSizeMB,
+          });
+        } catch (compressionError) {
+          console.warn(`Failed to compress ${file.name}, using original:`, compressionError);
+          setUploadProgress({
+            status: 'uploading',
+            progress: 0,
+            originalSizeMB: originalSizeMB,
+          });
+        }
+      } else {
+        setUploadProgress({
+          status: 'uploading',
+          progress: 0,
+        });
+      }
 
       const formData = new FormData();
       formData.append('file', fileToUpload);
@@ -67,7 +106,10 @@ export default function SingleImageUpload({
       xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable) {
           const percentComplete = (e.loaded / e.total) * 100;
-          setUploadProgress(percentComplete);
+          setUploadProgress((prev) => ({
+            ...prev!,
+            progress: percentComplete,
+          }));
         }
       });
 
@@ -96,14 +138,34 @@ export default function SingleImageUpload({
       });
 
       if (response.url) {
+        setUploadProgress((prev) => ({
+          ...prev!,
+          status: 'success',
+          progress: 100,
+        }));
         onChange(response.url);
+        
+        // Clear progress after a short delay
+        setTimeout(() => {
+          setUploadProgress(null);
+        }, 2000);
       }
     } catch (error) {
       console.error('Error uploading file:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setUploadProgress({
+        status: 'error',
+        error: errorMessage,
+        originalSizeMB: originalSizeMB,
+      });
       onChange('');
+      
+      // Clear error after a delay
+      setTimeout(() => {
+        setUploadProgress(null);
+      }, 5000);
     } finally {
       setUploading(false);
-      setUploadProgress(0);
     }
   };
 
@@ -163,7 +225,7 @@ export default function SingleImageUpload({
           <div className="relative w-full aspect-square max-w-[400px] border border-[#e0e0e0] bg-[#f5f5f5] overflow-hidden">
             <img
               src={value}
-              alt="Thumbnail"
+              alt={t('thumbnail')}
               className="w-full h-full object-cover"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -176,20 +238,52 @@ export default function SingleImageUpload({
               variant="danger"
               size="sm"
               className="absolute top-2 right-2 p-1.5! rounded! min-w-0!"
-              title="Xóa ảnh"
+              title={t('removeImage')}
             >
               <X className="w-4 h-4" />
             </Button>
           </div>
-          {uploading && (
-            <div className="mt-2">
-              <div className="w-full bg-[#e0e0e0] h-1.5">
-                <div
-                  className="bg-[#333] h-1.5 transition-all"
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
+          {uploadProgress && (
+            <div className="mt-2 text-xs text-[#666] bg-[#f5f5f5] p-3 border border-[#e0e0e0]">
+              <div className="flex justify-between items-center mb-1">
+                <span className="font-medium">{t('thumbnail')}</span>
+                <span className="ml-2 flex items-center gap-1">
+                  {uploadProgress.status === 'compressing' && (
+                    <>
+                      <Upload className="w-3 h-3 animate-pulse" />
+                      <span>{t('compressing')}</span>
+                    </>
+                  )}
+                  {uploadProgress.status === 'uploading' && (
+                    <>
+                      <Upload className="w-3 h-3 animate-pulse" />
+                      <span>{t('uploading')}</span>
+                    </>
+                  )}
+                  {uploadProgress.status === 'success' && (
+                    <>
+                      <Check className="w-3 h-3 text-green-600" />
+                      <span>{t('success')}</span>
+                    </>
+                  )}
+                  {uploadProgress.status === 'error' && (
+                    <>
+                      <X className="w-3 h-3 text-red-600" />
+                      <span>{uploadProgress.error}</span>
+                    </>
+                  )}
+                </span>
               </div>
-              <p className="text-xs text-[#666] mt-1">Đang upload... {Math.round(uploadProgress)}%</p>
+              {(uploadProgress.status === 'compressing' || uploadProgress.status === 'uploading') && (
+                <div className="w-full bg-[#e0e0e0] h-1.5 mt-2">
+                  <div
+                    className={`h-1.5 transition-all ${
+                      uploadProgress.status === 'compressing' ? 'bg-blue-500' : 'bg-[#333]'
+                    }`}
+                    style={{ width: `${uploadProgress.progress || 0}%` }}
+                  ></div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -212,26 +306,58 @@ export default function SingleImageUpload({
           {isDragging ? (
             <div className="text-center">
               <Upload className="w-16 h-16 mx-auto mb-4 text-[#333]" strokeWidth={1.5} />
-              <p className="text-[#333] font-medium text-base mb-2">Thả ảnh vào đây</p>
+              <p className="text-[#333] font-medium text-base mb-2">{t('dropImageHere')}</p>
             </div>
           ) : (
             <div className="text-center">
               <ImageIcon className="w-20 h-20 mx-auto mb-4 text-[#666]" strokeWidth={1.5} />
               <p className="text-[#333] font-medium text-base mb-2">
-                Kéo thả ảnh vào đây hoặc click để chọn
+                {t('dragDropOrClick')}
               </p>
               <p className="text-[#666] text-sm">
-                Hỗ trợ JPEG, PNG, WebP, GIF • Tối đa 50MB
+                {t('supportedFormats')}
               </p>
-              {uploading && (
-                <div className="mt-4 w-full max-w-xs">
-                  <div className="w-full bg-[#e0e0e0] h-1.5">
-                    <div
-                      className="bg-[#333] h-1.5 transition-all"
-                      style={{ width: `${uploadProgress}%` }}
-                    ></div>
+              {uploadProgress && (
+                <div className="mt-4 w-full max-w-xs text-xs text-[#666] bg-[#f5f5f5] p-3 border border-[#e0e0e0]">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-medium">{t('thumbnail')}</span>
+                    <span className="ml-2 flex items-center gap-1">
+                      {uploadProgress.status === 'compressing' && (
+                        <>
+                          <Upload className="w-3 h-3 animate-pulse" />
+                          <span>{t('compressing')}</span>
+                        </>
+                      )}
+                      {uploadProgress.status === 'uploading' && (
+                        <>
+                          <Upload className="w-3 h-3 animate-pulse" />
+                          <span>{t('uploading')}</span>
+                        </>
+                      )}
+                      {uploadProgress.status === 'success' && (
+                        <>
+                          <Check className="w-3 h-3 text-green-600" />
+                          <span>{t('success')}</span>
+                        </>
+                      )}
+                      {uploadProgress.status === 'error' && (
+                        <>
+                          <X className="w-3 h-3 text-red-600" />
+                          <span>{uploadProgress.error}</span>
+                        </>
+                      )}
+                    </span>
                   </div>
-                  <p className="text-xs text-[#666] mt-1">Đang upload... {Math.round(uploadProgress)}%</p>
+                  {(uploadProgress.status === 'compressing' || uploadProgress.status === 'uploading') && (
+                    <div className="w-full bg-[#e0e0e0] h-1.5 mt-2">
+                      <div
+                        className={`h-1.5 transition-all ${
+                          uploadProgress.status === 'compressing' ? 'bg-blue-500' : 'bg-[#333]'
+                        }`}
+                        style={{ width: `${uploadProgress.progress || 0}%` }}
+                      ></div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

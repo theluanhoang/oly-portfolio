@@ -392,6 +392,16 @@
                 "validationSpecialChar": "Mật khẩu phải chứa ít nhất một ký tự đặc biệt"
             }
         },
+        "imageUpload": {
+            "thumbnail": "Ảnh đại diện",
+            "dropImageHere": "Thả ảnh vào đây",
+            "dragDropOrClick": "Kéo thả ảnh vào đây hoặc click để chọn",
+            "supportedFormats": "Hỗ trợ JPEG, PNG, WebP, GIF • Tối đa 50MB mỗi ảnh • Tự động nén tối ưu",
+            "compressing": "Đang nén...",
+            "uploading": "Đang upload...",
+            "success": "Thành công",
+            "removeImage": "Xóa ảnh"
+        },
         "translations": {
             "title": "Quản Lý Translations",
             "subtitle": "Quản lý và chỉnh sửa các bản dịch đa ngôn ngữ",
@@ -457,7 +467,7 @@
     },
     "ContactPage": {
         "heroAlt": "Hero Liên hệ",
-        "title": "CONTACT",
+        "title": "LIÊN HỆ",
         "form": {
             "customerName": "Tên khách hàng",
             "email": "Email",
