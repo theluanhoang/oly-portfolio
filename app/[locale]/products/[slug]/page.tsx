@@ -29,7 +29,7 @@ export async function generateMetadata(
   { params }: { params: Promise<{ slug: string; locale: string }> }
 ): Promise<Metadata> {
   const { slug, locale } = await params;
-  const product = await getProductBySlug(slug);
+  const product = await getProductBySlug(slug, locale);
 
   if (!product) {
     return generateLocalizedMetadata(
@@ -53,7 +53,7 @@ export async function generateMetadata(
     descriptions?: string[];
   };
 
-  const displayName = productData.slug.replace(/-/g, ' ').toUpperCase();
+  const displayName = productData.title || productData.slug.replace(/-/g, ' ').toUpperCase();
   const title = `${displayName} | OLY Studio`;
   const description = productData.content
     ? productData.content.replace(/<[^>]*>/g, '').substring(0, 160)
@@ -105,13 +105,13 @@ export async function generateStaticParams() {
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
   const { slug, locale } = await params;
   const t = await getTranslations({ locale, namespace: 'Products' });
-  const product = await getProductBySlug(slug);
+  const product = await getProductBySlug(slug, locale);
 
   if (!product) {
     notFound();
   }
 
-  const allProducts = await getProducts();
+  const allProducts = await getProducts(locale);
   const productData = product as {
     slug: string;
     title?: string;
@@ -132,14 +132,15 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   const nextProduct = currentIndex < productsList.length - 1 ? productsList[currentIndex + 1] : null;
   const relatedProduct = nextProduct || (currentIndex > 0 ? productsList[currentIndex - 1] : null);
 
-  const getDisplayName = (slug: string) => {
-    if (!slug) return 'Product';
-    return slug.replace(/-/g, ' ').toUpperCase();
+  const getDisplayName = (product: { slug: string; title?: string }) => {
+    if (product.title) return product.title;
+    if (!product.slug) return 'Product';
+    return product.slug.replace(/-/g, ' ').toUpperCase();
   };
 
   // Generate structured data
   const productUrl = `${SEO_CONSTANTS.SITE_URL}/${locale}/products/${slug}`;
-  const displayName = getDisplayName(productData.slug);
+  const displayName = getDisplayName(productData);
   const productDescription = productData.content
     ? productData.content.replace(/<[^>]*>/g, '').substring(0, 160)
     : `${displayName} - ${productData.category || 'Product'}${productData.material ? ` made from ${productData.material}` : ''}${productData.year ? ` (${productData.year})` : ''} by OLY Studio.`;
@@ -202,7 +203,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             {t('title')}
           </Link>
           <span className="mx-2" aria-hidden="true">&gt;</span>
-          <span className="text-black text-[10px] sm:text-[12px] font-bold tracking-[1.68px] underline decoration-solid">{getDisplayName(productData.slug)}</span>
+          <span className="text-black text-[10px] sm:text-[12px] font-bold tracking-[1.68px] underline decoration-solid">{displayName}</span>
         </nav>
         
         <div>
@@ -212,7 +213,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 <div className="relative w-full aspect-1416/528 overflow-hidden">
                   <OptimizedImage
                     src={productData.thumbnail}
-                    alt={generateProductImageAlt(displayName, 0, 1, 'thumbnail')}
+                    alt={generateProductImageAlt(productData.title || displayName, 0, 1, 'thumbnail')}
                     className="w-full h-full"
                     objectFit="cover"
                     priority="eager"

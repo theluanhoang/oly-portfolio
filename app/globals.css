@@ -510,6 +510,11 @@ html {
   font-family: var(--font-gayathri), sans-serif;
   color: var(--foreground);
   line-height: 1.8;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .project-content img {
@@ -749,6 +754,10 @@ html {
   line-height: 1.6;
   font-size: 1rem;
   min-height: 1em;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .project-content p:last-child {
@@ -818,6 +827,10 @@ html {
   vertical-align: top;
   box-sizing: border-box;
   position: relative;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .project-content .tiptap-table th {

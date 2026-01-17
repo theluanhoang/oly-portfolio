@@ -120,17 +120,36 @@ model SubCategoryTranslation {
 model Product {
   id           String   @id @default(cuid())
   slug         String   @unique
-  title        String
   category     String
   material     String
   year         String
   thumbnail    String
-  descriptions String[] @default([])
-  content      String   @default("")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  translations ProductTranslation[]
+
   @@map("products")
+}
+
+model ProductTranslation {
+  id        String   @id @default(cuid())
+  productId String
+  locale    String   // 'en' hoặc 'vi'
+  
+  title     String
+  descriptions String[] @default([])
+  content   String   @default("")
+  
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([productId, locale])
+  @@index([productId])
+  @@index([locale])
+  @@map("product_translations")
 }
 
 model User {

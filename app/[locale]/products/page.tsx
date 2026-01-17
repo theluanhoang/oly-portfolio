@@ -37,7 +37,7 @@ export default async function ProductsPage({
   params: Promise<{ locale: string }> 
 }) {
   const { locale } = await params;
-  const products = await getProducts();
+  const products = await getProducts(locale);
   
   const pageUrl = `${SEO_CONSTANTS.SITE_URL}/${locale}/products`;
   const pageName = locale === 'vi' ? 'Sản Phẩm' : 'Products';

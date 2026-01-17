@@ -15,20 +15,28 @@ const TiptapEditor = dynamicImport(
     ssr: false,
   }
 );
+import { LocaleTabs } from '@/components/admin/LocaleTabs';
 import SingleImageUpload from '@/components/admin/SingleImageUpload';
 import FormField from '@/components/forms/FormField';
 import Textarea from '@/components/forms/Textarea';
-import { Header, PageHeader, StepIndicator } from '@/components/layout';
+import { Header, StepIndicator } from '@/components/layout';
 import { Button } from '@/components/ui';
 import { productSchema, ProductSchema } from '@/lib/validations/productSchema';
 import { generateSlug } from '@/lib/utils';
 import { PRODUCT_CATEGORIES, PRODUCT_MATERIALS } from '@/lib/constants/productConstants';
 import { Plus, X } from 'lucide-react';
 
+const LOCALES = ['vi', 'en'];
+const LOCALE_LABELS: Record<string, { label: string }> = {
+  vi: { label: 'Tiếng Việt' },
+  en: { label: 'English' },
+};
+
 export default function NewProductPage() {
   const t = useTranslations('Admin.products');
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
+  const [currentLocale, setCurrentLocale] = useState('vi');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -36,52 +44,107 @@ export default function NewProductPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(productSchema) as any,
     defaultValues: {
-      title: '',
       slug: '',
       category: '',
       material: '',
       year: '',
       thumbnail: '',
-      descriptions: [],
-      content: '',
+      translations: {
+        vi: {
+          title: '',
+          descriptions: [],
+          content: '',
+        },
+        en: {
+          title: '',
+          descriptions: [],
+          content: '',
+        },
+      },
     },
     mode: 'onBlur',
   });
 
   const { handleSubmit, trigger, setValue, watch, formState: { errors }, control } = methods;
-  const content = watch('content');
-  const title = watch('title');
+  const translations = watch('translations');
+  const currentTranslation = translations[currentLocale] || translations.vi || translations.en;
+  const viTitle = translations?.vi?.title || '';
+  const enTitle = translations?.en?.title || '';
   const thumbnail = watch('thumbnail');
-  const previousTitleRef = useRef('');
+  const previousTitleRef = useRef<Record<string, string>>({});
 
   const { fields, append, remove } = useFieldArray({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     control: control as any,
-    name: 'descriptions',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    name: `translations.${currentLocale}.descriptions` as any,
+    keyName: 'id',
   });
 
   useEffect(() => {
-    if (title && title !== previousTitleRef.current) {
-      const generatedSlug = generateSlug(title);
-      const currentSlug = watch('slug');
-      const previousGeneratedSlug = previousTitleRef.current ? generateSlug(previousTitleRef.current) : '';
+    const firstLocaleWithTitle = LOCALES.find(locale => {
+      const title = locale === 'vi' ? viTitle : enTitle;
+      return title && title.trim();
+    });
+
+    if (firstLocaleWithTitle) {
+      const title = firstLocaleWithTitle === 'vi' ? viTitle : enTitle;
+      const previousTitle = previousTitleRef.current[firstLocaleWithTitle] || '';
       
-      if (!currentSlug || currentSlug === previousGeneratedSlug) {
-        setValue('slug', generatedSlug, { shouldValidate: false });
+      if (title && title !== previousTitle) {
+        const generatedSlug = generateSlug(title);
+        const currentSlug = watch('slug');
+        const previousGeneratedSlug = previousTitle ? generateSlug(previousTitle) : '';
+        
+        if (!currentSlug || currentSlug === previousGeneratedSlug) {
+          setValue('slug', generatedSlug, { shouldValidate: false });
+        }
+        previousTitleRef.current[firstLocaleWithTitle] = title;
       }
-      previousTitleRef.current = title;
     }
-  }, [title, setValue, watch]);
+  }, [viTitle, enTitle, setValue, watch]);
 
   const handleContentChange = (newContent: string) => {
-    setValue('content', newContent, { shouldValidate: false });
+    const currentTranslations = watch('translations') || {};
+    const localeTranslation = currentTranslations[currentLocale] || {};
+    setValue('translations', {
+      ...currentTranslations,
+      [currentLocale]: {
+        ...localeTranslation,
+        content: newContent,
+      },
+    }, { shouldValidate: false });
   };
+
 
   const handleNext = async () => {
     if (currentStep === 1) {
-      const isValid = await trigger(['title', 'slug', 'category', 'material', 'year', 'thumbnail']);
+      const slugValid = await trigger('slug');
+      const categoryValid = await trigger('category');
+      const materialValid = await trigger('material');
+      const yearValid = await trigger('year');
+      const thumbnailValid = await trigger('thumbnail');
+      const viFieldsValid = await trigger([
+        'translations.vi.title' as keyof ProductSchema,
+      ]);
+      const enFieldsValid = await trigger([
+        'translations.en.title' as keyof ProductSchema,
+      ]);
+      
+      const isValid = slugValid && categoryValid && materialValid && yearValid && thumbnailValid && viFieldsValid && enFieldsValid;
+      
       if (isValid) {
         setCurrentStep(2);
+        setCurrentLocale('vi');
+      } else {
+        const viHasError = errors.translations?.vi;
+        const enHasError = errors.translations?.en;
+        
+        if (enHasError && !viHasError) {
+          setCurrentLocale('en');
+        } else if (viHasError) {
+          setCurrentLocale('vi');
+        }
       }
     }
   };
@@ -102,14 +165,12 @@ export default function NewProductPage() {
       }
 
       const productData = {
-        title: data.title,
-        slug: data.slug || generateSlug(data.title),
+        slug: data.slug || generateSlug(data.translations.vi?.title || data.translations.en?.title || 'product'),
         category: data.category,
         material: data.material,
         year: data.year,
         thumbnail: data.thumbnail,
-        descriptions: data.descriptions || [],
-        content: data.content || '',
+        translations: data.translations,
       };
       
       const response = await fetch('/api/products/save', {
@@ -139,16 +200,26 @@ export default function NewProductPage() {
       setSaveMessage({ type: 'success', text: t('new.success') });
       
       methods.reset({
-        title: '',
         slug: '',
         category: '',
         material: '',
         year: '',
         thumbnail: '',
-        descriptions: [],
-        content: '',
+        translations: {
+          vi: {
+            title: '',
+            descriptions: [],
+            content: '',
+          },
+          en: {
+            title: '',
+            descriptions: [],
+            content: '',
+          },
+        },
       });
       setCurrentStep(1);
+      setCurrentLocale('vi');
       
       setTimeout(() => {
         setSaveMessage(null);
@@ -169,10 +240,23 @@ export default function NewProductPage() {
       <Header isFixed={true} />
 
       <div className="max-w-5xl mx-auto py-12 px-8 md:px-4">
-        <PageHeader
-          title={t('new.title')}
-          subtitle={`${t('new.step')} ${currentStep} ${t('new.of')} 2`}
-        />
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-4xl font-normal tracking-[3px] uppercase text-[#333] md:text-2xl">
+              {t('new.title')}
+            </h1>
+            <LocaleTabs
+              locales={LOCALES}
+              currentLocale={currentLocale}
+              onLocaleChange={setCurrentLocale}
+              translations={LOCALE_LABELS}
+              variant="inline"
+            />
+          </div>
+          <p className="text-sm text-[#666] tracking-[1px] uppercase">
+            {`${t('new.step')} ${currentStep} ${t('new.of')} 2`}
+          </p>
+        </div>
 
         <StepIndicator currentStep={currentStep} totalSteps={2} />
 
@@ -184,11 +268,12 @@ export default function NewProductPage() {
                   <h2 className="text-lg font-normal tracking-[2px] uppercase text-[#333] mb-6 border-b border-[#e0e0e0] pb-2">
                     {t('new.productInfo')}
                   </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6" key={currentLocale}>
                     <div className="md:col-span-2">
                       <FormField
-                        name="title"
-                        label={t('fields.title')}
+                        key={`title-${currentLocale}`}
+                        name={`translations.${currentLocale}.title`}
+                        label={`${t('fields.title')} (${LOCALE_LABELS[currentLocale].label})`}
                         placeholder="Wooden Chair"
                         required
                       />
@@ -255,14 +340,15 @@ export default function NewProductPage() {
 
                 <div>
                   <h3 className="text-sm font-normal tracking-[1px] uppercase text-[#333] mb-4">
-                    {t('fields.descriptions')}
+                    {t('fields.descriptions')} ({LOCALE_LABELS[currentLocale].label})
                   </h3>
                   <div className="space-y-3">
                     {fields.map((field, index) => (
                       <div key={field.id} className="flex gap-2 items-center">
                         <div className="flex-1">
                           <Controller
-                            name={`descriptions.${index}`}
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            name={`translations.${currentLocale}.descriptions.${index}` as any}
                             control={control}
                             render={({ field: textareaField }) => (
                               <Textarea
@@ -309,8 +395,12 @@ export default function NewProductPage() {
                   <h2 className="text-lg font-normal tracking-[2px] uppercase text-[#333] mb-6 border-b border-[#e0e0e0] pb-2">
                     {t('new.content')}
                   </h2>
+                  <label className="block text-base font-bold text-black tracking-[0.16px] leading-normal mb-2 font-montserrat">
+                    {t('new.content')} ({LOCALE_LABELS[currentLocale].label})
+                  </label>
                   <TiptapEditor
-                    content={content || ''}
+                    key={`content-${currentLocale}`}
+                    content={currentTranslation?.content || ''}
                     onChange={handleContentChange}
                   />
                 </div>

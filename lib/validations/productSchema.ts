@@ -4,11 +4,19 @@ import { PRODUCT_CATEGORIES, PRODUCT_MATERIALS } from '@/lib/constants/productCo
 export const productCategoryValues = PRODUCT_CATEGORIES.map(cat => cat.value) as [string, ...string[]];
 export const productMaterialValues = PRODUCT_MATERIALS.map(mat => mat.value) as [string, ...string[]];
 
-export const productSchema = z.object({
+export const productTranslationSchema = z.object({
   title: z
     .string()
     .min(1, 'Tên sản phẩm là bắt buộc')
     .max(200, 'Tên sản phẩm không được vượt quá 200 ký tự'),
+  descriptions: z
+    .array(z.string())
+    .optional()
+    .default([]),
+  content: z.string().optional().default(''),
+});
+
+export const productSchema = z.object({
   slug: z
     .string()
     .min(1, 'Slug là bắt buộc')
@@ -27,11 +35,11 @@ export const productSchema = z.object({
   thumbnail: z
     .string()
     .min(1, 'Vui lòng upload ảnh đại diện'),
-  descriptions: z
-    .array(z.string())
-    .optional()
-    .default([]),
-  content: z.string().optional().default(''),
+  translations: z.record(z.string(), productTranslationSchema).refine(
+    (translations) => Object.keys(translations).length > 0,
+    'Phải có ít nhất một bản dịch'
+  ),
 });
 
+export type ProductTranslationSchema = z.infer<typeof productTranslationSchema>;
 export type ProductSchema = z.infer<typeof productSchema>;

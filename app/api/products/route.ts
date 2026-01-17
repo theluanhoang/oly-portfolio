@@ -46,8 +46,13 @@ export async function GET(request: Request): Promise<Response> {
             },
           },
           {
-            descriptions: {
-              has: searchValue,
+            translations: {
+              some: {
+                title: {
+                  contains: searchValue,
+                  mode: Prisma.QueryMode.insensitive,
+                },
+              },
             },
           },
         ],
@@ -86,6 +91,8 @@ export async function GET(request: Request): Promise<Response> {
     const orderByField = validSortFields[sortField] || 'createdAt';
     const orderByDirection = sortDirection === 'asc' ? 'asc' : 'desc';
 
+    const locale = searchParams.get('locale') || 'vi';
+    
     const [total, items] = await Promise.all([
       prisma.product.count({ where }),
       prisma.product.findMany({
@@ -95,10 +102,27 @@ export async function GET(request: Request): Promise<Response> {
         },
         skip: (page - 1) * pageSize,
         take: pageSize,
+        include: {
+          translations: true,
+        },
       }),
     ]);
 
-    return Response.json({ items, total, page, pageSize });
+    // Transform items to include translation data for the requested locale
+    const transformedItems = items.map(product => {
+      const translation = product.translations.find(t => t.locale === locale) 
+        || product.translations.find(t => t.locale === 'vi') 
+        || product.translations[0];
+
+      return {
+        ...product,
+        title: translation?.title || '',
+        descriptions: translation?.descriptions || [],
+        content: translation?.content || '',
+      };
+    });
+
+    return Response.json({ items: transformedItems, total, page, pageSize });
   } catch (error) {
     console.error('Error fetching products:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

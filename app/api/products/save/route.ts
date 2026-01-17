@@ -17,9 +17,16 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const productData = await request.json();
     
-    if (!productData.title || !productData.slug || !productData.category || !productData.material || !productData.year || !productData.thumbnail) {
+    if (!productData.slug || !productData.category || !productData.material || !productData.year || !productData.thumbnail) {
       return Response.json(
-        { error: 'Missing required fields: title, slug, category, material, year, thumbnail' },
+        { error: 'Missing required fields: slug, category, material, year, thumbnail' },
+        { status: 400 }
+      );
+    }
+
+    if (!productData.translations || Object.keys(productData.translations).length === 0) {
+      return Response.json(
+        { error: 'Missing required field: translations (at least one locale required)' },
         { status: 400 }
       );
     }
@@ -49,13 +56,23 @@ export async function POST(request: NextRequest): Promise<Response> {
     const product = await prisma.product.create({
       data: {
         slug: productData.slug,
-        title: productData.title || '',
         category: productData.category || '',
         material: productData.material || '',
         year: productData.year || '',
         thumbnail: productData.thumbnail || '',
-        descriptions: productData.descriptions || [],
-        content: productData.content || '',
+        translations: {
+          create: Object
+            .entries(productData.translations as Record<string, { title: string; descriptions?: string[]; content?: string }>)
+            .map(([locale, translationData]) => ({
+              locale,
+              title: translationData.title || '',
+              descriptions: translationData.descriptions || [],
+              content: translationData.content || '',
+            })),
+        },
+      },
+      include: {
+        translations: true,
       },
     });
     

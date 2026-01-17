@@ -365,7 +365,11 @@ export function checkApiRateLimit(request: NextRequest): RateLimitResult {
   const method = request.method.toUpperCase();
   const pathname = request.nextUrl.pathname;
   const isGet = method === 'GET';
-  const isAuth = pathname.startsWith('/api/auth');
+  const isAuth = pathname.startsWith('/api/auth') && 
+                 !pathname.includes('/session') && 
+                 !pathname.includes('/providers') &&
+                 !pathname.includes('/csrf') &&
+                 method === 'POST';
   
   let config: typeof API_RATE_LIMIT_CONFIG | typeof API_GET_RATE_LIMIT_CONFIG | typeof API_AUTH_RATE_LIMIT_CONFIG;
   let store: Map<string, RateLimitRecord>;

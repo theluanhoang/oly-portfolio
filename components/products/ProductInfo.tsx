@@ -23,9 +23,10 @@ interface ProductInfoProps {
   relatedProduct?: RelatedProduct | null;
 }
 
-function getDisplayName(slug: string) {
-  if (!slug) return "Product";
-  return slug.replace(/-/g, " ").toUpperCase();
+function getDisplayName(product: { slug: string; title?: string }) {
+  if (product.title) return product.title;
+  if (!product.slug) return "Product";
+  return product.slug.replace(/-/g, " ").toUpperCase();
 }
 
 export default function ProductInfo({
@@ -61,7 +62,7 @@ export default function ProductInfo({
     <section className="relative bg-background">
       {/* Title */}
       <h1 className="text-text-dark text-[28px] sm:text-[36px] lg:text-[48px] font-thin tracking-[3.92px] sm:tracking-[5.04px] lg:tracking-[6.72px] uppercase mb-8 sm:mb-12 lg:mb-[60px]">
-        {getDisplayName(product.slug)}
+        {getDisplayName(product)}
       </h1>
       <div className={`flex flex-col lg:flex-row ${hasDescriptions ? 'justify-between' : 'justify-start'} items-stretch`}>
         {/* Left Column - Only show when descriptions exist */}
@@ -128,7 +129,7 @@ export default function ProductInfo({
             {/* Related Product */}
               <div className="">
                 <h3 className="text-black font-gayathri text-[18px] sm:text-[20px] lg:text-[22px] font-bold tracking-[2.52px] sm:tracking-[2.8px] lg:tracking-[3.08px] uppercase">
-                  {product.title || getDisplayName(product.slug)}
+                  {getDisplayName(product)}
                 </h3>
                 <p className="text-black text-xs sm:text-sm font-light tracking-wide mt-1">
                   {product.category}
@@ -146,7 +147,7 @@ export default function ProductInfo({
           {/* Order Button */}
           <div className="mt-auto lg:mt-0">
             <button 
-              aria-label={`Order ${product.title || getDisplayName(product.slug)}`}
+              aria-label={`Order ${getDisplayName(product)}`}
               className="border border-black text-black text-xs sm:text-sm tracking-wide hover:bg-black hover:text-white transition-colors w-full sm:w-auto" 
               style={{ width: '113px', padding: '10px', gap: '10px' }}
             >

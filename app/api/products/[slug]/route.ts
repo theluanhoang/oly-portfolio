@@ -10,14 +10,12 @@ interface RouteParams {
 export async function GET(request: Request, { params }: RouteParams): Promise<Response> {
   try {
     const { slug } = await params;
-    const prismaWithProduct = prisma as typeof prisma & {
-      product: {
-        findUnique(args: { where: { slug: string } }): Promise<unknown | null>;
-      };
-    };
 
-    const product = await prismaWithProduct.product.findUnique({
+    const product = await prisma.product.findUnique({
       where: { slug },
+      include: {
+        translations: true,
+      },
     });
 
     if (!product) {
@@ -49,15 +47,11 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
     const { slug } = await params;
     const productData = await request.json();
     
-    const prismaWithProduct = prisma as typeof prisma & {
-      product: {
-        findUnique(args: { where: { slug: string } }): Promise<unknown | null>;
-        update(args: { where: { slug: string }; data: unknown }): Promise<unknown>;
-      };
-    };
-
-    const existingProduct = await prismaWithProduct.product.findUnique({
+    const existingProduct = await prisma.product.findUnique({
       where: { slug },
+      include: {
+        translations: true,
+      },
     });
 
     if (!existingProduct) {
@@ -68,7 +62,7 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
     }
 
     if (productData.slug && productData.slug !== slug) {
-      const slugExists = await prismaWithProduct.product.findUnique({
+      const slugExists = await prisma.product.findUnique({
         where: { slug: productData.slug },
       });
       if (slugExists) {
@@ -77,6 +71,13 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
           { status: 409 }
         );
       }
+    }
+
+    if (!productData.translations || Object.keys(productData.translations).length === 0) {
+      return Response.json(
+        { error: 'Missing required field: translations (at least one locale required)' },
+        { status: 400 }
+      );
     }
 
     const validationResult = productSchema.safeParse(productData);
@@ -90,17 +91,32 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
       );
     }
 
-    const updated = await prismaWithProduct.product.update({
+    // Delete existing translations and create new ones
+    await prisma.productTranslation.deleteMany({
+      where: { productId: existingProduct.id },
+    });
+
+    const updated = await prisma.product.update({
       where: { slug },
       data: {
         slug: productData.slug || slug,
-        title: productData.title || '',
         category: productData.category || '',
         material: productData.material || '',
         year: productData.year || '',
         thumbnail: productData.thumbnail || '',
-        descriptions: productData.descriptions || [],
-        content: productData.content || '',
+        translations: {
+          create: Object
+            .entries(productData.translations as Record<string, { title: string; descriptions?: string[]; content?: string }>)
+            .map(([locale, translationData]) => ({
+              locale,
+              title: translationData.title || '',
+              descriptions: translationData.descriptions || [],
+              content: translationData.content || '',
+            })),
+        },
+      },
+      include: {
+        translations: true,
       },
     });
 
@@ -139,13 +155,8 @@ export async function DELETE(request: Request, { params }: RouteParams): Promise
     }
 
     const { slug } = await params;
-    const prismaWithProduct = prisma as typeof prisma & {
-      product: {
-        delete(args: { where: { slug: string } }): Promise<unknown>;
-      };
-    };
 
-    const deleted = await prismaWithProduct.product.delete({
+    const deleted = await prisma.product.delete({
       where: { slug },
     });
 

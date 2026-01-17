@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 interface Product {
   id: string;
   slug: string;
+  title?: string;
   category: string;
   material: string;
   year: string;
@@ -23,7 +24,9 @@ export default function ProductsClient() {
   useEffect(() => {
     async function loadProducts() {
       try {
-        const res = await fetch('/api/products');
+        // Get locale from URL or use default
+        const locale = window.location.pathname.split('/')[1] || 'vi';
+        const res = await fetch(`/api/products?locale=${locale}`);
         if (!res.ok) {
           throw new Error('Failed to fetch products');
         }
@@ -84,6 +87,7 @@ export default function ProductsClient() {
               product={{
                 id: product.id,
                 slug: product.slug,
+                title: product.title,
                 category: product.category,
                 year: product.year,
                 thumbnail: product.thumbnail,

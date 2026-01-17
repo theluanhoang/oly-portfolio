@@ -19,16 +19,20 @@ export async function middleware(request: NextRequest) {
 
     const method = request.method.toUpperCase();
     const isGet = method === 'GET';
-    const isAuth = pathname.startsWith('/api/auth');
+    const isAuth = pathname.startsWith('/api/auth') && 
+                   !pathname.includes('/session') && 
+                   !pathname.includes('/providers') &&
+                   !pathname.includes('/csrf') &&
+                   method === 'POST';
     const rateLimitResult = checkApiRateLimit(request);
     
     let maxLimit: string;
     if (isAuth) {
       maxLimit = '30';
     } else if (isGet) {
-      maxLimit = '300';
+      maxLimit = '500';
     } else {
-      maxLimit = '100';
+      maxLimit = '200';
     }
     
     if (!rateLimitResult.allowed) {

@@ -1,37 +1,61 @@
 import prisma from '@/lib/prisma';
 
-export async function getProducts() {
+export async function getProducts(locale?: string) {
   try {
-    const prismaWithProduct = prisma as typeof prisma & {
-      product: {
-        findMany(args: { orderBy: { createdAt: 'desc' } }): Promise<unknown[]>;
-      };
-    };
-
-    const products = await prismaWithProduct.product.findMany({
+    const products = await prisma.product.findMany({
       orderBy: {
         createdAt: 'desc',
       },
+      include: {
+        translations: true,
+      },
     });
-    return products;
+
+    // Transform to include translation data for the requested locale
+    return products.map(product => {
+      const translation = locale 
+        ? product.translations.find(t => t.locale === locale) 
+        : product.translations.find(t => t.locale === 'vi') || product.translations[0];
+
+      return {
+        ...product,
+        title: translation?.title || '',
+        descriptions: translation?.descriptions || [],
+        content: translation?.content || '',
+      };
+    });
   } catch (error) {
     console.error('Error fetching products from database:', error);
     return [];
   }
 }
 
-export async function getProductBySlug(slug: string) {
+export async function getProductBySlug(slug: string, locale?: string) {
   try {
-    const prismaWithProduct = prisma as typeof prisma & {
-      product: {
-        findUnique(args: { where: { slug: string } }): Promise<unknown | null>;
-      };
-    };
-
-    const product = await prismaWithProduct.product.findUnique({
+    const product = await prisma.product.findUnique({
       where: { slug },
+      include: {
+        translations: true,
+      },
     });
-    return product;
+    
+    if (!product) {
+      return null;
+    }
+
+    // Transform to include translation data for the requested locale
+    const translation = locale 
+      ? product.translations.find(t => t.locale === locale) 
+      : product.translations.find(t => t.locale === 'vi') || product.translations[0];
+
+    return {
+      ...product,
+      title: translation?.title || '',
+      descriptions: translation?.descriptions || [],
+      content: translation?.content || '',
+      translation,
+      translations: product.translations,
+    };
   } catch (error) {
     console.error('Error fetching product by slug:', error);
     return null;
