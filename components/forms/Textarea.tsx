@@ -34,6 +34,18 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
 
   const propsClassName = 'className' in props ? (props.className as string) || '' : '';
 
+  const { className: _unused, onChange, onFocus, onBlur, value: propsValue, style: propsStyle, ...textareaProps } = props as { 
+    className?: string; 
+    onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+    onFocus?: (e: React.FocusEvent<HTMLTextAreaElement>) => void;
+    onBlur?: (e: React.FocusEvent<HTMLTextAreaElement>) => void;
+    value?: string;
+    style?: React.CSSProperties;
+    [key: string]: unknown;
+  };
+
+  const prevPropsValueRef = useRef<string | undefined>(propsValue);
+
   useEffect(() => {
     if (!multilinePlaceholder || !placeholder || !textareaRef) {
       return;
@@ -53,12 +65,42 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
       }
     };
 
+    // Check if propsValue changed (especially when form resets)
+    const propsValueChanged = prevPropsValueRef.current !== propsValue;
+    if (propsValueChanged) {
+      prevPropsValueRef.current = propsValue;
+    }
+
     const timeoutId = setTimeout(() => {
       requestAnimationFrame(measureHeight);
     }, 0);
 
-    return () => clearTimeout(timeoutId);
-  }, [multilinePlaceholder, placeholder, textareaRef]);
+    // Add ResizeObserver to recalculate when textarea size changes
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(measureHeight);
+    });
+
+    if (textareaRef) {
+      resizeObserver.observe(textareaRef);
+    }
+
+    // If propsValue changed, trigger an additional measurement after DOM updates
+    if (propsValueChanged) {
+      const delayedMeasurement = setTimeout(() => {
+        requestAnimationFrame(measureHeight);
+      }, 100);
+      return () => {
+        clearTimeout(timeoutId);
+        clearTimeout(delayedMeasurement);
+        resizeObserver.disconnect();
+      };
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+    };
+  }, [multilinePlaceholder, placeholder, textareaRef, value, propsValue]);
 
   const minHeightStyle = minHeight !== undefined 
     ? { minHeight: `${minHeight}px` }
@@ -69,16 +111,6 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
       ? 'border-red-500 focus:border-red-600'
       : 'border-black focus:border-black'
   } ${propsClassName}`;
-
-  const { className: _unused, onChange, onFocus, onBlur, value: propsValue, style: propsStyle, ...textareaProps } = props as { 
-    className?: string; 
-    onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-    onFocus?: (e: React.FocusEvent<HTMLTextAreaElement>) => void;
-    onBlur?: (e: React.FocusEvent<HTMLTextAreaElement>) => void;
-    value?: string;
-    style?: React.CSSProperties;
-    [key: string]: unknown;
-  };
 
   const setRefs = useCallback((node: HTMLTextAreaElement | null) => {
     setTextareaRef(node);
