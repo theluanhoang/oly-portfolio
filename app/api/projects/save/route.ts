@@ -53,13 +53,25 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const maxDisplayOrderResult = await prisma.project.findFirst({
-      orderBy: { displayOrder: 'desc' },
+    const allProjects = await prisma.project.findMany({
       select: { displayOrder: true },
+      orderBy: { displayOrder: 'asc' },
     });
-    const nextDisplayOrder = maxDisplayOrderResult 
-      ? maxDisplayOrderResult.displayOrder + 1 
-      : 0;
+    
+    const usedOrders = new Set(allProjects.map(p => p.displayOrder));
+    let nextDisplayOrder = 0;
+    
+    if (allProjects.length > 0) {
+      const maxOrder = Math.max(...usedOrders);
+      for (let i = 0; i <= maxOrder + 1; i++) {
+        if (!usedOrders.has(i)) {
+          nextDisplayOrder = i;
+          break;
+        }
+      }
+    } else {
+      nextDisplayOrder = 0;
+    }
 
     const project = await prisma.project.create({
       data: {
