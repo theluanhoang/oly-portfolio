@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { ComingSoonModal } from '@/components/ui';
@@ -12,8 +12,30 @@ interface MenuProps {
 function Menu({ className }: MenuProps) {
   const t = useTranslations('Navigation');
   const [showComingSoon, setShowComingSoon] = useState(false);
+  const [productsCount, setProductsCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function fetchProductsCount() {
+      try {
+        const res = await fetch('/api/products?pageSize=1');
+        if (res.ok) {
+          const data = await res.json();
+          setProductsCount(data.total || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching products count:', error);
+        setProductsCount(0);
+      }
+    }
+
+    fetchProductsCount();
+  }, []);
 
   const handleProductsClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (productsCount !== null && productsCount > 0) {
+      return;
+    }
+    
     e.preventDefault();
     e.stopPropagation();
     setShowComingSoon(true);

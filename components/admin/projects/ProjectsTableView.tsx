@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo } from 'react';
 import { Project } from '@/types/project';
 import { AdminTableView, TableColumn, SortDirection } from '@/components/admin/AdminTableView';
 
@@ -34,74 +34,11 @@ export function ProjectsTableView({
   onPageChange,
   onDeleteClick,
   onEditClick,
-  onOrderUpdate,
   sortField,
   sortDirection,
   onSortChange,
 }: ProjectsTableViewProps) {
-  const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set());
-
-  const handleOrderChange = useCallback(async (project: Project, newOrder: number) => {
-    const orderValue = Math.max(0, Math.floor(newOrder));
-    if (orderValue === project.displayOrder) return;
-
-    setUpdatingOrders(prev => new Set(prev).add(project.slug));
-    try {
-      const response = await fetch(`/api/projects/${encodeURIComponent(project.slug)}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ displayOrder: orderValue }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update order');
-      }
-
-      onOrderUpdate?.();
-    } catch (error) {
-      alert('Failed to update order. Please try again.');
-    } finally {
-      setUpdatingOrders(prev => {
-        const next = new Set(prev);
-        next.delete(project.slug);
-        return next;
-      });
-    }
-  }, [onOrderUpdate]);
-
   const columns = useMemo<TableColumn<Project>[]>(() => [
-    {
-      key: 'displayOrder',
-      headerKey: 'order',
-      sortable: true,
-      sortKey: 'displayOrder',
-      render: (project) => (
-        <div className="text-center">
-          <input
-            type="number"
-            min="0"
-            value={project.displayOrder ?? 0}
-            onChange={(e) => {
-              const value = parseInt(e.target.value, 10);
-              if (!isNaN(value)) {
-                handleOrderChange(project, value);
-              }
-            }}
-            onBlur={(e) => {
-              const value = parseInt(e.target.value, 10);
-              if (!isNaN(value)) {
-                handleOrderChange(project, value);
-              }
-            }}
-            disabled={updatingOrders.has(project.slug)}
-            className="w-16 px-2 py-1 text-center text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-        </div>
-      ),
-      className: 'w-20 text-center',
-    },
     {
       key: 'title',
       headerKey: 'title',
@@ -171,7 +108,7 @@ export function ProjectsTableView({
       className: 'text-[#666]',
       responsive: { hidden: 'md' },
     },
-  ], [handleOrderChange, updatingOrders]);
+  ], []);
 
   return (
     <AdminTableView
