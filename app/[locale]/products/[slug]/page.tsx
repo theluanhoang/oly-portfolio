@@ -112,6 +112,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   }
 
   const allProducts = await getProducts(locale);
+  const hasMoreProducts = allProducts.length > 1;
   const productData = product as {
     slug: string;
     title?: string;
@@ -235,35 +236,44 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         
         <section className="relative bg-background lg:mt-[169px] md:mt-12 mt-8 pb-[150px]">
           <div className="">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-[112px]">
-              {/* Main Content */}
-              <article className="lg:col-span-2">
-                <ProductContent content={productData.content} />
-              </article>
+            {hasMoreProducts ? (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-[112px]">
+                {/* Main Content */}
+                <article className="lg:col-span-2">
+                  <ProductContent content={productData.content} />
+                </article>
 
-              {/* Sidebar - Related Products */}
-              <aside className="lg:col-span-1" aria-label="Related products">
-                <MoreProducts 
-                  products={allProducts.map((p: unknown) => {
-                    const prod = p as {
-                      id: string;
-                      slug: string;
-                      category: string;
-                      thumbnail: string;
-                      year: string;
-                    };
-                    return {
-                      id: prod.id,
-                      slug: prod.slug,
-                      category: prod.category,
-                      thumbnail: prod.thumbnail,
-                      year: prod.year,
-                    };
-                  })}
-                  currentSlug={slug}
-                />
-              </aside>
-            </div>
+                {/* Sidebar - Related Products */}
+                <aside className="lg:col-span-1" aria-label="Related products">
+                  <MoreProducts 
+                    products={allProducts.map((p: unknown) => {
+                      const prod = p as {
+                        id: string;
+                        slug: string;
+                        category: string;
+                        thumbnail: string;
+                        year: string;
+                      };
+                      return {
+                        id: prod.id,
+                        slug: prod.slug,
+                        category: prod.category,
+                        thumbnail: prod.thumbnail,
+                        year: prod.year,
+                      };
+                    })}
+                    currentSlug={slug}
+                  />
+                </aside>
+              </div>
+            ) : (
+              <div className="max-w-4xl mx-auto">
+                {/* Main Content - Full Width */}
+                <article>
+                  <ProductContent content={productData.content} />
+                </article>
+              </div>
+            )}
           </div>
         </section>
       </main>
