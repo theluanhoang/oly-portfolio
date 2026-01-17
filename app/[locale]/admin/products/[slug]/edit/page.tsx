@@ -6,7 +6,16 @@ import { useForm, FormProvider, useFieldArray, Controller } from 'react-hook-for
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
-import TiptapEditor from '@/components/admin/TiptapEditor';
+import dynamicImport from 'next/dynamic';
+import { DefaultLoading } from '@/lib/performance/dynamic-imports';
+
+const TiptapEditor = dynamicImport(
+  () => import('@/components/admin/TiptapEditor'),
+  {
+    loading: DefaultLoading,
+    ssr: false,
+  }
+);
 import SingleImageUpload from '@/components/admin/SingleImageUpload';
 import FormField from '@/components/forms/FormField';
 import Textarea from '@/components/forms/Textarea';

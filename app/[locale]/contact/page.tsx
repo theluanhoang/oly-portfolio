@@ -1,30 +1,32 @@
-'use client';
+import type { Metadata } from 'next';
+import { generateLocalizedMetadata } from '@/lib/seo/metadata';
+import ContactClient from './ContactClient';
 
-import { useTranslations } from 'next-intl';
-import { ContactHero, ContactForm, ContactMapSection } from '@/components/contact';
-
-export default function ContactPage() {
-  const t = useTranslations('ContactPage');
-
-  return (
-    <div className="min-h-screen bg-white">
-      <ContactHero />
-      <div className="sm:mt-[62px] mt-[23px]">
-        <div className="">
-          <h1 className="text-3xl sm:text-4xl font-normal md:mb-[124px] mb-8 tracking-wide">
-            {t('title')}
-          </h1>
-
-          <div className="flex flex-col lg:flex-row lg:justify-between gap-8 lg:gap-[107px] mb-12">
-            <div className="w-full lg:flex-1">
-              <ContactForm />
-            </div>
-
-            <ContactMapSection />
-          </div>
-        </div>
-      </div>
-    </div>
+export async function generateMetadata(
+  { params }: { params: Promise<{ locale: string }> }
+): Promise<Metadata> {
+  const { locale } = await params;
+  
+  const title = locale === 'vi' 
+    ? 'Liên Hệ | OLY Studio'
+    : 'Contact Us | OLY Studio';
+  
+  const description = locale === 'vi'
+    ? 'Liên hệ với OLY Studio để được tư vấn về các dịch vụ kiến trúc, xây dựng, nội thất và đồ gỗ. Chúng tôi luôn sẵn sàng hỗ trợ bạn.'
+    : 'Contact OLY Studio for consultation on architecture, construction, interior design, and furniture services. We are always ready to assist you.';
+  
+  return generateLocalizedMetadata(
+    {
+      title,
+      description,
+      keywords: ['contact', 'consultation', 'architecture', 'construction', 'interior', 'OLY Studio'],
+      url: '/contact',
+    },
+    locale,
+    '/contact'
   );
 }
 
+export default function ContactPage() {
+  return <ContactClient />;
+}

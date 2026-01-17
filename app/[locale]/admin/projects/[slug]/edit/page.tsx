@@ -6,8 +6,16 @@ import { useRouter } from '@/i18n/routing';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
-import TiptapEditor from '@/components/admin/TiptapEditor';
+import dynamicImport from 'next/dynamic';
 import GalleryUpload from '@/components/admin/GalleryUpload';
+
+const TiptapEditor = dynamicImport(
+  () => import('@/components/admin/TiptapEditor'),
+  {
+    loading: DefaultLoading,
+    ssr: false,
+  }
+);
 import { LocaleTabs } from '@/components/admin/LocaleTabs';
 import FormField from '@/components/forms/FormField';
 import { Header, StepIndicator } from '@/components/layout';
@@ -16,6 +24,7 @@ import { useGalleryUpload } from '@/hooks/useGalleryUpload';
 import { projectSchema, ProjectSchema, ProjectTranslationSchema } from '@/lib/validations/projectSchema';
 import type { ProjectTranslation } from '@/types/project';
 import { generateSlug } from '@/lib/utils';
+import { DefaultLoading } from '@/lib/performance/dynamic-imports';
 
 const LOCALES = ['vi', 'en'];
 const LOCALE_LABELS: Record<string, { label: string }> = {

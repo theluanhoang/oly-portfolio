@@ -1,97 +1,75 @@
-'use client';
+import type { Metadata } from 'next';
+import { generateLocalizedMetadata } from '@/lib/seo/metadata';
+import ProductsClient from './ProductsClient';
+import JsonLd from '@/components/seo/JsonLd';
+import { generateCollectionPageSchema, generateBreadcrumbSchema } from '@/lib/seo/structured-data';
+import { getProducts } from '@/data/products';
+import { SEO_CONSTANTS } from '@/lib/seo/constants';
 
-import { useEffect, useState } from 'react';
-import { ProductCardSkeleton } from '@/components/ui';
-import { ProductCard } from '@/components/products/ProductCard';
-import { useTranslations } from 'next-intl';
-
-interface Product {
-  id: string;
-  slug: string;
-  category: string;
-  material: string;
-  year: string;
-  thumbnail: string;
-}
-
-export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const t = useTranslations('Products');
-
-  useEffect(() => {
-    async function loadProducts() {
-      try {
-        const res = await fetch('/api/products');
-        if (!res.ok) {
-          throw new Error('Failed to fetch products');
-        }
-        const data = (await res.json()) as { items?: Product[] };
-        setProducts(Array.isArray(data.items) ? data.items : []);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error');
-      } finally {
-        setLoading(false);
+export async function generateMetadata(
+  { params }: { params: Promise<{ locale: string }> }
+): Promise<Metadata> {
+  const { locale } = await params;
+  
+  const title = locale === 'vi' 
+    ? 'Sản Phẩm | OLY Studio'
+    : 'Products | OLY Studio';
+  
+  const description = locale === 'vi'
+    ? 'Khám phá bộ sưu tập sản phẩm nội thất và đồ gỗ cao cấp của OLY Studio. Thiết kế tinh tế, chất lượng vượt trội.'
+    : 'Discover OLY Studio\'s collection of premium interior and furniture products. Exquisite design, superior quality.';
+  
+  return generateLocalizedMetadata(
+    {
+      title,
+      description,
+      keywords: ['products', 'furniture', 'interior', 'design', 'OLY Studio'],
+      url: '/products',
+    },
+    locale,
+    '/products'
+  );
       }
-    }
 
-    loadProducts();
-  }, []);
+export default async function ProductsPage({ 
+  params 
+}: { 
+  params: Promise<{ locale: string }> 
+}) {
+  const { locale } = await params;
+  const products = await getProducts();
+  
+  const pageUrl = `${SEO_CONSTANTS.SITE_URL}/${locale}/products`;
+  const pageName = locale === 'vi' ? 'Sản Phẩm' : 'Products';
+  const pageDescription = locale === 'vi'
+    ? 'Khám phá bộ sưu tập sản phẩm nội thất và đồ gỗ cao cấp của OLY Studio.'
+    : 'Discover OLY Studio\'s collection of premium interior and furniture products.';
 
-  if (loading) {
-    // Show skeleton cards while loading
-    const skeletonCount = 12; // Show 12 skeleton cards (2 rows on mobile, more on larger screens)
-    
-    return (
-      <div className="min-h-screen bg-white text-black">
-        <div className="max-w-[1512px] mx-auto px-4 sm:px-6 lg:px-10 py-12">
-          <h1 className="text-[28px] sm:text-[34px] lg:text-[40px] font-semibold leading-none tracking-[0.22em] uppercase mb-10">
-            {t('title')}
-          </h1>
+  // CollectionPage schema
+  const productsList = products as Array<{ slug: string; category: string }>;
+  const collectionPageSchema = generateCollectionPageSchema({
+    name: pageName,
+    description: pageDescription,
+    url: pageUrl,
+    numberOfItems: productsList.length,
+    mainEntity: productsList.slice(0, 20).map((product) => ({
+      '@type': 'Product',
+      name: product.slug.replace(/-/g, ' ').toUpperCase(),
+      url: `${SEO_CONSTANTS.SITE_URL}/${locale}/products/${product.slug}`,
+    })),
+  });
 
-          <div className="grid gap-0 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 items-stretch">
-            {Array.from({ length: skeletonCount }).map((_, index) => (
-              <ProductCardSkeleton key={index} />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white text-black">
-        <p className="text-sm">
-          {t('loadError')}: {error}
-        </p>
-      </div>
-    );
-  }
+  // Breadcrumb schema
+  const breadcrumbItems = [
+    { name: locale === 'vi' ? 'Trang chủ' : 'Home', url: `${SEO_CONSTANTS.SITE_URL}/${locale}` },
+    { name: pageName, url: pageUrl },
+  ];
+  const breadcrumbSchema = generateBreadcrumbSchema(breadcrumbItems);
 
   return (
-    <div className="min-h-screen bg-white text-black">
-      <div className="max-w-[1512px] mx-auto px-4 sm:px-6 lg:px-10 py-12">
-        <h1 className="text-[28px] sm:text-[34px] lg:text-[40px] font-semibold leading-none tracking-[0.22em] uppercase mb-10">
-          {t('title')}
-        </h1>
-
-        <div className="grid gap-0 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 items-stretch">
-          {products.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={{
-                id: product.id,
-                slug: product.slug,
-                category: product.category,
-                year: product.year,
-                thumbnail: product.thumbnail,
-              }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
+    <>
+      <JsonLd data={[collectionPageSchema, breadcrumbSchema]} />
+      <ProductsClient />
+    </>
   );
 }

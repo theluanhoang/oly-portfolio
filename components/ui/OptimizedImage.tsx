@@ -12,9 +12,10 @@ interface OptimizedImageProps {
   height?: number;
   /** Use lazy loading (default: true) */
   lazy?: boolean;
-  /** Use progressive loading with blur placeholder (default: true) */
+  /** Use progressive loading with blur placeholder (default: true) 
+   * Note: blur placeholder will only show if blurDataURL is provided to avoid hydration mismatch */
   progressive?: boolean;
-  /** Blur placeholder data URL (auto-generated if not provided) */
+  /** Blur placeholder data URL (required for progressive loading blur effect) */
   blurDataURL?: string;
   /** Loading priority: 'eager' for above-fold images, 'lazy' for others */
   priority?: 'eager' | 'lazy';
@@ -33,8 +34,7 @@ interface OptimizedImageProps {
  * 
  * Features:
  * - Lazy loading with Intersection Observer
- * - Progressive loading with blur placeholder
- * - Automatic blur placeholder generation
+ * - Progressive loading with blur placeholder (requires blurDataURL prop)
  * - Error handling with fallback
  * - Responsive and performant
  */
@@ -53,28 +53,22 @@ export default function OptimizedImage({
   onError,
   objectFit = 'cover',
 }: OptimizedImageProps) {
-  // Initialize blur placeholder from prop or generate default (lazy initialization)
-  const [blurPlaceholder] = useState<string>(() => {
-    if (blurDataURL) return blurDataURL;
-    if (!progressive || typeof window === 'undefined') return '';
-    
-    // Create a simple blur placeholder
-    const canvas = document.createElement('canvas');
-    canvas.width = width || 20;
-    canvas.height = height || 20;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = '#e0e0e0';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL();
-    }
-    return '';
-  });
+  const [blurPlaceholder] = useState<string>(blurDataURL || '');
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [shouldLoad, setShouldLoad] = useState(priority === 'eager' || !lazy);
   const imgRef = useRef<HTMLImageElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const setImgRef = useCallback((node: HTMLImageElement | null) => {
+    if (node) {
+      imgRef.current = node;
+      if (node.complete && node.naturalWidth > 0) {
+        setIsLoaded(true);
+        onLoad?.();
+      }
+    }
+  }, [onLoad]);
 
   // Intersection Observer for lazy loading
   useEffect(() => {
@@ -155,7 +149,8 @@ export default function OptimizedImage({
       {/* Main image */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        ref={imgRef}
+        key={displaySrc}
+        ref={setImgRef}
         src={displaySrc}
         alt={alt}
         onLoad={handleLoad}

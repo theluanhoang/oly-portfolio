@@ -81,6 +81,10 @@ export async function middleware(request: NextRequest) {
   }
 
   const response = intlMiddleware(request);
+  
+  const contentLanguage = locale || routing.defaultLocale;
+  response.headers.set('Content-Language', contentLanguage);
+  
   return applySecurityHeaders(response);
 }
 

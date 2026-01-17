@@ -2,6 +2,7 @@
 
 import { Link } from '@/i18n/routing';
 import OptimizedImage from '@/components/ui/OptimizedImage';
+import { generateProductImageAlt } from '@/lib/seo/image-helpers';
 
 interface ProductCardProps {
   id: string;
@@ -23,14 +24,14 @@ export function ProductCard({ product }: { product: ProductCardProps }) {
         <div className="aspect-square overflow-hidden">
           <OptimizedImage
             src={product.thumbnail}
-            alt={getDisplayName(product.slug)}
+            alt={generateProductImageAlt(getDisplayName(product.slug), 0, 1, 'thumbnail')}
             className="w-full h-full"
             objectFit="cover"
             priority="lazy"
             progressive={true}
           />
         </div>
-        <div className="mt-3 flex-grow">
+        <div className="mt-3 grow">
           <h2 className="text-black text-[12px] font-bold tracking-[1.68px] uppercase">
             {getDisplayName(product.slug)}
           </h2>

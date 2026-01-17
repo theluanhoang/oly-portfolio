@@ -1,0 +1,97 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { ProductCardSkeleton } from '@/components/ui';
+import { ProductCard } from '@/components/products/ProductCard';
+import { useTranslations } from 'next-intl';
+
+interface Product {
+  id: string;
+  slug: string;
+  category: string;
+  material: string;
+  year: string;
+  thumbnail: string;
+}
+
+export default function ProductsClient() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const t = useTranslations('Products');
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const res = await fetch('/api/products');
+        if (!res.ok) {
+          throw new Error('Failed to fetch products');
+        }
+        const data = (await res.json()) as { items?: Product[] };
+        setProducts(Array.isArray(data.items) ? data.items : []);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProducts();
+  }, []);
+
+  if (loading) {
+    // Show skeleton cards while loading
+    const skeletonCount = 12; // Show 12 skeleton cards (2 rows on mobile, more on larger screens)
+    
+    return (
+      <main className="min-h-screen bg-white text-black">
+        <div className="max-w-[1512px] mx-auto px-4 sm:px-6 lg:px-10 py-12">
+          <h1 className="text-[28px] sm:text-[34px] lg:text-[40px] font-semibold leading-none tracking-[0.22em] uppercase mb-10">
+            {t('title')}
+          </h1>
+
+          <section className="grid gap-0 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 items-stretch">
+            {Array.from({ length: skeletonCount }).map((_, index) => (
+              <ProductCardSkeleton key={index} />
+            ))}
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-white text-black">
+        <p className="text-sm">
+          {t('loadError')}: {error}
+        </p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-white text-black">
+      <div className="max-w-[1512px] mx-auto px-4 sm:px-6 lg:px-10 py-12">
+        <h1 className="text-[28px] sm:text-[34px] lg:text-[40px] font-semibold leading-none tracking-[0.22em] uppercase mb-10">
+          {t('title')}
+        </h1>
+
+        <section className="grid gap-0 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 items-stretch">
+          {products.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={{
+                id: product.id,
+                slug: product.slug,
+                category: product.category,
+                year: product.year,
+                thumbnail: product.thumbnail,
+              }}
+            />
+          ))}
+        </section>
+      </div>
+    </main>
+  );
+}

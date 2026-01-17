@@ -1,16 +1,93 @@
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import ProductInfo from '@/components/products/ProductInfo';
 import ProductContent from '@/components/products/ProductContent';
 import MoreProducts from '@/components/products/MoreProducts';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import { getProductBySlug, getAllProductSlugs, getProducts } from '@/data/products';
 import { Link, routing } from '@/i18n/routing';
+import { generateLocalizedMetadata } from '@/lib/seo/metadata';
+import JsonLd from '@/components/seo/JsonLd';
+import { 
+  generateProductSchema, 
+  generateArticleSchema,
+  generateBreadcrumbSchema,
+  generateImageObjectSchema
+} from '@/lib/seo/structured-data';
+import { generateProductImageAlt } from '@/lib/seo/image-helpers';
+import { SEO_CONSTANTS } from '@/lib/seo/constants';
+import HeroImagePreload from '@/components/performance/HeroImagePreload';
 
 interface ProductDetailPageProps {
   params: Promise<{ slug: string; locale: string }>;
 }
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string; locale: string }> }
+): Promise<Metadata> {
+  const { slug, locale } = await params;
+  const product = await getProductBySlug(slug);
+
+  if (!product) {
+    return generateLocalizedMetadata(
+      {
+        title: 'Product Not Found',
+        description: 'The requested product could not be found.',
+      },
+      locale,
+      `/products/${slug}`
+    );
+  }
+
+  const productData = product as {
+    slug: string;
+    title?: string;
+    category: string;
+    material: string;
+    year: string;
+    thumbnail: string;
+    content: string;
+    descriptions?: string[];
+  };
+
+  const displayName = productData.slug.replace(/-/g, ' ').toUpperCase();
+  const title = `${displayName} | OLY Studio`;
+  const description = productData.content
+    ? productData.content.replace(/<[^>]*>/g, '').substring(0, 160)
+    : `${displayName} - ${productData.category || 'Product'}${productData.material ? ` made from ${productData.material}` : ''}${productData.year ? ` (${productData.year})` : ''} by OLY Studio.`;
+
+  const alternateLocales = routing.locales
+    .filter((loc) => loc !== locale)
+    .map((loc) => ({
+      locale: loc,
+      url: `/products/${slug}`,
+    }));
+
+  return generateLocalizedMetadata(
+    {
+      title,
+      description,
+      image: productData.thumbnail || undefined,
+      type: 'product',
+      url: `/products/${slug}`,
+      alternateLocales,
+      keywords: [
+        displayName,
+        productData.category || '',
+        productData.material || '',
+        'furniture',
+        'interior',
+        'design',
+        'OLY Studio',
+      ].filter(Boolean),
+    },
+    locale,
+    `/products/${slug}`
+  );
+}
 
 export async function generateStaticParams() {
   const allSlugs = await getAllProductSlugs();
@@ -60,73 +137,136 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     return slug.replace(/-/g, ' ').toUpperCase();
   };
 
-  return (
-    <div className="min-h-screen bg-background text-foreground lg:pt-[78px] pt-[48px]">
-      {/* Breadcrumb */}
-      <div className="mb-[27px] sm:mb-6 text-sm tracking-wide flex items-center">
-        <Link href="/products" className="text-black text-[10px] sm:text-[12px] font-bold tracking-[1.68px]">
-          {t('title')}
-        </Link>
-        <span className="mx-2">&gt;</span>
-        <p className="text-black text-[10px] sm:text-[12px] font-bold tracking-[1.68px] underline decoration-solid">{getDisplayName(productData.slug)}</p>
-      </div>
-      
-      <div>
-        <div className="flex flex-col lg:flex-col">
-          {productData.thumbnail && (
-            <section className="bg-background lg:order-2 order-1 lg:mt-[60px] mt-0">
-              <div className="relative w-full aspect-1416/528 overflow-hidden">
-                <img
-                  src={productData.thumbnail}
-                  alt={productData.slug}
-                  className="w-full h-full object-cover"
-                  loading="eager"
-                />
-              </div>
-            </section>
-          )}
-          
-          <div className="lg:order-1 order-2 lg:mt-0 mt-8 sm:mt-12">
-            <ProductInfo 
-              product={productData}
-              relatedProduct={relatedProduct}
-            />
-          </div>
-        </div>
-      </div>
-      
-      <section className="relative bg-background lg:mt-[169px] md:mt-12 mt-8 pb-[150px]">
-        <div className="">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-[112px]">
-            <div className="lg:col-span-2">
-              <ProductContent content={productData.content} />
-            </div>
+  // Generate structured data
+  const productUrl = `${SEO_CONSTANTS.SITE_URL}/${locale}/products/${slug}`;
+  const displayName = getDisplayName(productData.slug);
+  const productDescription = productData.content
+    ? productData.content.replace(/<[^>]*>/g, '').substring(0, 160)
+    : `${displayName} - ${productData.category || 'Product'}${productData.material ? ` made from ${productData.material}` : ''}${productData.year ? ` (${productData.year})` : ''} by OLY Studio.`;
+  const cleanDescription = productData.content 
+    ? productData.content.replace(/<[^>]*>/g, '').trim().substring(0, 160)
+    : productDescription;
 
-            <div className="lg:col-span-1">
-              <MoreProducts 
-                products={allProducts.map((p: unknown) => {
-                  const prod = p as {
-                    id: string;
-                    slug: string;
-                    category: string;
-                    thumbnail: string;
-                    year: string;
-                  };
-                  return {
-                    id: prod.id,
-                    slug: prod.slug,
-                    category: prod.category,
-                    thumbnail: prod.thumbnail,
-                    year: prod.year,
-                  };
-                })}
-                currentSlug={slug}
+  // Product schema
+  const productSchema = generateProductSchema({
+    name: displayName,
+    description: cleanDescription,
+    image: productData.thumbnail ? [productData.thumbnail] : undefined,
+    category: productData.category || undefined,
+    brand: SEO_CONSTANTS.SITE_NAME,
+    sku: productData.slug,
+  });
+
+  // Article schema (for product detail pages)
+  const articleSchema = generateArticleSchema({
+    headline: displayName,
+    description: cleanDescription,
+    image: productData.thumbnail ? [productData.thumbnail] : undefined,
+    publisher: {
+      name: SEO_CONSTANTS.SITE_NAME,
+      logo: '/assets/logo.svg',
+    },
+  });
+
+  // Breadcrumb schema
+  const breadcrumbItems = [
+    { name: locale === 'vi' ? 'Trang chủ' : 'Home', url: `${SEO_CONSTANTS.SITE_URL}/${locale}` },
+    { name: locale === 'vi' ? 'Sản phẩm' : 'Products', url: `${SEO_CONSTANTS.SITE_URL}/${locale}/products` },
+    { name: displayName, url: productUrl },
+  ];
+  const breadcrumbSchema = generateBreadcrumbSchema(breadcrumbItems);
+
+  // ImageObject schema for product thumbnail
+  const imageSchemas = productData.thumbnail
+    ? [
+        generateImageObjectSchema({
+          url: productData.thumbnail,
+          caption: generateProductImageAlt(displayName, 0, 1, 'thumbnail'),
+          name: `${displayName} - Product Image`,
+          description: `${displayName} - ${productData.category || 'Product'}${productData.material ? ` made from ${productData.material}` : ''} by OLY Studio`,
+        }),
+      ]
+    : [];
+
+  const allSchemas = [productSchema, articleSchema, breadcrumbSchema, ...imageSchemas];
+
+  return (
+    <>
+      <JsonLd data={allSchemas} />
+      {/* Preload product thumbnail for LCP optimization */}
+      {productData.thumbnail && <HeroImagePreload imageUrl={productData.thumbnail} />}
+      <main className="min-h-screen bg-background text-foreground lg:pt-[78px] pt-[48px]">
+        {/* Breadcrumb Navigation */}
+        <nav aria-label="Breadcrumb" className="mb-[27px] sm:mb-6 text-sm tracking-wide flex items-center">
+          <Link href="/products" className="text-black text-[10px] sm:text-[12px] font-bold tracking-[1.68px]">
+            {t('title')}
+          </Link>
+          <span className="mx-2" aria-hidden="true">&gt;</span>
+          <span className="text-black text-[10px] sm:text-[12px] font-bold tracking-[1.68px] underline decoration-solid">{getDisplayName(productData.slug)}</span>
+        </nav>
+        
+        <div>
+          <div className="flex flex-col lg:flex-col">
+            {productData.thumbnail && (
+              <section className="bg-background lg:order-2 order-1 lg:mt-[60px] mt-0" aria-label="Product image">
+                <div className="relative w-full aspect-1416/528 overflow-hidden">
+                  <OptimizedImage
+                    src={productData.thumbnail}
+                    alt={generateProductImageAlt(displayName, 0, 1, 'thumbnail')}
+                    className="w-full h-full"
+                    objectFit="cover"
+                    priority="eager"
+                    width={1416}
+                    height={528}
+                  />
+                </div>
+              </section>
+            )}
+            
+            <div className="lg:order-1 order-2 lg:mt-0 mt-8 sm:mt-12">
+              <ProductInfo 
+                product={productData}
+                relatedProduct={relatedProduct}
               />
             </div>
           </div>
         </div>
-      </section>
-    </div>
+        
+        <section className="relative bg-background lg:mt-[169px] md:mt-12 mt-8 pb-[150px]">
+          <div className="">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-[112px]">
+              {/* Main Content */}
+              <article className="lg:col-span-2">
+                <ProductContent content={productData.content} />
+              </article>
+
+              {/* Sidebar - Related Products */}
+              <aside className="lg:col-span-1" aria-label="Related products">
+                <MoreProducts 
+                  products={allProducts.map((p: unknown) => {
+                    const prod = p as {
+                      id: string;
+                      slug: string;
+                      category: string;
+                      thumbnail: string;
+                      year: string;
+                    };
+                    return {
+                      id: prod.id,
+                      slug: prod.slug,
+                      category: prod.category,
+                      thumbnail: prod.thumbnail,
+                      year: prod.year,
+                    };
+                  })}
+                  currentSlug={slug}
+                />
+              </aside>
+            </div>
+          </div>
+        </section>
+      </main>
+    </>
   );
 }
 

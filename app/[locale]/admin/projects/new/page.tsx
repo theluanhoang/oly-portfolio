@@ -4,8 +4,17 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
-import TiptapEditor from '@/components/admin/TiptapEditor';
+import dynamicImport from 'next/dynamic';
 import GalleryUpload from '@/components/admin/GalleryUpload';
+import { DefaultLoading } from '@/lib/performance/dynamic-imports';
+
+const TiptapEditor = dynamicImport(
+  () => import('@/components/admin/TiptapEditor'),
+  {
+    loading: DefaultLoading,
+    ssr: false,
+  }
+);
 import { LocaleTabs } from '@/components/admin/LocaleTabs';
 import FormField from '@/components/forms/FormField';
 import { Header, StepIndicator } from '@/components/layout';

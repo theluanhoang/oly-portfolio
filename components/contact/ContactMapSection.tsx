@@ -1,7 +1,16 @@
 'use client';
 
-import GoogleMap from './GoogleMap';
+import dynamicImport from 'next/dynamic';
 import ContactInfo from './ContactInfo';
+import { DefaultLoading } from '@/lib/performance/dynamic-imports';
+
+const GoogleMap = dynamicImport(
+  () => import('./GoogleMap'),
+  {
+    loading: DefaultLoading,
+    ssr: false,
+  }
+);
 
 export default function ContactMapSection() {
   return (

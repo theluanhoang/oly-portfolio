@@ -87,36 +87,38 @@ export default function ProductInfo({
           )}
 
           {/* Navigation */}
-          <div className="flex justify-between items-center mt-6 lg:mt-0">
+          <nav aria-label="Product description navigation" className="flex justify-between items-center mt-6 lg:mt-0">
             {hasPrev ? (
               <button
                 onClick={handlePrev}
+                aria-label="Previous description"
                 className="text-black text-xs sm:text-sm tracking-wide underline hover:no-underline cursor-pointer flex items-center gap-1"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4" aria-hidden="true" />
                 Prev
               </button>
             ) : (
-              <span className="text-gray-400 text-xs sm:text-sm flex items-center gap-1">
-                <ChevronLeft className="w-4 h-4" />
+              <span className="text-gray-400 text-xs sm:text-sm flex items-center gap-1" aria-disabled="true">
+                <ChevronLeft className="w-4 h-4" aria-hidden="true" />
                 Prev
               </span>
             )}
             {hasNext ? (
               <button
                 onClick={handleNext}
+                aria-label="Next description"
                 className="text-black text-xs sm:text-sm tracking-wide underline hover:no-underline cursor-pointer flex items-center gap-1"
               >
                 Next
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4" aria-hidden="true" />
               </button>
             ) : (
-              <span className="text-gray-400 text-xs sm:text-sm flex items-center gap-1">
+              <span className="text-gray-400 text-xs sm:text-sm flex items-center gap-1" aria-disabled="true">
                 Next
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4" aria-hidden="true" />
               </span>
             )}
-          </div>
+          </nav>
         </div>
 
         {/* Right Column */}
@@ -142,7 +144,11 @@ export default function ProductInfo({
 
           {/* Order Button */}
           <div className="mt-auto lg:mt-0">
-            <button className="border border-black text-black text-xs sm:text-sm tracking-wide hover:bg-black hover:text-white transition-colors w-full sm:w-auto" style={{ width: '113px', padding: '10px', gap: '10px' }}>
+            <button 
+              aria-label={`Order ${product.title || getDisplayName(product.slug)}`}
+              className="border border-black text-black text-xs sm:text-sm tracking-wide hover:bg-black hover:text-white transition-colors w-full sm:w-auto" 
+              style={{ width: '113px', padding: '10px', gap: '10px' }}
+            >
               {t("order")}
             </button>
           </div>

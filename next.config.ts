@@ -5,6 +5,9 @@ const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+  compress: true,
+  poweredByHeader: false,
+  reactStrictMode: true,
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.resolve.alias = {

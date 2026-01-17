@@ -24,7 +24,19 @@
     "test:image:large": "tsx scripts/generate-large-images.ts",
     "test:image:validation": "tsx __tests__/lib/image-upload-validation.test.ts",
     "test:image:queue": "tsx __tests__/lib/image-processing-queue.test.ts",
-    "test:image:generate": "tsx scripts/generate-test-images.ts"
+    "test:image:generate": "tsx scripts/generate-test-images.ts",
+    "test:seo": "tsx __tests__/seo/metadata.test.ts",
+    "test:seo:metadata": "sh scripts/test-seo-metadata.sh http://localhost:3000",
+    "test:seo:structured": "tsx __tests__/seo/structured-data.test.ts",
+    "test:seo:structured:live": "sh scripts/test-seo-structured-data.sh http://localhost:3000",
+    "test:seo:technical": "sh scripts/test-sitemap-robots.sh http://localhost:3000",
+    "test:seo:international": "sh scripts/test-seo-international.sh",
+    "test:seo:images": "sh scripts/test-seo-images.sh http://localhost:3000",
+    "test:performance": "sh scripts/test-performance.sh http://localhost:3000",
+    "test:seo:content": "sh scripts/test-seo-content.sh http://localhost:3000",
+    "test:seo:all": "npm run test:seo && npm run test:seo:structured && npm run test:seo:metadata && npm run test:seo:structured:live && npm run test:seo:technical && npm run test:seo:international && npm run test:seo:images && npm run test:performance && npm run test:seo:content",
+    "test:seo:complete": "sh scripts/test-seo-complete.sh",
+    "test:seo:pre-production": "sh scripts/test-seo-complete.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
