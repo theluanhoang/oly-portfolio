@@ -680,6 +680,15 @@ export default function EditProjectPage() {
     }
   }, [currentStep]);
 
+  const scrollToFormTop = () => {
+    setTimeout(() => {
+      const formElement = document.querySelector('form');
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
   const handleNext = async () => {
     if (currentStep === 1) {
       const slugValid = await trigger('slug');
@@ -710,6 +719,8 @@ export default function EditProjectPage() {
         } else if (viHasError) {
           setCurrentLocale('vi');
         }
+
+        scrollToFormTop();
       }
     }
   };
