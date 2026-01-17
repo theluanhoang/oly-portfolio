@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions, checkAdminAuth } from '@/lib/auth';
 import type { ProjectTranslationSchema } from '@/lib/validations/projectSchema';
+import { unlink } from 'fs/promises';
+import { join } from 'path';
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -229,6 +231,26 @@ export async function PATCH(request: Request, { params }: RouteParams): Promise<
   }
 }
 
+/**
+ * Delete image file from filesystem
+ */
+async function deleteImageFile(imagePath: string): Promise<void> {
+  if (!imagePath || !imagePath.startsWith('/uploads/')) {
+    return;
+  }
+
+  try {
+    const filename = imagePath.replace(/^\//, '');
+    const filePath = join(process.cwd(), 'public', filename);
+    await unlink(filePath);
+    console.log(`Deleted image: ${filePath}`);
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+      console.warn(`Failed to delete image ${imagePath}:`, error);
+    }
+  }
+}
+
 export async function DELETE(request: Request, { params }: RouteParams): Promise<Response> {
   try {
     const session = await getServerSession(authOptions);
@@ -241,9 +263,41 @@ export async function DELETE(request: Request, { params }: RouteParams): Promise
     }
 
     const { slug } = await params;
+    
+    // Get project data before deleting to access image paths
+    const project = await prisma.project.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        heroImage: true,
+        gallery: true,
+      },
+    });
+
+    if (!project) {
+      return Response.json(
+        { error: 'Project not found' },
+        { status: 404 }
+      );
+    }
+
+    const imagePaths: string[] = [];
+    
+    if (project.heroImage) {
+      imagePaths.push(project.heroImage);
+    }
+    
+    if (Array.isArray(project.gallery) && project.gallery.length > 0) {
+      imagePaths.push(...project.gallery.filter((path): path is string => typeof path === 'string' && path.length > 0));
+    }
+
+    await Promise.all(imagePaths.map(path => deleteImageFile(path)));
+
     const deleted = await prisma.project.delete({
       where: { slug },
     });
+
+    console.log(`Deleted project "${slug}" and ${imagePaths.length} associated image(s)`);
 
     return Response.json(deleted);
   } catch (error) {

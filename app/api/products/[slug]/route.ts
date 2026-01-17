@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { productSchema } from '@/lib/validations/productSchema';
 import { getServerSession } from 'next-auth';
 import { authOptions, checkAdminAuth } from '@/lib/auth';
+import { unlink } from 'fs/promises';
+import { join } from 'path';
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -163,6 +165,26 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
   }
 }
 
+/**
+ * Delete image file from filesystem
+ */
+async function deleteImageFile(imagePath: string): Promise<void> {
+  if (!imagePath || !imagePath.startsWith('/uploads/')) {
+    return;
+  }
+
+  try {
+    const filename = imagePath.replace(/^\//, '');
+    const filePath = join(process.cwd(), 'public', filename);
+    await unlink(filePath);
+    console.log(`Deleted image: ${filePath}`);
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+      console.warn(`Failed to delete image ${imagePath}:`, error);
+    }
+  }
+}
+
 export async function DELETE(request: Request, { params }: RouteParams): Promise<Response> {
   try {
     const session = await getServerSession(authOptions);
@@ -176,9 +198,59 @@ export async function DELETE(request: Request, { params }: RouteParams): Promise
 
     const { slug } = await params;
 
+    const product = await prisma.product.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        thumbnail: true,
+        translations: {
+          select: {
+            content: true,
+          },
+        },
+      },
+    });
+
+    if (!product) {
+      return Response.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
+    }
+
+    const imagePaths: string[] = [];
+
+    if (product.thumbnail) {
+      imagePaths.push(product.thumbnail);
+    }
+
+    // Extract images from content (HTML content may contain img tags)
+    if (product.translations && product.translations.length > 0) {
+      for (const translation of product.translations) {
+        if (translation.content) {
+          // Extract image URLs from img src attributes
+          const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
+          let match;
+          while ((match = imgRegex.exec(translation.content)) !== null) {
+            const imgSrc = match[1];
+            if (imgSrc && imgSrc.startsWith('/uploads/')) {
+              imagePaths.push(imgSrc);
+            }
+          }
+        }
+      }
+    }
+
+    // Remove duplicates
+    const uniqueImagePaths = [...new Set(imagePaths)];
+
+    await Promise.all(uniqueImagePaths.map(path => deleteImageFile(path)));
+
     const deleted = await prisma.product.delete({
       where: { slug },
     });
+
+    console.log(`Deleted product "${slug}" and ${uniqueImagePaths.length} associated image(s)`);
 
     return Response.json(deleted);
   } catch (error) {
