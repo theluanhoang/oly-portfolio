@@ -9,6 +9,14 @@ if (!process.env.NEXTAUTH_SECRET) {
   throw new Error('NEXTAUTH_SECRET must be set in environment variables');
 }
 
+const getAuthUrl = (): string => {
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL;
+  }
+  
+  return 'https://olystudio.com';
+};
+
 export const authOptions = {
   providers: [
     CredentialsProvider({
@@ -54,6 +62,7 @@ export const authOptions = {
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
+  url: getAuthUrl(),
   trustHost: true,
   callbacks: {
     async jwt({ token, user }: { token: JWT; user?: User }): Promise<JWT> {

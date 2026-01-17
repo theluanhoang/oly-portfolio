@@ -9,7 +9,6 @@ import { Link as LocaleLink } from '@/i18n/routing';
 import { Settings, LogOut, ChevronDown, Menu as MenuIcon, X } from 'lucide-react';
 import Menu from './Menu';
 import LanguageSwitcher from './LanguageSwitcher';
-import { getBaseUrl } from '@/lib/seo/constants';
 
 interface HeaderProps {
   isFixed?: boolean;
@@ -35,10 +34,7 @@ export default function Header({ isFixed = false }: HeaderProps) {
 
   const handleSignOut = async () => {
     setIsDropdownOpen(false);
-    const baseUrl = typeof window !== 'undefined' 
-      ? window.location.origin 
-      : getBaseUrl();
-    const callbackUrl = `${baseUrl}/${locale}/admin/login`;
+    const callbackUrl = `/${locale}/admin/login`;
     await signOut({ callbackUrl });
   };
 

@@ -67,8 +67,7 @@ Vào **GitHub Repository → Settings → Secrets and variables → Actions → 
 | `ADMIN_USERNAME` | Admin username | `admin` | ✅ Yes |
 | `ADMIN_PASSWORD` | Admin password | `your_secure_password` | ✅ Yes |
 | `NGINX_PORT` | Nginx port | `80` | ❌ No (default: 80) |
-| `NEXT_PUBLIC_APP_URL` | Public app URL (optional) | `https://olystudio.vn` | ❌ No |
-| `NEXT_PUBLIC_BASE_URL` | Base URL cho email links | `https://olystudio.vn` | ❌ No |
+| `NEXT_PUBLIC_SITE_URL` | Base URL cho toàn bộ ứng dụng (SEO, auth, email) | `https://olystudio.vn` | ✅ Yes |
 
 ### 2.3. Tạo SSH Key cho GitHub Actions
 

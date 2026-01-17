@@ -70,7 +70,7 @@ jobs:
           ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
 
           NGINX_PORT=${{ secrets.NGINX_PORT || '80' }}
-          NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL || '' }}
+          NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL || '' }}
 
           FROM_EMAIL=${{ secrets.FROM_EMAIL || '' }}
           FROM_NAME=${{ secrets.FROM_NAME || '' }}
