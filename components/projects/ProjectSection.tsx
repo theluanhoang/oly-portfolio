@@ -20,6 +20,7 @@ interface ProjectImageData {
   slug?: string | null;
   title?: string;
   category?: string;
+  location?: string;
   isPlaceholder?: boolean;
 }
 
@@ -43,7 +44,7 @@ export default function ProjectSection({ images, sectionIndex }: ProjectSectionP
           gridPosition={getGridPosition(isLayout1, imageIndex)}
           slug={image.slug}
           title={image.title}
-          category={image.category}
+          location={image.location}
           isPlaceholder={image.isPlaceholder || false}
         />
       ))}

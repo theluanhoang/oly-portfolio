@@ -13,11 +13,11 @@ interface ProjectImageProps {
   gridPosition?: string;
   slug?: string | null;
   title?: string;
-  category?: string;
+  location?: string;
   isPlaceholder?: boolean;
 }
 
-export default function ProjectImage({ src, alt, gridPosition, slug, title, category, isPlaceholder = false }: ProjectImageProps) {
+export default function ProjectImage({ src, alt, gridPosition, slug, title, location, isPlaceholder = false }: ProjectImageProps) {
   const [imageSrc, setImageSrc] = useState(src || placeholderImage);
   const [hasError, setHasError] = useState(false);
   const t = useTranslations('Common');
@@ -61,9 +61,9 @@ export default function ProjectImage({ src, alt, gridPosition, slug, title, cate
             {title}
           </h3>
         )}
-        {category && (
+        {location && (
           <p className="text-white/80 text-[12px] font-normal tracking-wider text-center">
-            {category}
+            {location}
           </p>
         )}
       </div>

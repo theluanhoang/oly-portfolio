@@ -15,6 +15,7 @@ interface ProjectImage {
   slug: string | null;
   title?: string;
   category?: string;
+  location?: string;
   isPlaceholder?: boolean;
 }
 
@@ -41,6 +42,7 @@ export default function ProjectsClient() {
             title: string;
             slug: string;
             category: string;
+            location: string;
             displayOrder: number;
           }>;
           total: number;
@@ -91,6 +93,7 @@ export default function ProjectsClient() {
                   slug: project.slug,
                   title: project.title,
                   category: project.category,
+                  location: project.location,
                   isPlaceholder: false,
                 };
               }
