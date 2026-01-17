@@ -3005,6 +3005,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           const editorContentContainer = editorDom.closest('.ProseMirror')?.parentElement;
           
           if (editorContentContainer) {
+            const containerRect = editorContentContainer.getBoundingClientRect();
             const { selection } = state;
             const { $from } = selection;
             const linkMark = $from.marks().find(mark => mark.type.name === 'link') ||
@@ -3019,31 +3020,65 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
               const popoverHeight = 100;
               const spacing = 8;
               
-              const viewportWidth = window.innerWidth;
-              const viewportHeight = window.innerHeight;
+              // Check if link is inside an image (image with link)
+              const imageWrapper = linkElement.closest('.resizable-image-wrapper');
+              const isImageLink = !!imageWrapper;
               
               let top: number;
-              const spaceBelow = viewportHeight - linkRect.bottom;
-              const spaceAbove = linkRect.top;
-              
-              if (spaceBelow >= popoverHeight + spacing || spaceBelow >= spaceAbove) {
-                top = linkRect.bottom + spacing;
-              } else {
-                top = linkRect.top - popoverHeight - spacing;
-              }
-              
-              top = Math.max(8, Math.min(top, viewportHeight - popoverHeight - 8));
-              
               let left: number;
-              const spaceRight = viewportWidth - linkRect.left;
-              const spaceLeft = linkRect.left;
               
-              if (spaceRight >= popoverWidth) {
-                left = linkRect.left;
-              } else if (spaceLeft >= popoverWidth) {
-                left = linkRect.right - popoverWidth;
+              if (isImageLink) {
+                // For image links, position link popover above image, and image toolbar will be below
+                const wrapperRect = imageWrapper.getBoundingClientRect();
+                const spaceAbove = wrapperRect.top - containerRect.top;
+                
+                // Position above image if there's enough space (use viewport coordinates for fixed position)
+                if (spaceAbove >= popoverHeight + spacing) {
+                  top = wrapperRect.top - popoverHeight - spacing;
+                } else {
+                  // Position below image (image toolbar will be at wrapperRect.bottom + 10, so add more space)
+                  // Image toolbar height is approximately 50px, so position link popover below toolbar
+                  top = wrapperRect.bottom + spacing + 60; // 60 = toolbar height + spacing
+                }
+                
+                // Align with image left edge (viewport coordinates)
+                left = wrapperRect.left;
+                
+                // Ensure popover doesn't go outside viewport bounds
+                const viewportWidth = window.innerWidth;
+                if (left + popoverWidth > viewportWidth - spacing) {
+                  left = viewportWidth - popoverWidth - spacing;
+                }
+                if (left < spacing) {
+                  left = spacing;
+                }
               } else {
-                left = Math.max(8, Math.min(linkRect.left, viewportWidth - popoverWidth - 8));
+                // For regular links, use viewport coordinates for fixed position
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                
+                const spaceBelow = viewportHeight - linkRect.bottom;
+                const spaceAbove = linkRect.top;
+                
+                if (spaceBelow >= popoverHeight + spacing || spaceBelow >= spaceAbove) {
+                  top = linkRect.bottom + spacing;
+                } else {
+                  top = linkRect.top - popoverHeight - spacing;
+                }
+                
+                // Clamp top to viewport bounds
+                top = Math.max(spacing, Math.min(top, viewportHeight - popoverHeight - spacing));
+                
+                const spaceRight = viewportWidth - linkRect.left;
+                const spaceLeft = linkRect.left;
+                
+                if (spaceRight >= popoverWidth) {
+                  left = linkRect.left;
+                } else if (spaceLeft >= popoverWidth) {
+                  left = linkRect.right - popoverWidth;
+                } else {
+                  left = Math.max(spacing, Math.min(linkRect.left, viewportWidth - popoverWidth - spacing));
+                }
               }
               
               setLinkPopoverPosition({
