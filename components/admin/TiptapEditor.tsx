@@ -3292,7 +3292,90 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     }
   }, [editor, showLinkPopover, showImageDropdown]);
 
+  // Update ALT, Caption, and Link dialog positions when scrolling (use same position as Image Toolbar)
+  useEffect(() => {
+    if (!editor || (!showImageAltDialog && !showImageCaptionDialog && !showImageLinkDialog)) return;
 
+    const updateDialogPosition = () => {
+      if (!selectedImagePos || !selectedImageNode) return;
+
+      const { view } = editor;
+      const editorDom = view.dom;
+      const editorContentContainer = editorDom.closest('.ProseMirror')?.parentElement;
+      
+      if (!editorContentContainer) return;
+
+      const imageId = selectedImageNode.attrs.id as string;
+      if (!imageId) return;
+
+      const imageWrappers = editorContentContainer.querySelectorAll('.resizable-image-wrapper');
+      let foundWrapper: HTMLElement | null = null;
+      
+      for (let i = 0; i < imageWrappers.length; i++) {
+        const wrapper = imageWrappers[i];
+        const img = wrapper.querySelector('img');
+        if (img) {
+          const imgId = img.getAttribute('data-image-id') || img.getAttribute('id');
+          if (imgId === imageId) {
+            foundWrapper = wrapper as HTMLElement;
+            break;
+          }
+        }
+      }
+      
+      if (!foundWrapper) return;
+
+      // Calculate position same as Image Toolbar (relative to container)
+      const containerRect = editorContentContainer.getBoundingClientRect();
+      const wrapperRect = foundWrapper.getBoundingClientRect();
+      const toolbarPosition = {
+        top: wrapperRect.bottom - containerRect.top + 10,
+        left: wrapperRect.left - containerRect.left,
+      };
+      
+      // Update dialogs with same position as toolbar
+      if (showImageAltDialog) {
+        setImageAltDialogPosition(toolbarPosition);
+      }
+      if (showImageCaptionDialog) {
+        setImageCaptionDialogPosition(toolbarPosition);
+      }
+      if (showImageLinkDialog) {
+        setImageLinkDialogPosition(toolbarPosition);
+      }
+    };
+
+    // Update position on scroll
+    const handleScroll = () => {
+      updateDialogPosition();
+    };
+
+    // Update position on resize
+    const handleResize = () => {
+      updateDialogPosition();
+    };
+
+    // Initial update
+    updateDialogPosition();
+
+    // Add event listeners
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', handleResize);
+    
+    // Also listen to scroll on editor container
+    const editorContentContainer = editor.view.dom.closest('.ProseMirror')?.parentElement;
+    if (editorContentContainer) {
+      editorContentContainer.addEventListener('scroll', handleScroll, true);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleResize);
+      if (editorContentContainer) {
+        editorContentContainer.removeEventListener('scroll', handleScroll, true);
+      }
+    };
+  }, [editor, showImageAltDialog, showImageCaptionDialog, showImageLinkDialog, selectedImagePos, selectedImageNode]);
 
   if (!editor) {
     return null;
@@ -4245,60 +4328,45 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
               setSelectedImageNode(null);
             }}
             onEditAltText={() => {
-              // Calculate position based on image position
-              if (selectedImagePos !== null && imageToolbarPos) {
-                // Position dialog below the toolbar
-                setImageAltDialogPosition({
-                  top: imageToolbarPos.top + 50,
-                  left: imageToolbarPos.left,
-                });
+              // Use same position as Image Toolbar
+              if (imageToolbarPos) {
+                setImageAltDialogPosition(imageToolbarPos);
               }
-              setShowImageAltDialog(true);
+              // Close other dialogs and toolbar
+              setShowImageCaptionDialog(false);
+              setShowImageLinkDialog(false);
               setShowImageToolbar(false);
+              setShowImageAltDialog(true);
             }}
             onEditCaption={() => {
-              // Calculate position based on image position
-              if (selectedImagePos !== null && imageToolbarPos) {
-                // Position dialog below the toolbar
-                setImageCaptionDialogPosition({
-                  top: imageToolbarPos.top + 50,
-                  left: imageToolbarPos.left,
-                });
+              // Use same position as Image Toolbar
+              if (imageToolbarPos) {
+                setImageCaptionDialogPosition(imageToolbarPos);
               }
-              setShowImageCaptionDialog(true);
+              // Close other dialogs and toolbar
+              setShowImageAltDialog(false);
+              setShowImageLinkDialog(false);
               setShowImageToolbar(false);
+              setShowImageCaptionDialog(true);
             }}
             onEditLink={() => {
-              // Calculate position based on image position
-              if (selectedImagePos !== null && imageToolbarPos) {
-                // Position dialog below the toolbar
-                setImageLinkDialogPosition({
-                  top: imageToolbarPos.top + 50,
-                  left: imageToolbarPos.left,
-                });
+              // Use same position as Image Toolbar
+              if (imageToolbarPos) {
+                setImageLinkDialogPosition(imageToolbarPos);
               }
+              // Close other dialogs and toolbar
+              setShowImageAltDialog(false);
+              setShowImageCaptionDialog(false);
+              setShowImageToolbar(false);
               setShowImageLinkDialog(true);
-              setShowImageToolbar(false);
-            }}
-            onReplace={() => {
-              // Calculate position based on image position
-              if (selectedImagePos !== null && imageToolbarPos) {
-                // Position dialog below the toolbar
-                setImageReplaceDialogPosition({
-                  top: imageToolbarPos.top + 50,
-                  left: imageToolbarPos.left,
-                });
-              }
-              setShowImageReplaceDialog(true);
-              setShowImageToolbar(false);
             }}
           />
         )}
 
         {/* Image Alt Text Dialog */}
-        {showImageAltDialog && selectedImagePos !== null && selectedImageNode && imageAltDialogPosition && typeof window !== 'undefined' ? createPortal(
+        {showImageAltDialog && selectedImagePos !== null && selectedImageNode && imageAltDialogPosition && (
           <div 
-            className={`fixed ${popoverCardClass} p-6 w-[500px] z-50 image-alt-dialog`}
+            className={`absolute ${popoverCardClass} p-6 w-[500px] z-50 image-alt-dialog`}
             style={{
               top: `${imageAltDialogPosition.top}px`,
               left: `${imageAltDialogPosition.left}px`,
@@ -4353,14 +4421,13 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                   Apply
                 </button>
               </div>
-          </div>,
-          document.body
-        ) : null}
+          </div>
+        )}
 
         {/* Image Caption Dialog */}
-        {showImageCaptionDialog && selectedImagePos !== null && selectedImageNode && imageCaptionDialogPosition && typeof window !== 'undefined' ? createPortal(
+        {showImageCaptionDialog && selectedImagePos !== null && selectedImageNode && imageCaptionDialogPosition && (
           <div 
-            className={`fixed ${popoverCardClass} p-6 w-[500px] z-50 image-caption-dialog`}
+            className={`absolute ${popoverCardClass} p-6 w-[500px] z-50 image-caption-dialog`}
             style={{
               top: `${imageCaptionDialogPosition.top}px`,
               left: `${imageCaptionDialogPosition.left}px`,
@@ -4402,9 +4469,8 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                   Apply
                 </button>
               </div>
-          </div>,
-          document.body
-        ) : null}
+          </div>
+        )}
 
         {/* Image Link Dialog */}
         {showImageLinkDialog && selectedImagePos !== null && selectedImageNode && imageLinkDialogPosition && (

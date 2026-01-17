@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AlignLeft, AlignCenter, AlignRight, Maximize2, Link as LinkIcon, RefreshCw, Trash2, MoreVertical, Type, FileImage } from 'lucide-react';
+import { AlignLeft, AlignCenter, AlignRight, Maximize2, Link as LinkIcon, Trash2, MoreVertical, Type, FileImage } from 'lucide-react';
 import type { Editor } from '@tiptap/core';
 import { NodeSelection } from 'prosemirror-state';
 
@@ -14,7 +14,6 @@ interface ImageToolbarProps {
   onEditAltText?: () => void;
   onEditCaption?: () => void;
   onEditLink?: () => void;
-  onReplace?: () => void;
 }
 
 export function ImageToolbar({
@@ -26,7 +25,6 @@ export function ImageToolbar({
   onEditAltText,
   onEditCaption,
   onEditLink,
-  onReplace,
 }: ImageToolbarProps) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [, forceUpdate] = useState(0);
@@ -217,16 +215,6 @@ export function ImageToolbar({
         title={hasLink ? 'Edit Link' : 'Add Link'}
       >
         <LinkIcon size={16} />
-      </button>
-
-      {/* Replace Button */}
-      <button
-        type="button"
-        onClick={onReplace}
-        className="p-2 rounded hover:bg-gray-100 transition-colors"
-        title="Replace Image"
-      >
-        <RefreshCw size={16} />
       </button>
 
       {/* More Options */}
