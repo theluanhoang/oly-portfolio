@@ -439,14 +439,41 @@ const ResizableImage = Image.extend({
       align: {
         default: null,
         parseHTML: (element) => {
-          const parent = element.parentElement;
-          if (!parent) return null;
-          const textAlign = parent.style.textAlign || parent.getAttribute('data-align');
+          let wrapper: HTMLElement | null = element.parentElement;
+          
+          if (wrapper && wrapper.tagName === 'A') {
+            wrapper = wrapper.parentElement;
+          }
+          
+          while (wrapper && !wrapper.classList?.contains('resizable-image-wrapper')) {
+            wrapper = wrapper.parentElement;
+          }
+          
+          if (!wrapper) return null;
+          
+          const dataAlign = wrapper.getAttribute('data-align');
+          if (dataAlign) return dataAlign;
+          
+          if (wrapper.classList.contains('image-align-center')) return 'center';
+          if (wrapper.classList.contains('image-align-left')) return 'left';
+          if (wrapper.classList.contains('image-align-right')) return 'right';
+          if (wrapper.classList.contains('image-align-full')) return 'full';
+          if (wrapper.classList.contains('image-align-float-left')) return 'float-left';
+          if (wrapper.classList.contains('image-align-float-right')) return 'float-right';
+          
+          const textAlign = wrapper.style.textAlign;
           if (textAlign) return textAlign;
+          
+          const computedTextAlign = window.getComputedStyle(wrapper).textAlign;
+          if (computedTextAlign === 'center') return 'center';
+          if (computedTextAlign === 'left') return 'left';
+          if (computedTextAlign === 'right') return 'right';
+          
           // Check for float
-          const float = parent.style.float || window.getComputedStyle(parent).float;
+          const float = wrapper.style.float || window.getComputedStyle(wrapper).float;
           if (float === 'left') return 'float-left';
           if (float === 'right') return 'float-right';
+          
           return null;
         },
         renderHTML: (attributes) => {
