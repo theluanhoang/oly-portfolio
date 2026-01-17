@@ -624,6 +624,15 @@ export default function EditProductPage() {
     }
   };
 
+  const scrollToFormTop = () => {
+    setTimeout(() => {
+      const formElement = document.querySelector('form');
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
   const handleNext = async () => {
     if (currentStep === 1) {
       const slugValid = await trigger('slug');
@@ -652,6 +661,8 @@ export default function EditProductPage() {
         } else if (viHasError) {
           setCurrentLocale('vi');
         }
+
+        scrollToFormTop();
       }
     }
   };
@@ -802,10 +813,10 @@ export default function EditProductPage() {
                           }}
                           onFocus={() => setCategoryPopoverOpen(true)}
                           onBlur={() => setTimeout(() => setCategoryPopoverOpen(false), 150)}
-                          placeholder={t('fields.selectCategory')}
+                        placeholder={t('fields.selectCategory')}
                           className="w-full h-[44px] border border-black px-4 pr-10 rounded-lg bg-white text-[#333] outline-none focus:outline-none focus:border-black transition-colors"
                           disabled={loadingCategories}
-                          required
+                        required
                         />
                         {selectedCategoryId && (
                           <button
@@ -929,10 +940,10 @@ export default function EditProductPage() {
                           }}
                           onFocus={() => setMaterialPopoverOpen(true)}
                           onBlur={() => setTimeout(() => setMaterialPopoverOpen(false), 150)}
-                          placeholder={t('fields.selectMaterial')}
+                        placeholder={t('fields.selectMaterial')}
                           className="w-full h-[44px] border border-black px-4 pr-10 rounded-lg bg-white text-[#333] outline-none focus:outline-none focus:border-black transition-colors"
                           disabled={loadingMaterials}
-                          required
+                        required
                         />
                         {selectedMaterialId && (
                           <button
