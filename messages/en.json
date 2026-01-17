@@ -348,7 +348,43 @@
                 "loading": "Loading...",
                 "noProducts": "No products yet."
             },
-            "error": "Error loading products"
+            "error": "Error loading products",
+            "productCategory": {
+                "addNew": "Add New Category",
+                "update": "Update Category",
+                "delete": "Delete Category",
+                "deleteConfirm": "Are you sure you want to delete category \"{name}\"? If the category is being used by products, you cannot delete it.",
+                "create": "Create",
+                "updateButton": "Update",
+                "cancel": "Cancel",
+                "creating": "Creating...",
+                "updating": "Updating...",
+                "deleteSuccess": "Category deleted successfully",
+                "updateSuccess": "Category updated successfully",
+                "nameVi": "Vietnamese Name",
+                "nameEn": "English Name",
+                "nameViPlaceholder": "Enter Vietnamese name",
+                "nameEnPlaceholder": "Enter English name",
+                "nameRequired": "Please enter both Vietnamese and English names"
+            },
+            "productMaterial": {
+                "addNew": "Add New Material",
+                "update": "Update Material",
+                "delete": "Delete Material",
+                "deleteConfirm": "Are you sure you want to delete material \"{name}\"? If the material is being used by products, you cannot delete it.",
+                "create": "Create",
+                "updateButton": "Update",
+                "cancel": "Cancel",
+                "creating": "Creating...",
+                "updating": "Updating...",
+                "deleteSuccess": "Material deleted successfully",
+                "updateSuccess": "Material updated successfully",
+                "nameVi": "Vietnamese Name",
+                "nameEn": "English Name",
+                "nameViPlaceholder": "Enter Vietnamese name",
+                "nameEnPlaceholder": "Enter English name",
+                "nameRequired": "Please enter both Vietnamese and English names"
+            }
         },
         "settings": {
             "title": "Settings",

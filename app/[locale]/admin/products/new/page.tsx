@@ -284,7 +284,7 @@ export default function NewProductPage() {
 
   const handleCreateCategory = async () => {
     if (!modalTranslations.vi.trim() || !modalTranslations.en.trim()) {
-      setSaveMessage({ type: 'error', text: 'Category name is required' });
+      setSaveMessage({ type: 'error', text: t('productCategory.nameRequired') });
       return;
     }
     try {
@@ -302,7 +302,7 @@ export default function NewProductPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.id) {
-        throw new Error(json.error || 'Failed to create category');
+        throw new Error(json.error || t('productCategory.create') + ' failed');
       }
       await reloadCategories();
       setValue('categoryId', json.id, { shouldValidate: true });
@@ -311,7 +311,7 @@ export default function NewProductPage() {
       setTranslationModal(null);
       setModalTranslations({ vi: '', en: '' });
     } catch (err) {
-      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to create category' });
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : t('productCategory.create') + ' failed' });
     } finally {
       setIsCreatingCategory(false);
     }
@@ -334,7 +334,7 @@ export default function NewProductPage() {
 
   const handleCreateMaterial = async () => {
     if (!modalTranslations.vi.trim() || !modalTranslations.en.trim()) {
-      setSaveMessage({ type: 'error', text: 'Material name is required' });
+      setSaveMessage({ type: 'error', text: t('productMaterial.nameRequired') });
       return;
     }
     try {
@@ -352,7 +352,7 @@ export default function NewProductPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.id) {
-        throw new Error(json.error || 'Failed to create material');
+        throw new Error(json.error || t('productMaterial.create') + ' failed');
       }
       await reloadMaterials();
       setValue('materialId', json.id, { shouldValidate: true });
@@ -361,7 +361,7 @@ export default function NewProductPage() {
       setTranslationModal(null);
       setModalTranslations({ vi: '', en: '' });
     } catch (err) {
-      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to create material' });
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : t('productMaterial.create') + ' failed' });
     } finally {
       setIsCreatingMaterial(false);
     }
@@ -384,7 +384,7 @@ export default function NewProductPage() {
   const handleUpdateCategory = async () => {
     if (!translationModal?.itemId) return;
     if (!modalTranslations.vi.trim() || !modalTranslations.en.trim()) {
-      setSaveMessage({ type: 'error', text: 'Category name is required' });
+      setSaveMessage({ type: 'error', text: t('productCategory.nameRequired') });
       return;
     }
     try {
@@ -402,7 +402,7 @@ export default function NewProductPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(json.error || 'Failed to update category');
+        throw new Error(json.error || t('productCategory.update') + ' failed');
       }
       await reloadCategories();
       if (selectedCategoryId === translationModal.itemId) {
@@ -411,9 +411,9 @@ export default function NewProductPage() {
       }
       setTranslationModal(null);
       setModalTranslations({ vi: '', en: '' });
-      setSaveMessage({ type: 'success', text: 'Category updated successfully' });
+      setSaveMessage({ type: 'success', text: t('productCategory.updateSuccess') });
     } catch (err) {
-      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to update category' });
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : t('productCategory.update') + ' failed' });
     } finally {
       setIsUpdatingCategory(false);
     }
@@ -422,7 +422,7 @@ export default function NewProductPage() {
   const handleUpdateMaterial = async () => {
     if (!translationModal?.itemId) return;
     if (!modalTranslations.vi.trim() || !modalTranslations.en.trim()) {
-      setSaveMessage({ type: 'error', text: 'Material name is required' });
+      setSaveMessage({ type: 'error', text: t('productMaterial.nameRequired') });
       return;
     }
     try {
@@ -440,7 +440,7 @@ export default function NewProductPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(json.error || 'Failed to update material');
+        throw new Error(json.error || t('productMaterial.update') + ' failed');
       }
       await reloadMaterials();
       if (selectedMaterialId === translationModal.itemId) {
@@ -449,9 +449,9 @@ export default function NewProductPage() {
       }
       setTranslationModal(null);
       setModalTranslations({ vi: '', en: '' });
-      setSaveMessage({ type: 'success', text: 'Material updated successfully' });
+      setSaveMessage({ type: 'success', text: t('productMaterial.updateSuccess') });
     } catch (err) {
-      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to update material' });
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : t('productMaterial.update') + ' failed' });
     } finally {
       setIsUpdatingMaterial(false);
     }
@@ -490,9 +490,9 @@ export default function NewProductPage() {
         setCategoryInput('');
         setValue('categoryId', null, { shouldValidate: true });
       }
-      setSaveMessage({ type: 'success', text: 'Category deleted successfully' });
+      setSaveMessage({ type: 'success', text: t('productCategory.deleteSuccess') });
     } catch (err) {
-      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to delete category' });
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : t('productCategory.delete') + ' failed' });
     } finally {
       setIsDeletingCategory(false);
       setDeleteConfirmDialog(null);
@@ -514,9 +514,9 @@ export default function NewProductPage() {
         setMaterialInput('');
         setValue('materialId', null, { shouldValidate: true });
       }
-      setSaveMessage({ type: 'success', text: 'Material deleted successfully' });
+      setSaveMessage({ type: 'success', text: t('productMaterial.deleteSuccess') });
     } catch (err) {
-      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to delete material' });
+      setSaveMessage({ type: 'error', text: err instanceof Error ? err.message : t('productMaterial.delete') + ' failed' });
     } finally {
       setIsDeletingMaterial(false);
       setDeleteConfirmDialog(null);
@@ -808,7 +808,7 @@ export default function NewProductPage() {
                                         handleEditCategory(cat);
                                       }}
                                       className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                      title="Cập nhật"
+                                      title={t('productCategory.updateButton')}
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -822,7 +822,7 @@ export default function NewProductPage() {
                                       }}
                                       disabled={isDeletingCategory}
                                       className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                                      title="Xóa"
+                                      title={t('fields.delete')}
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -935,7 +935,7 @@ export default function NewProductPage() {
                                         handleEditMaterial(mat);
                                       }}
                                       className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                      title="Cập nhật"
+                                      title={t('productMaterial.updateButton')}
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -949,7 +949,7 @@ export default function NewProductPage() {
                                       }}
                                       disabled={isDeletingMaterial}
                                       className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                                      title="Xóa"
+                                      title={t('fields.delete')}
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1104,37 +1104,37 @@ export default function NewProductPage() {
                 <h2 className="text-sm sm:text-base md:text-base font-semibold tracking-[1px] sm:tracking-[1.5px] md:tracking-[2px] uppercase text-[#333]">
                   {translationModal.itemId
                     ? translationModal.type === 'category'
-                      ? 'Cập nhật danh mục'
-                      : 'Cập nhật chất liệu'
+                      ? t('productCategory.update')
+                      : t('productMaterial.update')
                     : translationModal.type === 'category'
-                    ? 'Thêm danh mục mới'
-                    : 'Thêm chất liệu mới'}
+                    ? t('productCategory.addNew')
+                    : t('productMaterial.addNew')}
                 </h2>
               </div>
               <div className="px-4 sm:px-6 md:px-6 py-4 sm:py-5 md:py-5 space-y-4">
                 <div>
                   <label className="block text-xs font-medium uppercase tracking-[1px] text-[#555] mb-1">
-                    Tên (Tiếng Việt) *
+                    {translationModal.type === 'category' ? t('productCategory.nameVi') : t('productMaterial.nameVi')} *
                   </label>
                   <input
                     type="text"
                     value={modalTranslations.vi}
                     onChange={(e) => setModalTranslations({ ...modalTranslations, vi: e.target.value })}
                     className="w-full border border-[#e0e0e0] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#333]"
-                    placeholder="Nhập tên tiếng Việt"
+                    placeholder={translationModal.type === 'category' ? t('productCategory.nameViPlaceholder') : t('productMaterial.nameViPlaceholder')}
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium uppercase tracking-[1px] text-[#555] mb-1">
-                    Tên (English) *
+                    {translationModal.type === 'category' ? t('productCategory.nameEn') : t('productMaterial.nameEn')} *
                   </label>
                   <input
                     type="text"
                     value={modalTranslations.en}
                     onChange={(e) => setModalTranslations({ ...modalTranslations, en: e.target.value })}
                     className="w-full border border-[#e0e0e0] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#333]"
-                    placeholder="Enter English name"
+                    placeholder={translationModal.type === 'category' ? t('productCategory.nameEnPlaceholder') : t('productMaterial.nameEnPlaceholder')}
                     required
                   />
                 </div>
@@ -1150,7 +1150,7 @@ export default function NewProductPage() {
                   }}
                   disabled={isCreatingCategory || isCreatingMaterial || isUpdatingCategory || isUpdatingMaterial}
                 >
-                  Hủy
+                  {translationModal.type === 'category' ? t('productCategory.cancel') : t('productMaterial.cancel')}
                 </ConfirmButton>
                 <ConfirmButton
                   type="button"
@@ -1170,12 +1170,12 @@ export default function NewProductPage() {
                   }
                 >
                   {isCreatingCategory || isCreatingMaterial
-                    ? 'Đang tạo...'
+                    ? (translationModal.type === 'category' ? t('productCategory.creating') : t('productMaterial.creating'))
                     : isUpdatingCategory || isUpdatingMaterial
-                    ? 'Đang cập nhật...'
+                    ? (translationModal.type === 'category' ? t('productCategory.updating') : t('productMaterial.updating'))
                     : translationModal.itemId
-                    ? 'Cập nhật'
-                    : 'Tạo'}
+                    ? (translationModal.type === 'category' ? t('productCategory.updateButton') : t('productMaterial.updateButton'))
+                    : (translationModal.type === 'category' ? t('productCategory.create') : t('productMaterial.create'))}
                 </ConfirmButton>
               </div>
             </div>
@@ -1185,10 +1185,12 @@ export default function NewProductPage() {
         {deleteConfirmDialog && (
           <ConfirmDialog
             isOpen={deleteConfirmDialog.isOpen}
-            title={deleteConfirmDialog.type === 'category' ? 'Xóa danh mục' : 'Xóa chất liệu'}
-            message={`Bạn có chắc chắn muốn xóa "${deleteConfirmDialog.itemName}"?`}
-            confirmText="Xóa"
-            cancelText="Hủy"
+            title={deleteConfirmDialog.type === 'category' ? t('productCategory.delete') : t('productMaterial.delete')}
+            message={deleteConfirmDialog.type === 'category' 
+              ? t('productCategory.deleteConfirm', { name: deleteConfirmDialog.itemName })
+              : t('productMaterial.deleteConfirm', { name: deleteConfirmDialog.itemName })}
+            confirmText={t('fields.delete')}
+            cancelText={deleteConfirmDialog.type === 'category' ? t('productCategory.cancel') : t('productMaterial.cancel')}
             variant="danger"
             onConfirm={handleDeleteConfirm}
             onCancel={() => setDeleteConfirmDialog(null)}

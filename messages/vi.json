@@ -348,7 +348,43 @@
                 "loading": "Đang tải...",
                 "noProducts": "Chưa có sản phẩm nào."
             },
-            "error": "Lỗi khi tải sản phẩm"
+            "error": "Lỗi khi tải sản phẩm",
+            "productCategory": {
+                "addNew": "Thêm danh mục mới",
+                "update": "Cập nhật danh mục",
+                "delete": "Xóa danh mục",
+                "deleteConfirm": "Bạn có chắc chắn muốn xóa danh mục \"{name}\"? Nếu danh mục đang được sử dụng bởi các sản phẩm, bạn không thể xóa.",
+                "create": "Tạo",
+                "updateButton": "Cập nhật",
+                "cancel": "Hủy",
+                "creating": "Đang tạo...",
+                "updating": "Đang cập nhật...",
+                "deleteSuccess": "Xóa danh mục thành công",
+                "updateSuccess": "Cập nhật danh mục thành công",
+                "nameVi": "Tên tiếng Việt",
+                "nameEn": "Tên tiếng Anh",
+                "nameViPlaceholder": "Nhập tên tiếng Việt",
+                "nameEnPlaceholder": "Nhập tên tiếng Anh",
+                "nameRequired": "Vui lòng nhập đầy đủ tên tiếng Việt và tiếng Anh"
+            },
+            "productMaterial": {
+                "addNew": "Thêm vật liệu mới",
+                "update": "Cập nhật vật liệu",
+                "delete": "Xóa vật liệu",
+                "deleteConfirm": "Bạn có chắc chắn muốn xóa vật liệu \"{name}\"? Nếu vật liệu đang được sử dụng bởi các sản phẩm, bạn không thể xóa.",
+                "create": "Tạo",
+                "updateButton": "Cập nhật",
+                "cancel": "Hủy",
+                "creating": "Đang tạo...",
+                "updating": "Đang cập nhật...",
+                "deleteSuccess": "Xóa vật liệu thành công",
+                "updateSuccess": "Cập nhật vật liệu thành công",
+                "nameVi": "Tên tiếng Việt",
+                "nameEn": "Tên tiếng Anh",
+                "nameViPlaceholder": "Nhập tên tiếng Việt",
+                "nameEnPlaceholder": "Nhập tên tiếng Anh",
+                "nameRequired": "Vui lòng nhập đầy đủ tên tiếng Việt và tiếng Anh"
+            }
         },
         "settings": {
             "title": "Cài Đặt",
