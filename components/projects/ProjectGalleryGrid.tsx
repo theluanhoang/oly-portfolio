@@ -238,7 +238,8 @@ export default function ProjectGalleryGrid({ images, maxImages = 8, projectTitle
               alt={projectTitle
                 ? generateProjectImageAlt(projectTitle, selectedImageIndex, safeImages.length)
                 : `Gallery image ${selectedImageIndex + 1}`}
-              className="max-w-full max-h-full object-contain"
+              className="max-w-full max-h-full"
+              objectFit="contain"
               priority="eager"
               progressive={true}
             />
