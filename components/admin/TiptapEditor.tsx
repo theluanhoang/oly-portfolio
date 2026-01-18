@@ -4289,9 +4289,48 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                 
                 if (e.currentTarget) {
                   const rect = e.currentTarget.getBoundingClientRect();
+                  const dialogWidth = 280; // min-w-[280px]
+                  const dialogHeight = 500; // Estimated height for the dialog with all layout options
+                  const spacing = 4;
+                  
+                  const viewportWidth = window.innerWidth;
+                  const viewportHeight = window.innerHeight;
+                  
+                  // Calculate top position - check if there's enough space below or above
+                  let top: number;
+                  const spaceBelow = viewportHeight - rect.bottom;
+                  const spaceAbove = rect.top;
+                  
+                  if (spaceBelow >= dialogHeight + spacing || spaceBelow >= spaceAbove) {
+                    // Place below button
+                    top = rect.bottom + spacing;
+                  } else {
+                    // Place above button
+                    top = rect.top - dialogHeight - spacing;
+                  }
+                  
+                  // Clamp top to viewport bounds
+                  top = Math.max(8, Math.min(top, viewportHeight - dialogHeight - 8));
+                  
+                  // Calculate left position - check if there's enough space on right or left
+                  let left: number;
+                  const spaceRight = viewportWidth - rect.left;
+                  const spaceLeft = rect.left;
+                  
+                  if (spaceRight >= dialogWidth) {
+                    // Place to the right (align with button left edge)
+                    left = rect.left;
+                  } else if (spaceLeft >= dialogWidth) {
+                    // Place to the left (align with button right edge)
+                    left = rect.right - dialogWidth;
+                  } else {
+                    // Center or align to viewport edge
+                    left = Math.max(8, Math.min(rect.left, viewportWidth - dialogWidth - 8));
+                  }
+                  
                   setImageLayoutDropdownPosition({
-                    top: rect.bottom + 4,
-                    left: rect.left,
+                    top,
+                    left,
                   });
                 }
                 
@@ -5214,7 +5253,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       </div>
 
       {/* Image Layout Dropdown */}
-      {showImageLayoutDialog && selectedImagePositions.length >= 2 && imageLayoutDropdownPosition && (
+      {showImageLayoutDialog && selectedImagePositions.length >= 2 && imageLayoutDropdownPosition && typeof window !== 'undefined' ? createPortal(
         <div 
           className={`image-layout-dropdown fixed ${popoverCardClass} p-4 z-50 min-w-[280px]`}
           style={{
@@ -5363,56 +5402,6 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
               </div>
               <div className="text-xs text-gray-500">Pinterest-style layout</div>
             </button>
-            
-            <button
-              type="button"
-              onClick={() => {
-                const { doc, tr, schema } = editor.state;
-                
-                const images: Array<{ pos: number; node: PMNode }> = [];
-                selectedImagePositions.forEach(pos => {
-                  const node = doc.nodeAt(pos);
-                  if (node && node.type.name === 'image') {
-                    images.push({ pos, node });
-                  }
-                });
-                
-                if (images.length >= 2) {
-                  images.sort((a, b) => a.pos - b.pos);
-                  const imageNodes = images.map(img => img.node);
-                  const firstPos = images[0].pos;
-                  
-                  images.reverse().forEach((img) => {
-                    tr.delete(img.pos, img.pos + img.node.nodeSize);
-                  });
-                  
-                  const fragment = Fragment.from(imageNodes);
-                  const galleryNode = schema.nodes.imageGallery.create(
-                    {
-                      layout: 'sidebyside',
-                      gap: '1rem',
-                    },
-                    fragment
-                  );
-                  
-                  tr.insert(firstPos, galleryNode);
-                  editor.view.dispatch(tr);
-                  
-                  setSelectedImagePositions([]);
-                  setShowImageLayoutDialog(false);
-                } else {
-                  alert(`Error: Only found ${images.length} image(s). Please try selecting again.`);
-                }
-              }}
-              className="w-full text-left p-3 border border-gray-200 rounded hover:border-blue-500 transition-colors"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <Columns size={20} className="text-gray-600" />
-                <div className="font-semibold text-sm">Side by Side</div>
-              </div>
-              <div className="text-xs text-gray-500">Images in a row</div>
-            </button>
-            
             <button
               type="button"
               onClick={() => {
@@ -5462,8 +5451,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
               <div className="text-xs text-gray-500">Images stacked vertically</div>
             </button>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+      ) : null}
     </div>
   );
 }
