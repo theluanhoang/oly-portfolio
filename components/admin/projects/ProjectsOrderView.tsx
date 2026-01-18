@@ -430,69 +430,6 @@ export function ProjectsOrderView({
     resetDragState();
   }, [resetDragState]);
 
-  const handleReset = useCallback(async () => {
-    if (!confirm('Bạn có chắc chắn muốn reset vị trí của tất cả projects? Hành động này không thể hoàn tác.')) {
-      return;
-    }
-
-    setIsSyncing(true);
-    setSyncError(null);
-    
-    try {
-      const sortedProjects = [...localProjects].sort((a, b) => {
-        if (a.displayOrder !== b.displayOrder) {
-          return (a.displayOrder || 0) - (b.displayOrder || 0);
-        }
-        return (a.title || '').localeCompare(b.title || '');
-      });
-
-      const updates: PendingUpdate[] = sortedProjects
-        .map((project, index) => {
-          const sectionIndex = Math.floor(index / PROJECTS_PER_SECTION);
-          const positionInSection = index % PROJECTS_PER_SECTION;
-          const newDisplayOrder = calculateDisplayOrder(sectionIndex, positionInSection);
-
-          if (project.displayOrder !== newDisplayOrder) {
-            return {
-              slug: project.slug,
-              displayOrder: newDisplayOrder,
-            };
-          }
-          return null;
-        })
-        .filter((update): update is PendingUpdate => update !== null);
-
-      if (updates.length > 0) {
-        const resetProjects = sortedProjects.map((project, index) => {
-          const sectionIndex = Math.floor(index / PROJECTS_PER_SECTION);
-          const positionInSection = index % PROJECTS_PER_SECTION;
-          const newDisplayOrder = calculateDisplayOrder(sectionIndex, positionInSection);
-          return { ...project, displayOrder: newDisplayOrder };
-        });
-        
-        projectsSnapshotRef.current = [...localProjects];
-        setLocalProjects(resetProjects);
-        setPendingUpdates(new Map(updates.map(u => [u.slug, u])));
-        
-        const response = await batchReorderProjects(updates);
-        
-        if (!response.ok) {
-          throw new Error('Failed to reset order');
-        }
-
-        setPendingUpdates(new Map());
-        projectsSnapshotRef.current = [...resetProjects];
-      }
-    } catch (error) {
-      console.error('[Reset] Error:', error);
-      setLocalProjects(projectsSnapshotRef.current);
-      setPendingUpdates(new Map());
-      alert('Không thể reset vị trí. Vui lòng thử lại.');
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [localProjects]);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -512,17 +449,10 @@ export function ProjectsOrderView({
   return (
     <div className="space-y-6">
       <div className="bg-gray-50 p-4 rounded-lg">
-        <div className="flex items-center justify-between mb-2">
+        <div className="mb-2">
           <p className="text-sm text-gray-600">
             <strong>Hướng dẫn:</strong> Kéo và thả các project để sắp xếp thứ tự hiển thị
           </p>
-          <button
-            onClick={handleReset}
-            disabled={isSyncing || localProjects.length === 0}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-          >
-            Reset Vị Trí
-          </button>
         </div>
         <div className="flex items-center gap-2">
           {isSyncing && (
