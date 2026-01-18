@@ -5,6 +5,9 @@ import { authOptions, checkAdminAuth } from '@/lib/auth';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
 
+// Increase timeout for large content uploads
+export const maxDuration = 300;
+
 interface RouteParams {
   params: Promise<{ slug: string }>;
 }

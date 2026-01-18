@@ -4,6 +4,9 @@ import type { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, checkAdminAuth } from '@/lib/auth';
 
+// Increase timeout for large content uploads
+export const maxDuration = 300;
+
 export async function POST(request: NextRequest): Promise<Response> {
   try {
     const session = await getServerSession(authOptions);
