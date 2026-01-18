@@ -726,24 +726,34 @@ const ResizableImage = Image.extend({
         
         dom.style.height = 'fit-content';
         
-        // Calculate aspect ratio from natural dimensions if available
-        if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+        // Calculate aspect ratio - prefer using current displayed dimensions over natural dimensions
+        // Only use natural dimensions if we don't have displayed dimensions yet
+        if (originalWidth > 0 && originalHeight > 0) {
+          // Use the width/height we just set from attrs
+          aspectRatio = originalWidth / originalHeight;
+          setTimeout(() => {
+            updateHandlesPosition();
+          }, 0);
+        } else if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+          // Fallback to natural dimensions only if we don't have attrs dimensions
           originalWidth = img.naturalWidth;
           originalHeight = img.naturalHeight;
           aspectRatio = originalWidth / originalHeight;
           setTimeout(() => {
             updateHandlesPosition();
           }, 0);
-        } else if (originalWidth > 0 && originalHeight > 0) {
-          aspectRatio = originalWidth / originalHeight;
-          setTimeout(() => {
-            updateHandlesPosition();
-          }, 0);
         } else {
+          // Wait for image to load to get natural dimensions
           img.onload = () => {
-            originalWidth = img.naturalWidth;
-            originalHeight = img.naturalHeight;
-            aspectRatio = originalWidth / originalHeight;
+            // Only use natural dimensions if we still don't have width/height from attrs
+            if (!originalWidth || !originalHeight) {
+              originalWidth = img.naturalWidth;
+              originalHeight = img.naturalHeight;
+              aspectRatio = originalWidth / originalHeight;
+            } else {
+              // We already have dimensions from attrs, just calculate aspect ratio
+              aspectRatio = originalWidth / originalHeight;
+            }
             if (img.style.width) {
               imgWrapper.style.width = img.style.width;
               // Only set dom width if alignment doesn't require 100% width
@@ -987,27 +997,57 @@ const ResizableImage = Image.extend({
           e.preventDefault();
           e.stopPropagation();
 
-          const imgOriginalWidth = originalWidth || img.naturalWidth || img.offsetWidth;
-          const imgOriginalHeight = originalHeight || img.naturalHeight || img.offsetHeight;
-          const imgAspectRatio = aspectRatio || (imgOriginalWidth / imgOriginalHeight) || 1;
-
-          let width = typeof node.attrs.width === 'number' ? node.attrs.width : parseInt(node.attrs.width || '0', 10);
-          let height = typeof node.attrs.height === 'number' ? node.attrs.height : parseInt(node.attrs.height || '0', 10);
-
           getMaxSize();
           const maxWidth = maxSize.width;
 
+          // Get current displayed width/height from the image element
+          const currentDisplayedWidth = img.offsetWidth || img.clientWidth;
+          const currentDisplayedHeight = img.offsetHeight || img.clientHeight;
+          
+          // Use aspect ratio from current display or from natural dimensions
+          const currentAspectRatio = (currentDisplayedWidth && currentDisplayedHeight) 
+            ? (currentDisplayedWidth / currentDisplayedHeight) 
+            : (aspectRatio || 1);
+
+          // Get width/height from node attrs, fallback to current displayed size
+          let width = typeof node.attrs.width === 'number' 
+            ? node.attrs.width 
+            : (node.attrs.width ? parseInt(node.attrs.width, 10) : null);
+          
+          let height = typeof node.attrs.height === 'number' 
+            ? node.attrs.height 
+            : (node.attrs.height ? parseInt(node.attrs.height, 10) : null);
+
+          // If width/height from attrs is invalid or missing, use current displayed size
+          if (!width || width <= 0 || isNaN(width)) {
+            width = currentDisplayedWidth || originalWidth;
+          }
+          if (!height || height <= 0 || isNaN(height)) {
+            height = currentDisplayedHeight || originalHeight;
+          }
+
+          // Calculate aspect ratio from valid dimensions
+          const imgAspectRatio = (width && height && height > 0) 
+            ? (width / height) 
+            : (aspectRatio || currentAspectRatio || 1);
+
+          // Ensure width is within limits and calculate height if needed
           if (width && !height) {
-            width = width > maxWidth ? maxWidth : width;
+            width = Math.min(width, maxWidth);
             height = Math.round(width / imgAspectRatio);
           } else if (height && !width) {
             width = Math.round(height * imgAspectRatio);
-            width = width > maxWidth ? maxWidth : width;
+            width = Math.min(width, maxWidth);
           } else if (!width && !height) {
-            width = imgOriginalWidth > maxWidth ? maxWidth : imgOriginalWidth;
+            // Fallback: use current displayed size or natural size
+            width = currentDisplayedWidth || originalWidth || img.naturalWidth || 200;
+            width = Math.min(width, maxWidth);
             height = Math.round(width / imgAspectRatio);
           } else {
-            width = width > maxWidth ? maxWidth : width;
+            // Both width and height exist, just ensure width is within limits
+            width = Math.min(width, maxWidth);
+            // Recalculate height to maintain aspect ratio
+            height = Math.round(width / imgAspectRatio);
           }
 
           isResizing = true;
