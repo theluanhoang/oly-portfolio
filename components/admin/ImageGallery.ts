@@ -92,7 +92,7 @@ export const ImageGallery = Node.create({
     console.log('ImageGallery renderHTML - layout:', layout, 'columns:', columns, 'gap:', gap);
     
     const layoutStyles: Record<string, string> = {
-      grid: `display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: ${gap}; margin: 1rem 0;`,
+      grid: `display: grid; grid-template-columns: repeat(${columns}, auto); column-gap: 0; row-gap: ${gap}; margin: 1rem 0; justify-content: center;`,
       masonry: `display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: ${gap}; margin: 1rem 0;`,
       sidebyside: `display: flex; gap: ${gap}; margin: 1rem 0; flex-wrap: wrap;`,
       stacked: `display: flex; flex-direction: column; gap: ${gap}; margin: 1rem 0;`,
