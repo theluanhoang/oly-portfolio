@@ -3159,6 +3159,67 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           }
         }
         
+        // Check for image files in clipboard (from copy/paste image files)
+        const items = Array.from(clipboardData.items);
+        const imageFiles = items.filter(item => item.kind === 'file' && item.type.startsWith('image/'));
+        
+        if (imageFiles.length > 0) {
+          event.preventDefault();
+          
+          const { state } = view;
+          const { from } = state.selection;
+          
+          // Process all images sequentially to maintain order
+          void (async () => {
+            let currentInsertPos = from;
+            
+            for (const item of imageFiles) {
+              const file = item.getAsFile();
+              if (!file) continue;
+              
+              try {
+                // Optimize image before upload (same as upload from computer)
+                const originalSizeMB = file.size / (1024 * 1024);
+                const fileToUpload = originalSizeMB > 0.5 
+                  ? await prepareImageForUpload(file).catch(() => file)
+                  : file;
+                
+                // Upload to server
+                const formData = new FormData();
+                formData.append('file', fileToUpload);
+                
+                const response = await fetch('/api/upload', {
+                  method: 'POST',
+                  body: formData,
+                });
+                
+                const data = await response.json();
+                if (data?.success && data.url) {
+                  const imageId = generateImageId();
+                  const currentState = view.state;
+                  const currentTr = currentState.tr;
+                  
+                  const imageNode = currentState.schema.nodes.image.create({
+                    src: data.url,
+                    alt: '',
+                    id: imageId,
+                  });
+                  
+                  currentTr.insert(currentInsertPos, imageNode);
+                  view.dispatch(currentTr);
+                  
+                  // Update insert position for next image
+                  currentInsertPos += imageNode.nodeSize;
+                }
+              } catch (error) {
+                console.error('Error uploading pasted image:', error);
+              }
+            }
+          })();
+          
+          return true; // Handled
+        }
+        
         const text = clipboardData.getData('text/plain');
         if (text) {
           // Check if text is an image URL
@@ -3178,6 +3239,150 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             ));
           
           if (isImageUrl) {
+            // If it's a data URL, convert to file and upload (to optimize)
+            if (isDataUrl) {
+              event.preventDefault();
+              
+              void (async () => {
+                try {
+                  // Convert data URL to blob
+                  const response = await fetch(trimmedText);
+                  const blob = await response.blob();
+                  const file = new File([blob], 'pasted-image.png', { type: blob.type });
+                  
+                  // Optimize and upload
+                  const originalSizeMB = file.size / (1024 * 1024);
+                  const fileToUpload = originalSizeMB > 0.5 
+                    ? await prepareImageForUpload(file).catch(() => file)
+                    : file;
+                  
+                  const formData = new FormData();
+                  formData.append('file', fileToUpload);
+                  
+                  const uploadResponse = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                  });
+                  
+                  const uploadData = await uploadResponse.json();
+                  if (uploadData?.success && uploadData.url) {
+                    const currentState = view.state;
+                    const currentTr = currentState.tr;
+                    const { from, to } = currentState.selection;
+                    
+                    if (from !== to) {
+                      currentTr.delete(from, to);
+                    }
+                    
+                    const imageId = generateImageId();
+                    const imageNode = currentState.schema.nodes.image.create({
+                      src: uploadData.url,
+                      alt: '',
+                      id: imageId,
+                    });
+                    currentTr.insert(from, imageNode);
+                    view.dispatch(currentTr);
+                  }
+                } catch (error) {
+                  console.error('Error uploading data URL image:', error);
+                  // Fall back to inserting as data URL if upload fails
+                  const currentState = view.state;
+                  const currentTr = currentState.tr;
+                  const { from, to } = currentState.selection;
+                  
+                  if (from !== to) {
+                    currentTr.delete(from, to);
+                  }
+                  
+                  const imageId = generateImageId();
+                  const imageNode = currentState.schema.nodes.image.create({
+                    src: trimmedText,
+                    id: imageId,
+                  });
+                  currentTr.insert(from, imageNode);
+                  view.dispatch(currentTr);
+                }
+              })();
+              
+              return true; // Handled
+            }
+            
+            // For regular HTTP/HTTPS URLs, download, optimize and upload
+            if (isHttpUrl && hasImageExtension) {
+              event.preventDefault();
+              
+              void (async () => {
+                try {
+                  // Download image from URL
+                  const response = await fetch(trimmedText, { mode: 'cors' });
+                  if (!response.ok) throw new Error('Failed to fetch image');
+                  
+                  const blob = await response.blob();
+                  const contentType = blob.type || 'image/jpeg';
+                  const fileExtension = trimmedText.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)(\?|$)/i)?.[1] || 'jpg';
+                  const file = new File([blob], `pasted-image.${fileExtension}`, { type: contentType });
+                  
+                  // Optimize and upload
+                  const originalSizeMB = file.size / (1024 * 1024);
+                  const fileToUpload = originalSizeMB > 0.5 
+                    ? await prepareImageForUpload(file).catch(() => file)
+                    : file;
+                  
+                  const formData = new FormData();
+                  formData.append('file', fileToUpload);
+                  
+                  const uploadResponse = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                  });
+                  
+                  const uploadData = await uploadResponse.json();
+                  if (uploadData?.success && uploadData.url) {
+                    const currentState = view.state;
+                    const currentTr = currentState.tr;
+                    const { from, to } = currentState.selection;
+                    
+                    if (from !== to) {
+                      currentTr.delete(from, to);
+                    }
+                    
+                    const imageId = generateImageId();
+                    const imageNode = currentState.schema.nodes.image.create({
+                      src: uploadData.url,
+                      alt: '',
+                      id: imageId,
+                    });
+                    currentTr.insert(from, imageNode);
+                    view.dispatch(currentTr);
+                    return;
+                  }
+                } catch (error) {
+                  console.error('Error downloading and optimizing image URL:', error);
+                  // Fall through to insert URL directly if download/optimize fails
+                }
+                
+                // Fallback: insert URL directly if download/optimize failed
+                const currentState = view.state;
+                const currentTr = currentState.tr;
+                const { from, to } = currentState.selection;
+                
+                if (from !== to) {
+                  currentTr.delete(from, to);
+                }
+                
+                const imageId = generateImageId();
+                const imageNode = currentState.schema.nodes.image.create({
+                  src: trimmedText,
+                  id: imageId,
+                });
+                currentTr.insert(from, imageNode);
+                view.dispatch(currentTr);
+              })();
+              
+              return true; // Handled
+            }
+            
+            // For other image URLs (without extension or non-HTTP), insert directly
             event.preventDefault();
             
             const { state, dispatch } = view;
@@ -3188,8 +3393,10 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
               tr.delete(from, to);
             }
             
+            const imageId = generateImageId();
             const imageNode = state.schema.nodes.image.create({
               src: trimmedText,
+              id: imageId,
             });
             tr.insert(from, imageNode);
             dispatch(tr);
