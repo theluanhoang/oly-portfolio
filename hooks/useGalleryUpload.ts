@@ -22,6 +22,7 @@ interface UseGalleryUploadOptions {
   onUploadSuccess?: (urls: string[]) => void;
   onError?: (error: string) => void;
   onReorder?: (urls: string[]) => void;
+  projectSlug?: string | null;
 }
 
 interface UseGalleryUploadReturn {
@@ -45,7 +46,7 @@ interface UseGalleryUploadReturn {
   setHeroImageIndex: (index: number) => void;
 }
 
-export function useGalleryUpload({ onUploadSuccess, onError, onReorder }: UseGalleryUploadOptions): UseGalleryUploadReturn {
+export function useGalleryUpload({ onUploadSuccess, onError, onReorder, projectSlug }: UseGalleryUploadOptions): UseGalleryUploadReturn {
   const [galleryUrls, setGalleryUrls] = useState<(string | GalleryItem)[]>([]);
   const [uploadedFileNames, setUploadedFileNames] = useState<Set<string>>(new Set());
   const [heroImageIndex, setHeroImageIndex] = useState<number>(0);
@@ -160,6 +161,11 @@ export function useGalleryUpload({ onUploadSuccess, onError, onReorder }: UseGal
 
         const formData = new FormData();
         formData.append('file', fileToUpload);
+        
+        // Add project slug if provided
+        if (projectSlug && projectSlug.trim()) {
+          formData.append('projectSlug', projectSlug.trim());
+        }
 
         try {
           const response = await fetch('/api/upload', {

@@ -601,6 +601,7 @@ export default function EditProjectPage() {
     onReorder: (urls) => {
       setValue('gallery', urls, { shouldValidate: true });
     },
+    projectSlug: slug || watch('slug') || null,
   });
 
   useEffect(() => {
@@ -1294,6 +1295,7 @@ export default function EditProjectPage() {
                     onChange={(newContent) => {
                       updateTranslation(currentLocale, 'content', newContent);
                     }}
+                    projectSlug={slug || watch('slug') || null}
                   />
                 </div>
 

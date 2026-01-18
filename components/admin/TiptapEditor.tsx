@@ -2785,10 +2785,11 @@ const parseIframeInput = (input: string): IframeAttributes | null => {
 interface TiptapEditorProps {
   content?: string;
   onChange?: (html: string) => void;
+  projectSlug?: string | null;
 }
 
 
-export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
+export default function TiptapEditor({ content, onChange, projectSlug }: TiptapEditorProps) {
   const [highlightColor, setHighlightColor] = useState('#ffffff');
   const [textColor, setTextColor] = useState('#000000');
   const [openColorPicker, setOpenColorPicker] = useState<'text' | 'highlight' | null>(null);
@@ -3187,6 +3188,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                 // Upload to server
                 const formData = new FormData();
                 formData.append('file', fileToUpload);
+                if (projectSlug && projectSlug.trim()) {
+                  formData.append('projectSlug', projectSlug.trim());
+                }
                 
                 const response = await fetch('/api/upload', {
                   method: 'POST',
@@ -3258,6 +3262,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                   
                   const formData = new FormData();
                   formData.append('file', fileToUpload);
+                  if (projectSlug && projectSlug.trim()) {
+                    formData.append('projectSlug', projectSlug.trim());
+                  }
                   
                   const uploadResponse = await fetch('/api/upload', {
                     method: 'POST',
@@ -3330,6 +3337,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                   
                   const formData = new FormData();
                   formData.append('file', fileToUpload);
+                  if (projectSlug && projectSlug.trim()) {
+                    formData.append('projectSlug', projectSlug.trim());
+                  }
                   
                   const uploadResponse = await fetch('/api/upload', {
                     method: 'POST',
@@ -4545,6 +4555,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
 
                         const formData = new FormData();
                         formData.append('file', fileToUpload);
+                        if (projectSlug && projectSlug.trim()) {
+                          formData.append('projectSlug', projectSlug.trim());
+                        }
 
                         const response = await fetch('/api/upload', {
                           method: 'POST',
@@ -5295,6 +5308,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
 
                       const formData = new FormData();
                       formData.append('file', fileToUpload);
+                      if (projectSlug && projectSlug.trim()) {
+                        formData.append('projectSlug', projectSlug.trim());
+                      }
                       
                       try {
                         const response = await fetch('/api/upload', {

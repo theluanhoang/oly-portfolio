@@ -1,4 +1,4 @@
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, access } from 'fs/promises';
 import { join } from 'path';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
@@ -7,6 +7,65 @@ import { authOptions, checkAdminAuth } from '@/lib/auth';
 import { optimizeImage, getOutputFormat } from '@/lib/imageOptimization';
 import { validateImageUpload } from '@/lib/validations/imageUploadValidation';
 import sharp from 'sharp';
+
+/**
+ * Sanitize filename for SEO-friendly URLs
+ * Converts to lowercase, removes accents, replaces spaces/special chars with hyphens
+ */
+function sanitizeFilename(filename: string): string {
+  // Remove extension
+  const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
+  
+  // Sanitize similar to generateSlug
+  let sanitized = nameWithoutExt
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+  
+  // Limit length to 100 characters for SEO
+  if (sanitized.length > 100) {
+    sanitized = sanitized.substring(0, 100);
+    sanitized = sanitized.replace(/-+$/, ''); // Remove trailing hyphen if cut off
+  }
+  
+  // If empty after sanitization, use a default name
+  if (!sanitized) {
+    sanitized = 'image';
+  }
+  
+  return sanitized;
+}
+
+/**
+ * Generate SEO-friendly filename with collision handling
+ */
+async function generateSEOFilename(
+  originalFilename: string,
+  extension: string,
+  uploadsDir: string
+): Promise<string> {
+  const sanitized = sanitizeFilename(originalFilename);
+  let filename = `${sanitized}.${extension}`;
+  let counter = 1;
+  
+  // Check if file exists and add counter if needed
+  while (true) {
+    const filepath = join(uploadsDir, filename);
+    try {
+      await access(filepath);
+      // File exists, try with counter
+      filename = `${sanitized}-${counter}.${extension}`;
+      counter++;
+    } catch {
+      // File doesn't exist, we can use this filename
+      break;
+    }
+  }
+  
+  return filename;
+}
 
 export const maxDuration = 300;
 
@@ -94,22 +153,48 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       outputFormat = file.name.split('.').pop() || 'jpg';
     }
 
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    try {
-      await mkdir(uploadsDir, { recursive: true });
-    } catch (error) {
-      console.warn('Failed to create uploads directory:', error);
-    }
-
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
+    // Check if this is a project image upload
+    const projectSlug = formData.get('projectSlug') as string | null;
+    
+    let uploadsDir: string;
+    let publicUrl: string;
+    let filename: string;
+    
     const extension = outputFormat === 'jpeg' ? 'jpg' : outputFormat;
-    const filename = `${timestamp}-${randomString}.${extension}`;
-    const filepath = join(uploadsDir, filename);
-
-    await writeFile(filepath, optimizedBuffer);
-
-    const publicUrl = `/uploads/${filename}`;
+    
+    if (projectSlug && projectSlug.trim()) {
+      // Save to project-specific folder: public/uploads/projects/{slug}/
+      uploadsDir = join(process.cwd(), 'public', 'uploads', 'projects', projectSlug.trim());
+      try {
+        await mkdir(uploadsDir, { recursive: true });
+      } catch (error) {
+        console.warn('Failed to create project uploads directory:', error);
+      }
+      
+      // Generate SEO-friendly filename
+      filename = await generateSEOFilename(file.name, extension, uploadsDir);
+      const filepath = join(uploadsDir, filename);
+      
+      await writeFile(filepath, optimizedBuffer);
+      
+      publicUrl = `/uploads/projects/${projectSlug.trim()}/${filename}`;
+    } else {
+      // Default behavior: save to public/uploads/
+      uploadsDir = join(process.cwd(), 'public', 'uploads');
+      try {
+        await mkdir(uploadsDir, { recursive: true });
+      } catch (error) {
+        console.warn('Failed to create uploads directory:', error);
+      }
+      
+      // Generate SEO-friendly filename
+      filename = await generateSEOFilename(file.name, extension, uploadsDir);
+      const filepath = join(uploadsDir, filename);
+      
+      await writeFile(filepath, optimizedBuffer);
+      
+      publicUrl = `/uploads/${filename}`;
+    }
 
     return NextResponse.json({
       success: true,

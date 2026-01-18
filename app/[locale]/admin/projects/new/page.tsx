@@ -696,6 +696,7 @@ export default function NewProjectPage() {
       : t('category.deleteSubConfirm', { name: deleteConfirmDialog.itemName });
   }, [deleteConfirmDialog, t]);
 
+  const projectSlug = watch('slug');
   const gallery = useGalleryUpload({
     onUploadSuccess: (urls) => {
       const currentGallery = watch('gallery') || [];
@@ -707,6 +708,7 @@ export default function NewProjectPage() {
     onReorder: (urls) => {
       setValue('gallery', urls, { shouldValidate: true });
     },
+    projectSlug: projectSlug || null,
   });
 
   useEffect(() => {
@@ -1343,6 +1345,7 @@ export default function NewProjectPage() {
                     onChange={(newContent) => {
                       updateTranslation(currentLocale, 'content', newContent);
                     }}
+                    projectSlug={watch('slug') || null}
                   />
                 </div>
 

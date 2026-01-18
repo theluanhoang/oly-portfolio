@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions, checkAdminAuth } from '@/lib/auth';
 import type { ProjectTranslationSchema } from '@/lib/validations/projectSchema';
-import { unlink } from 'fs/promises';
+import { unlink, rm } from 'fs/promises';
 import { join } from 'path';
 
 interface RouteParams {
@@ -233,6 +233,7 @@ export async function PATCH(request: Request, { params }: RouteParams): Promise<
 
 /**
  * Delete image file from filesystem
+ * Handles both old format (/uploads/...) and new format (/uploads/projects/{slug}/...)
  */
 async function deleteImageFile(imagePath: string): Promise<void> {
   if (!imagePath || !imagePath.startsWith('/uploads/')) {
@@ -281,23 +282,46 @@ export async function DELETE(request: Request, { params }: RouteParams): Promise
       );
     }
 
+    // Delete the entire project folder if it exists (new format)
+    const projectFolderPath = join(process.cwd(), 'public', 'uploads', 'projects', slug);
+    try {
+      await rm(projectFolderPath, { recursive: true, force: true });
+      console.log(`Deleted project folder: ${projectFolderPath}`);
+    } catch (error) {
+      // Folder might not exist (old format or no images), or already deleted
+      if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+        console.warn(`Failed to delete project folder ${projectFolderPath}:`, error);
+      }
+    }
+
+    // Also handle old format images (backward compatibility)
     const imagePaths: string[] = [];
     
-    if (project.heroImage) {
+    if (project.heroImage && !project.heroImage.startsWith('/uploads/projects/')) {
       imagePaths.push(project.heroImage);
     }
     
     if (Array.isArray(project.gallery) && project.gallery.length > 0) {
-      imagePaths.push(...project.gallery.filter((path): path is string => typeof path === 'string' && path.length > 0));
+      imagePaths.push(
+        ...project.gallery.filter((path): path is string => 
+          typeof path === 'string' && 
+          path.length > 0 && 
+          !path.startsWith('/uploads/projects/')
+        )
+      );
     }
 
-    await Promise.all(imagePaths.map(path => deleteImageFile(path)));
+    // Delete old format images if any
+    if (imagePaths.length > 0) {
+      await Promise.all(imagePaths.map(path => deleteImageFile(path)));
+      console.log(`Deleted ${imagePaths.length} old format image(s)`);
+    }
 
     const deleted = await prisma.project.delete({
       where: { slug },
     });
 
-    console.log(`Deleted project "${slug}" and ${imagePaths.length} associated image(s)`);
+    console.log(`Deleted project "${slug}"`);
 
     return Response.json(deleted);
   } catch (error) {
