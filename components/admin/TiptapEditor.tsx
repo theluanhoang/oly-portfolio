@@ -3767,6 +3767,19 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     }
   }, [editor, showLinkPopover, showImageDropdown]);
 
+  // Update editor content when content prop changes
+  useEffect(() => {
+    if (!editor) return;
+    
+    const currentContent = editor.getHTML();
+    const newContent = content || '';
+    
+    // Only update if content actually changed to avoid unnecessary updates
+    if (currentContent !== newContent) {
+      editor.commands.setContent(newContent, { emitUpdate: false });
+    }
+  }, [content, editor]);
+
   // Update ALT, Caption, and Link dialog positions when scrolling (use same position as Image Toolbar)
   useEffect(() => {
     if (!editor || (!showImageAltDialog && !showImageCaptionDialog && !showImageLinkDialog)) return;

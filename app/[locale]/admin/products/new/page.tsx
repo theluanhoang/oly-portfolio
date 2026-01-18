@@ -553,6 +553,29 @@ export default function NewProductPage() {
     }, { shouldValidate: false });
   };
 
+  const handleCopyContent = () => {
+    const currentTranslations = watch('translations') || {};
+    const sourceLocale = currentLocale === 'vi' ? 'en' : 'vi';
+    const sourceContent = currentTranslations[sourceLocale]?.content || '';
+    
+    if (!sourceContent.trim()) {
+      setSaveMessage({ type: 'error', text: `Không có nội dung để copy từ tab ${LOCALE_LABELS[sourceLocale].label}` });
+      return;
+    }
+
+    const localeTranslation = currentTranslations[currentLocale] || {};
+    setValue('translations', {
+      ...currentTranslations,
+      [currentLocale]: {
+        ...localeTranslation,
+        content: sourceContent,
+      },
+    }, { shouldValidate: false });
+    
+    setSaveMessage({ type: 'success', text: `Đã copy nội dung từ tab ${LOCALE_LABELS[sourceLocale].label}` });
+    setTimeout(() => setSaveMessage(null), 2000);
+  };
+
 
   const scrollToFormTop = () => {
     setTimeout(() => {
@@ -703,13 +726,26 @@ export default function NewProductPage() {
             <h1 className="text-4xl font-normal tracking-[3px] uppercase text-[#333] md:text-2xl">
               {t('new.title')}
             </h1>
-            <LocaleTabs
-              locales={LOCALES}
-              currentLocale={currentLocale}
-              onLocaleChange={setCurrentLocale}
-              translations={LOCALE_LABELS}
-              variant="inline"
-            />
+            <div className="flex items-center gap-4">
+              {currentStep === 2 && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCopyContent}
+                  title={`Copy nội dung từ tab ${currentLocale === 'vi' ? 'English' : 'Tiếng Việt'}`}
+                >
+                  Copy từ {currentLocale === 'vi' ? 'EN' : 'VI'}
+                </Button>
+              )}
+              <LocaleTabs
+                locales={LOCALES}
+                currentLocale={currentLocale}
+                onLocaleChange={setCurrentLocale}
+                translations={LOCALE_LABELS}
+                variant="inline"
+              />
+            </div>
           </div>
           <p className="text-sm text-[#666] tracking-[1px] uppercase">
             {`${t('new.step')} ${currentStep} ${t('new.of')} 2`}
