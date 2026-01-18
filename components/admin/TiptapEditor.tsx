@@ -2766,7 +2766,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                 const coords = view.coordsAtPos(pos);
                 if (coords) {
                   setImageToolbarPos({
-                    top: coords.bottom - containerRect.top + 10,
+                    top: coords.bottom - containerRect.top + 40,
                     left: coords.left - containerRect.left,
                   });
                   setShowImageToolbar(true);
@@ -2795,14 +2795,14 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                 // Use the wrapper's bounding rect to position toolbar
                 const wrapperRect = foundWrapper.getBoundingClientRect();
                 setImageToolbarPos({
-                  top: wrapperRect.bottom - containerRect.top + 10,
+                  top: wrapperRect.bottom - containerRect.top + 40,
                   left: wrapperRect.left - containerRect.left,
                 });
                 setShowImageToolbar(true);
               } else if (mouseX !== undefined && mouseY !== undefined) {
                 // Fallback to mouse position
                 setImageToolbarPos({
-                  top: mouseY - containerRect.top + 10,
+                  top: mouseY - containerRect.top + 40,
                   left: mouseX - containerRect.left,
                 });
                 setShowImageToolbar(true);
@@ -2811,7 +2811,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                 const coords = view.coordsAtPos(pos);
                 if (coords) {
                   setImageToolbarPos({
-                    top: coords.bottom - containerRect.top + 10,
+                    top: coords.bottom - containerRect.top + 40,
                     left: coords.left - containerRect.left,
                   });
                   setShowImageToolbar(true);
@@ -3017,9 +3017,9 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                 if (spaceAbove >= popoverHeight + spacing) {
                   top = wrapperRect.top - popoverHeight - spacing;
                 } else {
-                  // Position below image (image toolbar will be at wrapperRect.bottom + 10, so add more space)
+                  // Position below image (image toolbar will be at wrapperRect.bottom + 40, so add more space)
                   // Image toolbar height is approximately 50px, so position link popover below toolbar
-                  top = wrapperRect.bottom + spacing + 60; // 60 = toolbar height + spacing
+                  top = wrapperRect.bottom + spacing + 90; // 90 = toolbar height (50px) + spacing (40px)
                 }
                 
                 // Align with image left edge (viewport coordinates)
@@ -3310,7 +3310,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       const containerRect = editorContentContainer.getBoundingClientRect();
       const wrapperRect = foundWrapper.getBoundingClientRect();
       const toolbarPosition = {
-        top: wrapperRect.bottom - containerRect.top + 10,
+        top: wrapperRect.bottom - containerRect.top + 40,
         left: wrapperRect.left - containerRect.left,
       };
       
