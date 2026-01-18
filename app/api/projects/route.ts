@@ -116,15 +116,20 @@ export async function GET(request: Request): Promise<Response> {
     const where: Prisma.ProjectWhereInput | undefined =
       andConditions.length > 0 ? { AND: andConditions } : undefined;
 
-    const orderBy: Prisma.ProjectOrderByWithRelationInput | Prisma.ProjectOrderByWithRelationInput[] = 
-      sortField === 'displayOrder'
-        ? [
-            { displayOrder: sortDirection === 'asc' ? 'asc' : 'desc' },
-            { createdAt: 'desc' }
-          ]
-        : sortField === 'createdAt'
-        ? { createdAt: sortDirection === 'asc' ? 'asc' : 'desc' }
-        : { createdAt: 'desc' };
+    let orderBy: Prisma.ProjectOrderByWithRelationInput | Prisma.ProjectOrderByWithRelationInput[] = { createdAt: 'desc' };
+    
+    if (sortField === 'displayOrder') {
+      orderBy = [
+        { displayOrder: sortDirection === 'asc' ? 'asc' : 'desc' },
+        { createdAt: 'desc' }
+      ];
+    } else if (sortField === 'createdAt') {
+      orderBy = { createdAt: sortDirection === 'asc' ? 'asc' : 'desc' };
+    } else if (sortField === 'title' || sortField === 'location' || sortField === 'year') {
+      orderBy = { createdAt: 'desc' };
+    } else if (sortField === 'category' || sortField === 'type') {
+      orderBy = { createdAt: 'desc' };
+    }
 
     const [total, items] = await Promise.all([
       prisma.project.count({ where }),
@@ -144,10 +149,6 @@ export async function GET(request: Request): Promise<Response> {
             },
           },
         },
-        ...(pageSize !== undefined && {
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-        }),
       }),
     ]);
 
@@ -182,7 +183,50 @@ export async function GET(request: Request): Promise<Response> {
       };
     });
 
-    return Response.json({ items: transformedItems, total, page, pageSize: pageSize || total });
+    if (sortField && sortDirection && ['title', 'category', 'type', 'location', 'year'].includes(sortField)) {
+      transformedItems.sort((a, b) => {
+        let aValue: string | number = '';
+        let bValue: string | number = '';
+
+        switch (sortField) {
+          case 'title':
+            aValue = a.title || '';
+            bValue = b.title || '';
+            break;
+          case 'category':
+            aValue = a.category || '';
+            bValue = b.category || '';
+            break;
+          case 'type':
+            aValue = a.type || '';
+            bValue = b.type || '';
+            break;
+          case 'location':
+            aValue = a.location || '';
+            bValue = b.location || '';
+            break;
+          case 'year':
+            aValue = a.year || '';
+            bValue = b.year || '';
+            break;
+        }
+
+        const aStr = String(aValue).toLowerCase();
+        const bStr = String(bValue).toLowerCase();
+
+        let comparison = 0;
+        if (aStr < bStr) comparison = -1;
+        else if (aStr > bStr) comparison = 1;
+
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    const paginatedItems = pageSize !== undefined
+      ? transformedItems.slice((page - 1) * pageSize, page * pageSize)
+      : transformedItems;
+
+    return Response.json({ items: paginatedItems, total, page, pageSize: pageSize || total });
   } catch (error) {
     console.error('Error fetching projects:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
