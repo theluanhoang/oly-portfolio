@@ -9,6 +9,7 @@ import { Link as LocaleLink } from '@/i18n/routing';
 import { Settings, LogOut, ChevronDown, Menu as MenuIcon, X } from 'lucide-react';
 import Menu from './Menu';
 import LanguageSwitcher from './LanguageSwitcher';
+import SearchModal from './SearchModal';
 
 interface HeaderProps {
   isFixed?: boolean;
@@ -25,6 +26,7 @@ export default function Header({ isFixed = false }: HeaderProps) {
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   
@@ -255,6 +257,7 @@ export default function Header({ isFixed = false }: HeaderProps) {
               <Menu className="flex items-center sm:gap-15 min-[468px]:gap-7 gap-5 sm:justify-between justify-around" />
               <button
                 type="button"
+                onClick={() => setIsSearchOpen(true)}
                 aria-label={tNav('search')}
                 className="text-foreground hover:text-[#666] transition-colors min-[468px]:block hidden"
               >
@@ -266,6 +269,9 @@ export default function Header({ isFixed = false }: HeaderProps) {
           </>
         )}
       </div>
+      {!isAdminPage && (
+        <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      )}
     </header>
   );
 }
