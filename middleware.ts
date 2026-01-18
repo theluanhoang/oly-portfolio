@@ -69,7 +69,12 @@ export async function middleware(request: NextRequest) {
   const pathnameAfterLocale = locale ? pathname.replace(`/${locale}`, '') : pathname;
   
   // Check if this is an admin route (before locale processing)
-  if (pathnameAfterLocale.startsWith('/admin') && !pathnameAfterLocale.startsWith('/admin/login')) {
+  // Allow /admin/login, /admin/forgot-password, and /admin/reset-password without authentication
+  const isPublicAdminRoute = pathnameAfterLocale === '/admin/login' || 
+                             pathnameAfterLocale === '/admin/forgot-password' ||
+                             pathnameAfterLocale.startsWith('/admin/reset-password');
+  
+  if (pathnameAfterLocale.startsWith('/admin') && !isPublicAdminRoute) {
     const token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
