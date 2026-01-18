@@ -4,7 +4,8 @@ import { useTranslations } from 'next-intl';
 
 interface Project {
   title: string;
-  category: string;
+  category?: string;
+  type?: string;
   location: string;
   area: string;
   year: string;
@@ -15,7 +16,7 @@ interface ProjectInfoProps {
 }
 
 export default function ProjectInfo({ project }: ProjectInfoProps) {
-  const { title, category, location, area, year } = project;
+  const { title, type, location, area, year } = project;
   const t = useTranslations('ProjectInfo');
 
   return (
@@ -52,7 +53,7 @@ export default function ProjectInfo({ project }: ProjectInfoProps) {
             </div>
           </div>
           <div className="space-y-[5px]">
-            <p className="font-normal whitespace-nowrap">{category}</p>
+            <p className="font-normal whitespace-nowrap">{type || ''}</p>
             <p className="font-normal whitespace-nowrap">{location}</p>
             <p className="font-normal whitespace-nowrap">{area} m²</p>
             <p className="font-normal whitespace-nowrap">{year}</p>
