@@ -117,19 +117,23 @@ export async function PUT(
       }
     }
 
-    // Check if slug is being changed and if it already exists
+    // Check if slug already exists in the target category
     const finalCategoryId = categoryId || subCategory.categoryId;
-    if (slug && slug !== subCategory.slug) {
+    const finalSlug = slug || subCategory.slug;
+    
+    // Only check if slug or categoryId is being changed
+    if ((slug && slug !== subCategory.slug) || (categoryId && categoryId !== subCategory.categoryId)) {
       const existing = await prisma.subCategory.findUnique({
         where: {
           categoryId_slug: {
             categoryId: finalCategoryId,
-            slug
+            slug: finalSlug
           }
         }
       });
 
-      if (existing) {
+      // Only error if the existing SubCategory is different from the one being updated
+      if (existing && existing.id !== id) {
         return Response.json(
           { error: 'SubCategory with this slug already exists for this category' },
           { status: 400 }
