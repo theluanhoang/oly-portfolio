@@ -161,7 +161,7 @@ html {
   max-width: 100%;
   height: auto;
   margin: 0;
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 .ProseMirror .resizable-image-wrapper {
