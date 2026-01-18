@@ -61,6 +61,7 @@ export default function EditProjectPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
+  const [projectSubCategory, setProjectSubCategory] = useState<{ id: string; translations: { locale: string; name: string }[] } | null>(null);
   const [translationModal, setTranslationModal] = useState<{
     isOpen: boolean;
     type: 'category' | 'subcategory';
@@ -222,9 +223,17 @@ export default function EditProjectPage() {
       const sub = subCategories.find(s => s.id === selectedSubCategoryId);
       if (sub) {
         setSubCategoryInput(getSubCategoryName(sub, currentLocale));
+      } else if (projectSubCategory && projectSubCategory.id === selectedSubCategoryId) {
+        const trans = projectSubCategory.translations.find(t => t.locale === currentLocale)
+          || projectSubCategory.translations.find(t => t.locale === 'vi')
+          || projectSubCategory.translations.find(t => t.locale === 'en')
+          || projectSubCategory.translations[0];
+        if (trans) {
+          setSubCategoryInput(trans.name);
+        }
       }
     }
-  }, [currentLocale, selectedCategoryId, selectedSubCategoryId, categories, subCategories, getCategoryName, getSubCategoryName]);
+  }, [currentLocale, selectedCategoryId, selectedSubCategoryId, categories, subCategories, projectSubCategory, getCategoryName, getSubCategoryName]);
 
   const filteredCategories = useMemo(() => {
     const searchTerm = categoryInput.trim().toLowerCase();
@@ -654,6 +663,18 @@ export default function EditProjectPage() {
           subCategoryId: project.subCategoryId || null,
           translations: translationsData,
         });
+
+        if (project.subCategoryId && project.subCategory?.translations) {
+          setProjectSubCategory({
+            id: project.subCategoryId,
+            translations: project.subCategory.translations.map((t: { locale: string; name: string }) => ({
+              locale: t.locale,
+              name: t.name,
+            })),
+          });
+        } else {
+          setProjectSubCategory(null);
+        }
 
         const categoryName =
           project.category?.translations?.find((t: { locale: string; name: string }) => t.locale === currentLocale)?.name ||
