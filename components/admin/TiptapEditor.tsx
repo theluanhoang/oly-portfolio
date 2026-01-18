@@ -1237,6 +1237,11 @@ const ResizableImage = Image.extend({
       };
 
       const handleImageMouseDown = (e: MouseEvent) => {
+        // Ignore right-click to allow context menu (copy image, copy image address, etc.)
+        if (e.button === 2) {
+          return;
+        }
+        
         if (e.target === img && !isResizing) {
           const pos = getPos();
           if (typeof pos === 'number') {
@@ -2656,6 +2661,98 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
 
         const html = clipboardData.getData('text/html');
         if (html) {
+          // Check if HTML contains resizable-image-wrapper (our custom image format)
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = html;
+          const imageWrappers = tempDiv.querySelectorAll('.resizable-image-wrapper');
+          
+          if (imageWrappers.length > 0) {
+            event.preventDefault();
+            
+            const { state, dispatch } = view;
+            const { tr } = state;
+            const { from, to } = state.selection;
+            
+            if (from !== to) {
+              tr.delete(from, to);
+            }
+            
+            let insertPos = from;
+            
+            // Parse each image wrapper and preserve attributes
+            imageWrappers.forEach((wrapper) => {
+              const img = wrapper.querySelector('img');
+              if (!img) return;
+              
+              // Extract attributes from wrapper and image
+              const dataAlign = wrapper.getAttribute('data-align');
+              const align = dataAlign || 
+                (wrapper.classList.contains('image-align-center') ? 'center' :
+                 wrapper.classList.contains('image-align-left') ? 'left' :
+                 wrapper.classList.contains('image-align-right') ? 'right' :
+                 wrapper.classList.contains('image-align-full') ? 'full' :
+                 wrapper.classList.contains('image-align-float-left') ? 'float-left' :
+                 wrapper.classList.contains('image-align-float-right') ? 'float-right' : null);
+              
+              // Extract width and height - check attribute first, then style, then computed style
+              let width: string | null = img.getAttribute('width');
+              if (!width && img.style.width) {
+                width = img.style.width.replace('px', '').trim();
+              }
+              if (!width) {
+                const computedWidth = window.getComputedStyle(img).width;
+                if (computedWidth && computedWidth !== 'auto') {
+                  width = computedWidth.replace('px', '').trim();
+                }
+              }
+              
+              let height: string | null = img.getAttribute('height');
+              if (!height && img.style.height) {
+                height = img.style.height.replace('px', '').trim();
+              }
+              if (!height) {
+                const computedHeight = window.getComputedStyle(img).height;
+                if (computedHeight && computedHeight !== 'auto') {
+                  height = computedHeight.replace('px', '').trim();
+                }
+              }
+              const alt = img.getAttribute('alt') || null;
+              const src = img.getAttribute('src') || null;
+              
+              // Extract link
+              const linkEl = wrapper.querySelector('a') || (img.parentElement?.tagName === 'A' ? img.parentElement as HTMLAnchorElement : null);
+              const href = linkEl?.getAttribute('href') || null;
+              
+              // Extract caption
+              const captionEl = wrapper.querySelector('.image-caption');
+              const caption = captionEl?.textContent?.trim() || null;
+              
+              // Extract image ID
+              const imageId = img.getAttribute('data-image-id') || img.getAttribute('id') || null;
+              
+              if (src) {
+                const imageAttrs: Record<string, unknown> = {
+                  src,
+                };
+                
+                if (width) imageAttrs.width = parseInt(width, 10);
+                if (height) imageAttrs.height = parseInt(height, 10);
+                if (alt) imageAttrs.alt = alt;
+                if (align) imageAttrs.align = align;
+                if (href) imageAttrs.href = href;
+                if (caption) imageAttrs.caption = caption;
+                if (imageId) imageAttrs.id = imageId;
+                
+                const imageNode = state.schema.nodes.image.create(imageAttrs);
+                tr.insert(insertPos, imageNode);
+                insertPos += imageNode.nodeSize;
+              }
+            });
+            
+            dispatch(tr);
+            return true;
+          }
+          
           const { iframes, remainingHTML } = extractIframesFromHTML(html);
           
           if (iframes.length > 0) {
@@ -2677,17 +2774,17 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             });
             
             if (remainingHTML && remainingHTML.trim()) {
-              const tempDiv = document.createElement('div');
-              tempDiv.innerHTML = remainingHTML;
+              const tempDiv2 = document.createElement('div');
+              tempDiv2.innerHTML = remainingHTML;
               
               const domParser = DOMParser.fromSchema(state.schema);
               try {
-                const parsedContent = domParser.parse(tempDiv);
+                const parsedContent = domParser.parse(tempDiv2);
                 if (parsedContent.content.size > 0) {
                   tr.insert(insertPos, parsedContent.content);
                 }
-              } catch (error) {
-                const text = tempDiv.textContent || remainingHTML;
+              } catch {
+                const text = tempDiv2.textContent || remainingHTML;
                 if (text.trim()) {
                   const textNode = state.schema.text(text);
                   tr.insert(insertPos, textNode);
@@ -2702,6 +2799,41 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         
         const text = clipboardData.getData('text/plain');
         if (text) {
+          // Check if text is an image URL
+          const trimmedText = text.trim();
+          const imageUrlPattern = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)(\?.*)?$/i;
+          const isDataUrl = trimmedText.startsWith('data:image/');
+          const hasImageExtension = imageUrlPattern.test(trimmedText);
+          const isHttpUrl = trimmedText.startsWith('http://') || trimmedText.startsWith('https://');
+          
+          // Check if it's an image URL: has extension, is data URL, or is HTTP/HTTPS URL that looks like an image
+          const isImageUrl = hasImageExtension || isDataUrl || 
+            (isHttpUrl && (
+              trimmedText.match(/\/[^\/]+\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)(\?|$)/i) ||
+              trimmedText.includes('/image/') ||
+              trimmedText.includes('/img/') ||
+              trimmedText.match(/\/image[^\/]*$/i)
+            ));
+          
+          if (isImageUrl) {
+            event.preventDefault();
+            
+            const { state, dispatch } = view;
+            const { tr } = state;
+            const { from, to } = state.selection;
+            
+            if (from !== to) {
+              tr.delete(from, to);
+            }
+            
+            const imageNode = state.schema.nodes.image.create({
+              src: trimmedText,
+            });
+            tr.insert(from, imageNode);
+            dispatch(tr);
+            return true; // Handled
+          }
+          
           const iframeAttrs = parseIframeInput(text);
           if (iframeAttrs && iframeAttrs.src) {
             event.preventDefault();
