@@ -2901,12 +2901,12 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
 
         const html = clipboardData.getData('text/html');
         if (html) {
-          // Check if HTML contains resizable-image-wrapper (our custom image format)
           const tempDiv = document.createElement('div');
           tempDiv.innerHTML = html;
-          const imageWrappers = tempDiv.querySelectorAll('.resizable-image-wrapper');
           
-          if (imageWrappers.length > 0) {
+          const imageGalleries = tempDiv.querySelectorAll('.image-gallery');
+          
+          if (imageGalleries.length > 0) {
             event.preventDefault();
             
             const { state, dispatch } = view;
@@ -2919,8 +2919,130 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             
             let insertPos = from;
             
-            // Parse each image wrapper and preserve attributes
-            imageWrappers.forEach((wrapper) => {
+            imageGalleries.forEach((galleryEl) => {
+              const element = galleryEl as HTMLElement;
+              
+              const layout = element.getAttribute('data-layout') || 
+                           element.className.match(/image-gallery-(\w+)/)?.[1] || 
+                           'grid';
+              
+              const columnsAttr = element.getAttribute('data-columns');
+              const columns = columnsAttr ? parseInt(columnsAttr, 10) : 2;
+              
+              const style = element.getAttribute('style') || '';
+              const gapMatch = style.match(/gap:\s*([^;]+)/);
+              const gap = gapMatch ? gapMatch[1].trim() : '1rem';
+              
+              const imageWrappers = element.querySelectorAll('.resizable-image-wrapper');
+              
+              if (imageWrappers.length > 0) {
+                const imageNodes: PMNode[] = [];
+                
+                imageWrappers.forEach((wrapper) => {
+                  const img = wrapper.querySelector('img');
+                  if (!img) return;
+                  
+                  const dataAlign = wrapper.getAttribute('data-align');
+                  const align = dataAlign || 
+                    (wrapper.classList.contains('image-align-center') ? 'center' :
+                     wrapper.classList.contains('image-align-left') ? 'left' :
+                     wrapper.classList.contains('image-align-right') ? 'right' :
+                     wrapper.classList.contains('image-align-full') ? 'full' :
+                     wrapper.classList.contains('image-align-float-left') ? 'float-left' :
+                     wrapper.classList.contains('image-align-float-right') ? 'float-right' : null);
+                  
+                  let width: string | null = img.getAttribute('width');
+                  if (!width && img.style.width) {
+                    width = img.style.width.replace('px', '').trim();
+                  }
+                  if (!width) {
+                    const computedWidth = window.getComputedStyle(img).width;
+                    if (computedWidth && computedWidth !== 'auto') {
+                      width = computedWidth.replace('px', '').trim();
+                    }
+                  }
+                  
+                  let height: string | null = img.getAttribute('height');
+                  if (!height && img.style.height) {
+                    height = img.style.height.replace('px', '').trim();
+                  }
+                  if (!height) {
+                    const computedHeight = window.getComputedStyle(img).height;
+                    if (computedHeight && computedHeight !== 'auto') {
+                      height = computedHeight.replace('px', '').trim();
+                    }
+                  }
+                  
+                  const alt = img.getAttribute('alt') || null;
+                  const src = img.getAttribute('src') || null;
+                  
+                  const linkEl = wrapper.querySelector('a') || (img.parentElement?.tagName === 'A' ? img.parentElement as HTMLAnchorElement : null);
+                  const href = linkEl?.getAttribute('href') || null;
+                  
+                  const captionEl = wrapper.querySelector('.image-caption');
+                  const caption = captionEl?.textContent?.trim() || null;
+                  
+                  const imageId = img.getAttribute('data-image-id') || img.getAttribute('id') || null;
+                  
+                  if (src) {
+                    const imageAttrs: Record<string, unknown> = {
+                      src,
+                    };
+                    
+                    if (width) imageAttrs.width = parseInt(width, 10);
+                    if (height) imageAttrs.height = parseInt(height, 10);
+                    if (alt) imageAttrs.alt = alt;
+                    if (align) imageAttrs.align = align;
+                    if (href) imageAttrs.href = href;
+                    if (caption) imageAttrs.caption = caption;
+                    if (imageId) imageAttrs.id = imageId;
+                    
+                    const imageNode = state.schema.nodes.image.create(imageAttrs);
+                    imageNodes.push(imageNode);
+                  }
+                });
+                
+                if (imageNodes.length > 0) {
+                  const fragment = Fragment.from(imageNodes);
+                  const galleryNode = state.schema.nodes.imageGallery.create(
+                    {
+                      layout: layout as 'grid' | 'masonry' | 'sidebyside' | 'stacked',
+                      columns,
+                      gap,
+                    },
+                    fragment
+                  );
+                  
+                  tr.insert(insertPos, galleryNode);
+                  insertPos += galleryNode.nodeSize;
+                }
+              }
+            });
+            
+            dispatch(tr);
+            return true;
+          }
+          
+          const imageWrappers = tempDiv.querySelectorAll('.resizable-image-wrapper');
+          
+          const standaloneImageWrappers = Array.from(imageWrappers).filter(wrapper => {
+            return !wrapper.closest('.image-gallery');
+          });
+          
+          if (standaloneImageWrappers.length > 0) {
+            event.preventDefault();
+            
+            const { state, dispatch } = view;
+            const { tr } = state;
+            const { from, to } = state.selection;
+            
+            if (from !== to) {
+              tr.delete(from, to);
+            }
+            
+            let insertPos = from;
+            
+            standaloneImageWrappers.forEach((wrapper) => {
               const img = wrapper.querySelector('img');
               if (!img) return;
               
