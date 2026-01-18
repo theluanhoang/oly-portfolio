@@ -414,7 +414,18 @@ const ResizableImage = Image.extend({
       ...this.parent?.(),
       width: {
         default: null,
-        parseHTML: (element) => element.getAttribute('width'),
+        parseHTML: (element) => {
+          const widthAttr = element.getAttribute('width');
+          if (widthAttr) {
+            return widthAttr;
+          }
+          const style = element.getAttribute('style') || '';
+          const widthMatch = style.match(/width:\s*(\d+)px/);
+          if (widthMatch && widthMatch[1]) {
+            return widthMatch[1];
+          }
+          return null;
+        },
         renderHTML: (attributes) => {
           if (!attributes.width) {
             return {};
@@ -426,7 +437,18 @@ const ResizableImage = Image.extend({
       },
       height: {
         default: null,
-        parseHTML: (element) => element.getAttribute('height'),
+        parseHTML: (element) => {
+          const heightAttr = element.getAttribute('height');
+          if (heightAttr) {
+            return heightAttr;
+          }
+          const style = element.getAttribute('style') || '';
+          const heightMatch = style.match(/height:\s*(\d+)px/);
+          if (heightMatch && heightMatch[1]) {
+            return heightMatch[1];
+          }
+          return null;
+        },
         renderHTML: (attributes) => {
           if (!attributes.height) {
             return {};
@@ -642,6 +664,8 @@ const ResizableImage = Image.extend({
     const marginRight = node.attrs.marginRight;
     const marginBottom = node.attrs.marginBottom;
     const marginLeft = node.attrs.marginLeft;
+    const width = node.attrs.width;
+    const height = node.attrs.height;
     
     let wrapperStyle = 'position: relative; display: inline-block; max-width: 100%;';
     let wrapperClass = 'resizable-image-wrapper';
@@ -690,11 +714,24 @@ const ResizableImage = Image.extend({
     }
     
     // Build img attributes, ensuring id is included
-    // Don't set display here - let CSS handle it (like reactjs-tiptap-editor)
+    // Use node.attrs directly instead of HTMLAttributes to ensure width/height are properly rendered
+    const widthValue = width ? (typeof width === 'number' ? width : parseInt(String(width), 10)) : null;
+    const heightValue = height ? (typeof height === 'number' ? height : parseInt(String(height), 10)) : null;
+    
+    const imgStyle = `max-width: 100%; height: auto;${widthValue ? ` width: ${widthValue}px;` : ''}${heightValue ? ` height: ${heightValue}px;` : ''}`;
+    
     const imgAttrs: Record<string, unknown> = {
       ...HTMLAttributes,
-      style: `max-width: 100%; height: auto; ${HTMLAttributes.width ? `width: ${HTMLAttributes.width}px;` : ''} ${HTMLAttributes.height ? `height: ${HTMLAttributes.height}px;` : ''}`,
+      style: imgStyle,
     };
+    
+    // Also set width/height as HTML attributes for better compatibility
+    if (widthValue) {
+      imgAttrs.width = widthValue;
+    }
+    if (heightValue) {
+      imgAttrs.height = heightValue;
+    }
     
     if (imageId) {
       imgAttrs['data-image-id'] = imageId;

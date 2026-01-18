@@ -521,7 +521,6 @@ html {
   max-width: 100%;
   height: auto;
   margin: 0;
-  border-radius: 4px;
 }
 
 /* Image alignment styles for preview */
@@ -543,6 +542,7 @@ html {
   display: inline-block;
   height: auto;
   max-width: 100%;
+  border-radius: 0;
 }
 
 /* Full width images */
