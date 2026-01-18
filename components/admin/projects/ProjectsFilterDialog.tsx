@@ -1,8 +1,15 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import { useEffect, useState } from 'react';
 import Button from '@/components/ui/Button';
+
+interface SubCategory {
+  id: string;
+  slug: string;
+  name: string;
+}
 
 interface ProjectsFilterDialogProps {
   isOpen: boolean;
@@ -28,6 +35,33 @@ export function ProjectsFilterDialog({
   onClose,
 }: ProjectsFilterDialogProps) {
   const t = useTranslations('Admin.projects.list.filterDialog');
+  const locale = useLocale();
+  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
+  const [loadingSubCategories, setLoadingSubCategories] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchSubCategories = async () => {
+        try {
+          setLoadingSubCategories(true);
+          const response = await fetch(`/api/subcategories?locale=${locale}`);
+          const result = await response.json();
+          
+          if (response.ok && result.items) {
+            setSubCategories(result.items);
+          } else {
+            console.error('Failed to fetch subcategories:', result.error);
+          }
+        } catch (error) {
+          console.error('Error fetching subcategories:', error);
+        } finally {
+          setLoadingSubCategories(false);
+        }
+      };
+
+      fetchSubCategories();
+    }
+  }, [isOpen, locale]);
   
   if (!isOpen) return null;
 
@@ -52,13 +86,19 @@ export function ProjectsFilterDialog({
             <label className="block text-xs font-medium uppercase tracking-[1px] sm:tracking-[1.5px] md:tracking-[1.5px] text-[#555] mb-1">
               {t('category')}
             </label>
-            <input
-              type="text"
+            <select
               value={category}
               onChange={(e) => onCategoryChange(e.target.value)}
-              className="w-full border border-[#e0e0e0] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#333]"
-              placeholder={t('categoryPlaceholder')}
-            />
+              className="w-full border border-[#e0e0e0] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#333] bg-white"
+              disabled={loadingSubCategories}
+            >
+              <option value="">{t('categoryPlaceholder')}</option>
+              {subCategories.map((subCat) => (
+                <option key={subCat.id} value={subCat.name}>
+                  {subCat.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium uppercase tracking-[1px] sm:tracking-[1.5px] md:tracking-[1.5px] text-[#555] mb-1">

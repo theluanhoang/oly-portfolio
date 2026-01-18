@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 interface ContactFormData {
   customerName: string;
@@ -11,13 +12,27 @@ interface ContactFormData {
   notes?: string;
 }
 
-function formatEmailAsHTML(data: ContactFormData): string {
-  const categoryMap: Record<string, string> = {
-    residential: 'Nhà ở',
-    commercial: 'Thương mại',
-    office: 'Văn phòng',
-    other: 'Khác',
-  };
+async function getSubCategoryName(slug: string, locale: string = 'vi'): Promise<string> {
+  try {
+    const subCategory = await prisma.subCategory.findFirst({
+      where: { slug },
+      include: { translations: true }
+    });
+
+    if (subCategory && subCategory.translations) {
+      const translation = subCategory.translations.find((t: { locale: string }) => t.locale === locale)
+        || subCategory.translations.find((t: { locale: string }) => t.locale === 'vi')
+        || subCategory.translations.find((t: { locale: string }) => t.locale === 'en')
+        || subCategory.translations[0];
+      return translation?.name || slug;
+    }
+  } catch (error) {
+    console.error('Error fetching subcategory:', error);
+  }
+  return slug;
+}
+
+async function formatEmailAsHTML(data: ContactFormData, categoryName: string): Promise<string> {
 
   const escapeHtml = (text: string): string => {
     return text
@@ -206,7 +221,7 @@ function formatEmailAsHTML(data: ContactFormData): string {
         </div>
         <div class="field">
           <span class="field-label">Thể Loại</span>
-          <div class="field-value">${escapeHtml(categoryMap[data.category] || data.category)}</div>
+          <div class="field-value">${escapeHtml(categoryName)}</div>
         </div>
       </div>
 
@@ -251,14 +266,7 @@ function formatEmailAsHTML(data: ContactFormData): string {
   `.trim();
 }
 
-function formatEmailAsText(data: ContactFormData): string {
-  const categoryMap: Record<string, string> = {
-    residential: 'Nhà ở',
-    commercial: 'Thương mại',
-    office: 'Văn phòng',
-    other: 'Khác',
-  };
-
+function formatEmailAsText(data: ContactFormData, categoryName: string): string {
   return `
 Thông tin liên hệ mới từ trang web Oly Studio:
 
@@ -266,7 +274,7 @@ Thông Tin Khách Hàng:
 - Tên: ${data.customerName}
 - Email: ${data.email}
 - Số Điện Thoại: ${data.phone}
-- Thể Loại: ${categoryMap[data.category] || data.category}
+- Thể Loại: ${categoryName}
 
 Chi Tiết Dự Án:
 - Vị Trí: ${data.location || 'Chưa cung cấp'}
@@ -491,11 +499,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const categoryName = await getSubCategoryName(category, 'vi');
+
     const recipientEmail = process.env.CONTACT_EMAIL || 'info@olystudio.vn';
 
     const emailSubject = `Thông Tin Liên Hệ Mới - ${customerName}`;
-    const emailTextBody = formatEmailAsText(body);
-    const emailHtmlBody = formatEmailAsHTML(body);
+    const emailTextBody = formatEmailAsText(body, categoryName);
+    const emailHtmlBody = await formatEmailAsHTML(body, categoryName);
 
     const emailSent = await sendEmail(
       recipientEmail,

@@ -51,7 +51,7 @@ export function ProjectsTableView({
         <>
           <div className="truncate max-w-[120px] sm:max-w-[150px] md:max-w-none">{project.title}</div>
           <div className="text-[10px] text-[#777] mt-0.5">
-            {project.category} • {project.location}
+            {project.category} {project.type ? `• ${project.type}` : ''} • {project.location}
           </div>
         </>
       ),
@@ -62,6 +62,14 @@ export function ProjectsTableView({
       sortable: true,
       sortKey: 'category',
       render: (project) => project.category,
+      responsive: { hidden: 'sm' },
+    },
+    {
+      key: 'type',
+      headerKey: 'subCategory',
+      sortable: true,
+      sortKey: 'type',
+      render: (project) => project.type || '-',
       responsive: { hidden: 'sm' },
     },
     {

@@ -82,22 +82,22 @@ export default function ContactForm() {
   });
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchSubCategories = async () => {
       try {
-        const response = await fetch(`/api/categories?locale=${locale}`);
+        const response = await fetch(`/api/subcategories?locale=${locale}`);
         const result = await response.json();
         
         if (response.ok && result.items) {
           setCategories(result.items);
         } else {
-          console.error('Failed to fetch categories:', result.error);
+          console.error('Failed to fetch subcategories:', result.error);
         }
       } catch (error) {
-        console.error('Error fetching categories:', error);
+        console.error('Error fetching subcategories:', error);
       }
     };
 
-    fetchCategories();
+    fetchSubCategories();
   }, [locale]);
 
   useEffect(() => {

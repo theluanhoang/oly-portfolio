@@ -18,8 +18,8 @@ export async function GET(request: Request): Promise<Response> {
     const pageSize = hasPagination 
       ? Math.min(Math.max(Number(pageSizeParam) || 12, 1), 100)
       : undefined;
-    const sortField = searchParams.get('sortField')?.trim() || 'displayOrder';
-    const sortDirection = searchParams.get('sortDirection')?.trim() || 'asc';
+    const sortField = searchParams.get('sortField')?.trim() || 'createdAt';
+    const sortDirection = searchParams.get('sortDirection')?.trim() || 'desc';
 
     const andConditions: Prisma.ProjectWhereInput[] = [];
 
@@ -74,7 +74,7 @@ export async function GET(request: Request): Promise<Response> {
 
     if (categoryFilter.length > 0) {
       andConditions.push({
-        category: {
+        subCategory: {
           translations: {
             some: {
               name: {
@@ -124,10 +124,7 @@ export async function GET(request: Request): Promise<Response> {
           ]
         : sortField === 'createdAt'
         ? { createdAt: sortDirection === 'asc' ? 'asc' : 'desc' }
-        : [
-            { displayOrder: 'asc' },
-            { createdAt: 'desc' }
-          ];
+        : { createdAt: 'desc' };
 
     const [total, items] = await Promise.all([
       prisma.project.count({ where }),
