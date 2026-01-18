@@ -714,13 +714,27 @@ const ResizableImage = Image.extend({
           }
           originalWidth = width;
         }
-        if (node.attrs.height) {
+        
+        // If height is null, set to auto to maintain aspect ratio
+        if (node.attrs.height === null || node.attrs.height === undefined) {
+          img.style.height = 'auto';
+        } else if (node.attrs.height) {
           const height = typeof node.attrs.height === 'number' ? node.attrs.height : parseInt(node.attrs.height);
           img.style.height = `${height}px`;
-          dom.style.height = 'fit-content';
           originalHeight = height;
         }
-        if (originalWidth > 0 && originalHeight > 0) {
+        
+        dom.style.height = 'fit-content';
+        
+        // Calculate aspect ratio from natural dimensions if available
+        if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+          originalWidth = img.naturalWidth;
+          originalHeight = img.naturalHeight;
+          aspectRatio = originalWidth / originalHeight;
+          setTimeout(() => {
+            updateHandlesPosition();
+          }, 0);
+        } else if (originalWidth > 0 && originalHeight > 0) {
           aspectRatio = originalWidth / originalHeight;
           setTimeout(() => {
             updateHandlesPosition();
@@ -800,11 +814,20 @@ const ResizableImage = Image.extend({
       }
 
       let isResizing = false;
-      let resizeHandle: 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w' | null = null;
-      let startX = 0;
-      let startY = 0;
-      let startWidth = 0;
-      let startHeight = 0;
+      let resizeHandle: 'tl' | 'tr' | 'bl' | 'br' | null = null;
+      let resizeState = {
+        x: 0,
+        y: 0,
+        w: 0,
+        h: 0,
+        dir: '',
+      };
+      const maxSize = {
+        width: 100000,
+        height: 100000,
+      };
+      const IMAGE_MIN_SIZE = 20;
+      const IMAGE_THROTTLE_WAIT_TIME = 16;
       let wasCtrlClick: boolean = false;
       // Custom drag state for image reordering (mouse-based, not HTML5 drag & drop)
       let isImageDragging = false;
@@ -890,21 +913,55 @@ const ResizableImage = Image.extend({
       let dragPreviewElement: HTMLElement | null = null;
       let lastMouseEvent: MouseEvent | null = null;
 
+      const throttle = <T extends (...args: never[]) => void>(
+        func: T,
+        wait: number
+      ): ((...args: Parameters<T>) => void) => {
+        let timeout: NodeJS.Timeout | null = null;
+        let previous = 0;
+        return function (this: unknown, ...args: Parameters<T>) {
+          const now = Date.now();
+          const remaining = wait - (now - previous);
+          if (remaining <= 0 || remaining > wait) {
+            if (timeout) {
+              clearTimeout(timeout);
+              timeout = null;
+            }
+            previous = now;
+            func.apply(this, args);
+          } else if (!timeout) {
+            timeout = setTimeout(() => {
+              previous = Date.now();
+              timeout = null;
+              func.apply(this, args);
+            }, remaining);
+          }
+        };
+      };
+
+      const clamp = (value: number, min: number, max: number): number => {
+        return Math.min(Math.max(value, min), max);
+      };
+
       const getCursorForPosition = (position: string): string => {
         const cursors: Record<string, string> = {
-          nw: 'nw-resize',
-          ne: 'ne-resize',
-          sw: 'sw-resize',
-          se: 'se-resize',
-          n: 'n-resize',
-          s: 's-resize',
-          e: 'e-resize',
-          w: 'w-resize',
+          tl: 'nw-resize',
+          tr: 'ne-resize',
+          bl: 'sw-resize',
+          br: 'se-resize',
         };
         return cursors[position] || 'default';
       };
 
-      const createResizeHandle = (position: 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w') => {
+      const getMaxSize = () => {
+        const editorContainer = view.dom.closest('.ProseMirror')?.parentElement as HTMLElement | null;
+        if (editorContainer) {
+          const { width } = window.getComputedStyle(editorContainer);
+          maxSize.width = parseInt(width, 10) || 100000;
+        }
+      };
+
+      const createResizeHandle = (position: 'tl' | 'tr' | 'bl' | 'br') => {
         const handle = document.createElement('div');
         handle.className = `resize-handle resize-handle-${position}`;
         handle.style.position = 'absolute';
@@ -918,14 +975,10 @@ const ResizableImage = Image.extend({
         handle.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
 
         const positions: Record<string, Partial<CSSStyleDeclaration>> = {
-          nw: { top: '-6px', left: '-6px' },
-          ne: { top: '-6px', right: '-6px' },
-          sw: { bottom: '-6px', left: '-6px' },
-          se: { bottom: '-6px', right: '-6px' },
-          n: { top: '-6px', left: '50%', transform: 'translateX(-50%)' },
-          s: { bottom: '-6px', left: '50%', transform: 'translateX(-50%)' },
-          e: { top: '50%', right: '-6px', transform: 'translateY(-50%)' },
-          w: { top: '50%', left: '-6px', transform: 'translateY(-50%)' },
+          tl: { top: '-6px', left: '-6px' },
+          tr: { top: '-6px', right: '-6px' },
+          bl: { bottom: '-6px', left: '-6px' },
+          br: { bottom: '-6px', right: '-6px' },
         };
 
         Object.assign(handle.style, positions[position]);
@@ -933,127 +986,122 @@ const ResizableImage = Image.extend({
         handle.addEventListener('mousedown', (e) => {
           e.preventDefault();
           e.stopPropagation();
+
+          const imgOriginalWidth = originalWidth || img.naturalWidth || img.offsetWidth;
+          const imgOriginalHeight = originalHeight || img.naturalHeight || img.offsetHeight;
+          const imgAspectRatio = aspectRatio || (imgOriginalWidth / imgOriginalHeight) || 1;
+
+          let width = typeof node.attrs.width === 'number' ? node.attrs.width : parseInt(node.attrs.width || '0', 10);
+          let height = typeof node.attrs.height === 'number' ? node.attrs.height : parseInt(node.attrs.height || '0', 10);
+
+          getMaxSize();
+          const maxWidth = maxSize.width;
+
+          if (width && !height) {
+            width = width > maxWidth ? maxWidth : width;
+            height = Math.round(width / imgAspectRatio);
+          } else if (height && !width) {
+            width = Math.round(height * imgAspectRatio);
+            width = width > maxWidth ? maxWidth : width;
+          } else if (!width && !height) {
+            width = imgOriginalWidth > maxWidth ? maxWidth : imgOriginalWidth;
+            height = Math.round(width / imgAspectRatio);
+          } else {
+            width = width > maxWidth ? maxWidth : width;
+          }
+
           isResizing = true;
           resizeHandle = position;
-          startX = e.clientX;
-          startY = e.clientY;
-          const rect = img.getBoundingClientRect();
-          startWidth = rect.width;
-          startHeight = rect.height;
-          document.addEventListener('mousemove', handleMouseMove);
-          document.addEventListener('mouseup', handleMouseUp);
+          resizeState = {
+            x: e.clientX,
+            y: e.clientY,
+            w: width,
+            h: height,
+            dir: position,
+          };
+
+          onEvents();
         });
 
         return handle;
       };
 
-      const handleMouseMove = (e: MouseEvent) => {
-        if (!isResizing || !resizeHandle) return;
+      const handleMouseMove = throttle((e: MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
 
-        const deltaX = e.clientX - startX;
-        const deltaY = e.clientY - startY;
-        let newWidth = startWidth;
-        let newHeight = startHeight;
-
-        const isCornerHandle = ['nw', 'ne', 'sw', 'se'].includes(resizeHandle);
-
-        if (isCornerHandle) {
-          if (resizeHandle.includes('e')) {
-            newWidth = startWidth + deltaX;
-          }
-          if (resizeHandle.includes('w')) {
-            newWidth = startWidth - deltaX;
-          }
-          if (resizeHandle.includes('s')) {
-            newHeight = startHeight + deltaY;
-          }
-          if (resizeHandle.includes('n')) {
-            newHeight = startHeight - deltaY;
-          }
-
-          const newAspectRatio = newWidth / newHeight;
-          if (Math.abs(newAspectRatio - aspectRatio) > 0.01) {
-            if (Math.abs(deltaX) > Math.abs(deltaY)) {
-              newHeight = newWidth / aspectRatio;
-            } else {
-              newWidth = newHeight * aspectRatio;
-            }
-          }
-        } else {
-          if (resizeHandle === 'e' || resizeHandle === 'w') {
-            newWidth = resizeHandle === 'e' ? startWidth + deltaX : startWidth - deltaX;
-          }
-          if (resizeHandle === 's' || resizeHandle === 'n') {
-            newHeight = resizeHandle === 's' ? startHeight + deltaY : startHeight - deltaY;
-          }
+        if (!isResizing || !resizeHandle) {
+          return;
         }
 
-        newWidth = Math.max(50, newWidth);
-        newHeight = Math.max(50, newHeight);
-
-        img.style.width = `${newWidth}px`;
-        img.style.height = `${newHeight}px`;
-        imgWrapper.style.width = `${newWidth}px`;
-        
-        const currentAlign = node.attrs.align;
-        if (currentAlign !== 'left' && currentAlign !== 'center' && currentAlign !== 'right' && currentAlign !== 'full') {
-          dom.style.width = `${newWidth}px`;
-        }
-        dom.style.height = 'fit-content';
-        
-        if (img.style.outline) {
-          updateSelectionStyle();
-        }
-        
-        updateHandlesPosition();
-      };
-
-      const handleMouseUp = () => {
-        if (!isResizing || !resizeHandle) return;
+        const { x, w, dir } = resizeState;
+        const dx = (e.clientX - x) * (/l/.test(dir) ? -1 : 1);
+        const width = clamp(w + dx, IMAGE_MIN_SIZE, maxSize.width);
+        const height = null;
 
         const pos = getPos();
         if (typeof pos === 'number') {
-          const width = parseInt(img.style.width);
-          const height = parseInt(img.style.height);
-
-          imgWrapper.style.width = `${width}px`;
-          
-          // Preserve alignment - only set dom width if alignment doesn't require 100% width
-          const currentAlign = node.attrs.align;
-          const shouldPreserveAlignmentWidth = currentAlign === 'left' || currentAlign === 'center' || currentAlign === 'right' || currentAlign === 'full';
-          if (!shouldPreserveAlignmentWidth) {
-            dom.style.width = `${width}px`;
-          }
-          // For left/center/right/full alignment, dom width should remain 100% (set by updateCaptionAndAlignment)
-          dom.style.height = 'fit-content';
-
           const { tr } = view.state;
           tr.setNodeMarkup(pos, undefined, {
             ...node.attrs,
-            width: width,
-            height: height,
+            width,
+            height,
           });
           view.dispatch(tr);
-          
-          // After dispatch, updateCaptionAndAlignment will be called automatically via node view update()
-          // But we also call it here to ensure alignment is preserved immediately
-          setTimeout(() => {
-            updateSelectionStyle();
-            updateHandlesPosition();
-            updateCaptionAndAlignment(); // Restore alignment styles after resize
-          }, 10);
+        }
+      }, IMAGE_THROTTLE_WAIT_TIME);
+
+      const handleMouseUp = (e: MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!isResizing) {
+          return;
         }
 
+        resizeState = {
+          x: 0,
+          y: 0,
+          w: 0,
+          h: 0,
+          dir: '',
+        };
         isResizing = false;
         resizeHandle = null;
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+
+        offEvents();
+
+        const pos = getPos();
+        if (typeof pos === 'number') {
+          const { tr, doc } = view.state;
+          const nodeAtPos = doc.nodeAt(pos);
+          if (nodeAtPos && nodeAtPos.type.name === 'image') {
+            tr.setSelection(TextSelection.create(doc, pos, pos + nodeAtPos.nodeSize));
+            view.dispatch(tr);
+          }
+        }
+
+        // Update alignment after resize completes
+        setTimeout(() => {
+          updateCaptionAndAlignment();
+          updateHandlesPosition();
+        }, 0);
       };
 
-      const positions: Array<'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w'> = ['nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w'];
+      const onEvents = () => {
+        document.addEventListener('mousemove', handleMouseMove, true);
+        document.addEventListener('mouseup', handleMouseUp, true);
+      };
+
+      const offEvents = () => {
+        document.removeEventListener('mousemove', handleMouseMove, true);
+        document.removeEventListener('mouseup', handleMouseUp, true);
+      };
+
+      const resizeDirections: Array<'tl' | 'tr' | 'bl' | 'br'> = ['tl', 'tr', 'bl', 'br'];
       const handles: HTMLElement[] = [];
       
-      positions.forEach((pos) => {
+      resizeDirections.forEach((pos) => {
         const handle = createResizeHandle(pos);
         handle.style.display = 'none';
         handles.push(handle);
@@ -1066,14 +1114,10 @@ const ResizableImage = Image.extend({
           if (!position) return;
           
           const positions: Record<string, Partial<CSSStyleDeclaration>> = {
-            nw: { top: '-6px', left: '-6px' },
-            ne: { top: '-6px', right: '-6px' },
-            sw: { bottom: '-6px', left: '-6px' },
-            se: { bottom: '-6px', right: '-6px' },
-            n: { top: '-6px', left: '50%', transform: 'translateX(-50%)' },
-            s: { bottom: '-6px', left: '50%', transform: 'translateX(-50%)' },
-            e: { top: '50%', right: '-6px', transform: 'translateY(-50%)' },
-            w: { top: '50%', left: '-6px', transform: 'translateY(-50%)' },
+            tl: { top: '-6px', left: '-6px' },
+            tr: { top: '-6px', right: '-6px' },
+            bl: { bottom: '-6px', left: '-6px' },
+            br: { bottom: '-6px', right: '-6px' },
           };
           
           Object.assign(handle.style, positions[position]);
@@ -1620,13 +1664,6 @@ const ResizableImage = Image.extend({
       };
       
       const cleanupDrag = () => {
-        console.log('[DEBUG] cleanupDrag called', {
-          hasRafId: rafId !== null,
-          hasDragState: !!dragState,
-          dragStateActive: dragState?.isActive,
-          globalDragActive: globalImageDragState.isActive,
-        });
-        
         if (rafId !== null) {
           cancelAnimationFrame(rafId);
           rafId = null;
@@ -1637,10 +1674,8 @@ const ResizableImage = Image.extend({
           if (globalImageDragState.nodeId === dragState.nodeId) {
             globalImageDragState.isActive = false;
             globalImageDragState.nodeId = null;
-            console.log('[DEBUG] Global drag state cleaned up');
           }
           dragState = null;
-          console.log('[DEBUG] Drag state cleaned up');
         }
         cachedImageNodes = null;
         cachedDocSize = 0;
@@ -1860,16 +1895,7 @@ const ResizableImage = Image.extend({
       };
       
       const handleDocumentDragOver = (e: DragEvent) => {
-        console.log('[DEBUG] handleDocumentDragOver called', {
-          dragStateActive: dragState?.isActive,
-          hasDragPreview: !!dragPreviewElement,
-          clientX: e.clientX,
-          clientY: e.clientY,
-          target: e.target,
-        });
-
         if (!dragState?.isActive || !dragPreviewElement) {
-          console.log('[DEBUG] Drag over ignored - not active or no preview');
           return;
         }
 
@@ -1937,18 +1963,8 @@ const ResizableImage = Image.extend({
       // Allow manual scroll (mouse wheel) during drag by scrolling the editor container ourselves
       // Note: Wheel events may not fire during drag, so we also use auto-scroll in mousemove
       const handleDocumentWheel = (e: WheelEvent) => {
-        console.log('[DEBUG] handleDocumentWheel called', {
-          dragStateActive: dragState?.isActive,
-          globalDragActive: globalImageDragState.isActive,
-          deltaY: e.deltaY,
-          deltaX: e.deltaX,
-          target: e.target,
-          currentTarget: e.currentTarget,
-        });
-
         // Use global drag state instead of local dragState to work across all node views
         if (!globalImageDragState.isActive) {
-          console.log('[DEBUG] Global drag state not active, ignoring wheel event');
           return;
         }
 
@@ -1959,52 +1975,33 @@ const ResizableImage = Image.extend({
         // Find the scroll container - find .ProseMirror from the event target or use view.dom
         const target = e.target as HTMLElement;
         const proseMirror = target.closest('.ProseMirror') || view.dom.closest('.ProseMirror');
-        console.log('[DEBUG] ProseMirror element:', proseMirror);
         
         if (!proseMirror) {
-          console.log('[DEBUG] ProseMirror not found');
           return;
         }
 
         // Find the scrollable parent container
         let scrollContainer: HTMLElement | null = proseMirror.parentElement;
-        console.log('[DEBUG] Starting scroll container search from:', scrollContainer);
         
         while (scrollContainer) {
           const style = window.getComputedStyle(scrollContainer);
           const overflowY = style.overflowY;
           const hasOverflowClass = scrollContainer.classList.contains('overflow-y-auto');
-          console.log('[DEBUG] Checking container:', {
-            element: scrollContainer,
-            overflowY,
-            hasOverflowClass,
-            scrollHeight: scrollContainer.scrollHeight,
-            clientHeight: scrollContainer.clientHeight,
-          });
           
           if (overflowY === 'auto' || overflowY === 'scroll' || hasOverflowClass) {
-            console.log('[DEBUG] Found scroll container by overflow style:', scrollContainer);
             break;
           }
           scrollContainer = scrollContainer.parentElement;
         }
 
         if (!scrollContainer) {
-          console.log('[DEBUG] Scroll container not found by overflow, trying fallback');
           // Fallback: try to find any scrollable ancestor
           scrollContainer = proseMirror.parentElement;
           while (scrollContainer && scrollContainer !== document.body) {
             const scrollHeight = scrollContainer.scrollHeight;
             const clientHeight = scrollContainer.clientHeight;
-            console.log('[DEBUG] Fallback check:', {
-              element: scrollContainer,
-              scrollHeight,
-              clientHeight,
-              isScrollable: scrollHeight > clientHeight,
-            });
             
             if (scrollHeight > clientHeight) {
-              console.log('[DEBUG] Found scroll container by scrollHeight:', scrollContainer);
               break;
             }
             scrollContainer = scrollContainer.parentElement;
@@ -2012,37 +2009,18 @@ const ResizableImage = Image.extend({
         }
 
         if (!scrollContainer) {
-          console.error('[DEBUG] Scroll container not found! Cannot scroll during drag.');
           return;
         }
-
-        console.log('[DEBUG] Scrolling container:', {
-          container: scrollContainer,
-          currentScrollTop: scrollContainer.scrollTop,
-          scrollHeight: scrollContainer.scrollHeight,
-          clientHeight: scrollContainer.clientHeight,
-          deltaY: e.deltaY,
-          deltaX: e.deltaX,
-        });
 
         // Prevent browser default to avoid wheel being ignored during drag
         e.preventDefault();
         e.stopPropagation();
 
         // Manually scroll the editor container
-        const beforeScroll = scrollContainer.scrollTop;
         scrollContainer.scrollBy({
           top: e.deltaY,
           left: e.deltaX,
           behavior: 'auto',
-        });
-        const afterScroll = scrollContainer.scrollTop;
-        
-        console.log('[DEBUG] Scroll executed:', {
-          beforeScroll,
-          afterScroll,
-          delta: afterScroll - beforeScroll,
-          expectedDelta: e.deltaY,
         });
       };
       
@@ -2052,7 +2030,6 @@ const ResizableImage = Image.extend({
         globalWheelHandler = handleDocumentWheel;
         document.addEventListener('wheel', handleDocumentWheel, { passive: false, capture: true });
         wheelHandlerRegistered = true;
-        console.log('[DEBUG] Global wheel handler registered');
       }
       document.addEventListener('click', handleDocumentClick);
       document.addEventListener('mousemove', handleDocumentMouseMove);
@@ -2092,7 +2069,6 @@ const ResizableImage = Image.extend({
 
       // Function to update caption and alignment when node changes
       const updateCaptionAndAlignment = () => {
-        console.log('[NodeView] updateCaptionAndAlignment() called, align:', node.attrs.align);
         const currentCaption = node.attrs.caption;
         const currentAlign = node.attrs.align || 'left';
         
@@ -2210,19 +2186,21 @@ const ResizableImage = Image.extend({
               imgWrapper.style.display = 'inline-block';
             }
           }
-          
-          console.log('[NodeView] Alignment applied:', {
-            align: currentAlign,
-            domWidth: dom.style.width,
-            domDisplay: dom.style.display,
-            domTextAlign: dom.style.textAlign,
-            imageContainerDisplay: imageContainer?.style.display,
-          });
         }
       };
 
       // Initial update
       updateCaptionAndAlignment();
+      getMaxSize();
+
+      // ResizeObserver to update maxSize when editor container resizes
+      const resizeObserver = new ResizeObserver(() => {
+        getMaxSize();
+      });
+      const editorContainer = view.dom.closest('.ProseMirror')?.parentElement;
+      if (editorContainer) {
+        resizeObserver.observe(editorContainer);
+      }
 
       // Cleanup function
       return {
@@ -2239,21 +2217,25 @@ const ResizableImage = Image.extend({
           return true;
         },
         update: (updatedNode: PMNode) => {
-          console.log('[NodeView] update() called', updatedNode.attrs);
           if (updatedNode.type.name !== 'image') {
-            console.log('[NodeView] Not an image node, returning false');
             return false;
           }
           node = updatedNode;
-          console.log('[NodeView] Node updated, calling updateImageSize and updateCaptionAndAlignment');
+          
+          // Always update size
           updateImageSize();
-          updateCaptionAndAlignment();
+          
+          // Only update alignment when NOT resizing to avoid flickering
+          // Alignment will be updated after resize completes
+          if (!isResizing) {
+            updateCaptionAndAlignment();
+          }
+          
           return true;
         },
         destroy: () => {
-          // Only remove wheel handler if this is the last node view being destroyed
-          // Note: In practice, we keep it registered as it's shared
-          // The wheel handler uses global state so it's safe to keep it
+          offEvents();
+          resizeObserver.disconnect();
           document.removeEventListener('click', handleDocumentClick);
           document.removeEventListener('mousemove', handleDocumentMouseMove);
           document.removeEventListener('mouseup', handleDocumentMouseUp);
@@ -2780,7 +2762,6 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
               
               // All images should have id now
               if (!imageId) {
-                console.warn('Image node missing id, cannot find DOM element');
                 // Fallback to coordsAtPos
                 const coords = view.coordsAtPos(pos);
                 if (coords) {
@@ -3874,8 +3855,6 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
 
                           tr.insert(from, imageNode);
                           view.dispatch(tr);
-                        } else {
-                          console.error('Failed to upload:', file.name, data?.error);
                         }
                       };
 
@@ -4582,8 +4561,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                         } else {
                           alert('Failed to upload image');
                         }
-                      } catch (error) {
-                        console.error('Error uploading image:', error);
+                      } catch {
                         alert('Error uploading image');
                       }
                     };
@@ -4901,7 +4879,6 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
                     
                     const fragment = Fragment.from(imageNodes);
                     const columnsValue = gridColumns || 2;
-                    console.log('Creating grid layout with columns:', columnsValue, 'images:', images.length);
                     const galleryNode = schema.nodes.imageGallery.create(
                       {
                         layout: 'grid',
