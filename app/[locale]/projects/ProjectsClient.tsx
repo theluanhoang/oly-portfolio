@@ -23,7 +23,6 @@ export default function ProjectsClient() {
   const { galleryRef, spacerRef, scrollIndicatorRef } = useHorizontalScroll();
   const [sections, setSections] = useState<ProjectImage[][]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [footerHeight, setFooterHeight] = useState<number>(0);
   const headerHeight = useHeaderHeight();
   const { isMobile } = useResponsive();
   const t = useTranslations('Common');
@@ -115,48 +114,6 @@ export default function ProjectsClient() {
     loadProjects();
   }, [t]);
 
-  // Measure footer height when not mobile (footer is fixed)
-  useEffect(() => {
-    if (isMobile) {
-      setFooterHeight(0);
-      return;
-    }
-
-    const measureFooter = () => {
-      const footer = document.querySelector('footer');
-      if (footer) {
-        const height = footer.offsetHeight;
-        setFooterHeight(height);
-      }
-    };
-
-    // Measure on mount and resize
-    measureFooter();
-    window.addEventListener('resize', measureFooter);
-    
-    // Also measure after a short delay to account for dynamic content
-    const timeoutId = setTimeout(measureFooter, 100);
-
-    // Observe footer for changes
-    const footer = document.querySelector('footer');
-    if (footer) {
-      const resizeObserver = new ResizeObserver(measureFooter);
-      resizeObserver.observe(footer);
-      return () => {
-        window.removeEventListener('resize', measureFooter);
-        clearTimeout(timeoutId);
-        resizeObserver.disconnect();
-      };
-    }
-
-    return () => {
-      window.removeEventListener('resize', measureFooter);
-      clearTimeout(timeoutId);
-    };
-  }, [isMobile, sections]);
-
-
-
   if (loading) {
     const skeletonSections = Array.from({ length: 3 }); // Show 3 skeleton sections
     
@@ -180,8 +137,7 @@ export default function ProjectsClient() {
           className="fixed w-full overflow-hidden z-0"
           style={{ 
             top: `calc(55px + ${headerHeight}px)`,
-            height: `calc(100vh - ${headerHeight}px - ${footerHeight}px)`,
-            paddingBottom: `${footerHeight}px`,
+            height: `calc(100vh - ${headerHeight}px)`,
             left: 0,
             right: 0
           }}
@@ -270,7 +226,7 @@ export default function ProjectsClient() {
           className="fixed w-full overflow-hidden z-0"
           style={{ 
             top: `calc(55px + ${headerHeight}px)`,
-            height: `calc(100vh - ${headerHeight}px - ${footerHeight}px)`,
+            height: `calc(100vh - ${headerHeight}px)`,
             left: 0,
             right: 0
           }}

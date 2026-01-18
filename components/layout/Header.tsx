@@ -103,9 +103,6 @@ export default function Header({ isFixed = false }: HeaderProps) {
               <Link href="/admin/products" className="text-[11px] sm:text-[12px] font-normal leading-normal text-black hover:text-gray-600 transition-colors whitespace-nowrap">
                 {tNav('products')}
               </Link>
-              <Link href="/admin/users" className="text-[11px] sm:text-[12px] font-normal leading-normal text-black hover:text-gray-600 transition-colors whitespace-nowrap">
-                {tNav('users')}
-              </Link>
               <Link href="/admin/translations" className="text-[11px] sm:text-[12px] font-normal leading-normal text-black hover:text-gray-600 transition-colors whitespace-nowrap">
                 {tNav('translations')}
               </Link>
@@ -195,13 +192,6 @@ export default function Header({ isFixed = false }: HeaderProps) {
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     {tNav('products')}
-                  </Link>
-                  <Link 
-                    href="/admin/users" 
-                    className="text-sm font-normal leading-normal text-black hover:text-gray-600 transition-colors py-2 px-4 hover:bg-gray-50 rounded-lg"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    {tNav('users')}
                   </Link>
                   <Link 
                     href="/admin/translations" 

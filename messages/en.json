@@ -293,7 +293,9 @@
                 "descriptionPlaceholder": "Enter description...",
                 "addDescription": "Add Description",
                 "selectCategory": "Select category",
-                "selectMaterial": "Select material"
+                "selectMaterial": "Select material",
+                "noOption": "No options",
+                "delete": "Delete"
             },
             "categories": {
                 "furniture": "Furniture",

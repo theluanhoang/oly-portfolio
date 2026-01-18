@@ -293,7 +293,9 @@
                 "descriptionPlaceholder": "Nhập mô tả...",
                 "addDescription": "Thêm Mô Tả",
                 "selectCategory": "Chọn danh mục",
-                "selectMaterial": "Chọn vật liệu"
+                "selectMaterial": "Chọn vật liệu",
+                "noOption": "Không có tùy chọn",
+                "delete": "Xóa"
             },
             "categories": {
                 "furniture": "Đồ Gỗ",
