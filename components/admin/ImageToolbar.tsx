@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AlignLeft, AlignCenter, AlignRight, Maximize2, Link as LinkIcon, Trash2, MoreVertical, Type, FileImage } from 'lucide-react';
+import { AlignLeft, AlignCenter, AlignRight, Maximize2, Link as LinkIcon, Trash2, MoreVertical, Type, FileImage, Move } from 'lucide-react';
 import type { Editor } from '@tiptap/core';
 import { NodeSelection } from 'prosemirror-state';
 
@@ -27,6 +27,7 @@ export function ImageToolbar({
   onEditLink,
 }: ImageToolbarProps) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showMarginMenu, setShowMarginMenu] = useState(false);
   const [, forceUpdate] = useState(0);
   
   const getCurrentNode = () => {
@@ -38,6 +39,10 @@ export function ImageToolbar({
   const currentNode = getCurrentNode();
   const currentAlign = currentNode?.attrs?.align || null;
   const hasLink = !!currentNode?.attrs?.href;
+  const marginTop = currentNode?.attrs?.marginTop as number | null | undefined;
+  const marginRight = currentNode?.attrs?.marginRight as number | null | undefined;
+  const marginBottom = currentNode?.attrs?.marginBottom as number | null | undefined;
+  const marginLeft = currentNode?.attrs?.marginLeft as number | null | undefined;
   
   useEffect(() => {
     const updateToolbar = () => {
@@ -59,15 +64,18 @@ export function ImageToolbar({
       if (!target.closest('.image-toolbar-more-menu') && !target.closest('.image-toolbar-more-button')) {
         setShowMoreMenu(false);
       }
+      if (!target.closest('.image-toolbar-margin-menu') && !target.closest('.image-toolbar-margin-button')) {
+        setShowMarginMenu(false);
+      }
     };
 
-    if (showMoreMenu) {
+    if (showMoreMenu || showMarginMenu) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }
-  }, [showMoreMenu]);
+  }, [showMoreMenu, showMarginMenu]);
 
   const handleAlign = (align: string | null) => {
     const alignValue: 'left' | 'center' | 'right' | 'full' | null = 
@@ -136,6 +144,32 @@ export function ImageToolbar({
         onClose();
       }
     }
+  };
+
+  const handleMarginChange = (direction: 'top' | 'right' | 'bottom' | 'left', value: string) => {
+    const numValue = value === '' ? null : parseInt(value, 10);
+    if (numValue !== null && isNaN(numValue)) {
+      return;
+    }
+    
+    const { state } = editor;
+    const { doc, tr } = state;
+    const node = doc.nodeAt(imagePos);
+    
+    if (!node || node.type.name !== 'image') {
+      return;
+    }
+    
+    tr.setSelection(NodeSelection.create(doc, imagePos));
+    
+    const marginAttr = `margin${direction.charAt(0).toUpperCase() + direction.slice(1)}` as 'marginTop' | 'marginRight' | 'marginBottom' | 'marginLeft';
+    const newAttrs = {
+      ...node.attrs,
+      [marginAttr]: numValue,
+    };
+    
+    tr.setNodeMarkup(imagePos, undefined, newAttrs);
+    editor.view.dispatch(tr);
   };
 
   return (
@@ -216,6 +250,100 @@ export function ImageToolbar({
       >
         <LinkIcon size={16} />
       </button>
+
+      {/* Margin Button */}
+      <div className="relative border-l border-gray-200 pl-1 image-toolbar-margin-button">
+        <button
+          type="button"
+          className={`p-2 rounded hover:bg-gray-100 transition-colors ${
+            (marginTop || marginRight || marginBottom || marginLeft) ? 'bg-blue-100 text-blue-600' : ''
+          }`}
+          title="Adjust Margins"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMarginMenu(!showMarginMenu);
+            setShowMoreMenu(false);
+          }}
+        >
+          <Move size={16} />
+        </button>
+        
+        {showMarginMenu && (
+          <div 
+            className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-[200] p-3 image-toolbar-margin-menu min-w-[200px]"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-xs font-semibold text-gray-700 mb-2">Margins (px)</div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600 w-12 shrink-0">Top:</label>
+                <input
+                  type="number"
+                  value={marginTop || ''}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleMarginChange('top', e.target.value);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600 w-12 shrink-0">Right:</label>
+                <input
+                  type="number"
+                  value={marginRight || ''}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleMarginChange('right', e.target.value);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600 w-12 shrink-0">Bottom:</label>
+                <input
+                  type="number"
+                  value={marginBottom || ''}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleMarginChange('bottom', e.target.value);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600 w-12 shrink-0">Left:</label>
+                <input
+                  type="number"
+                  value={marginLeft || ''}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleMarginChange('left', e.target.value);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* More Options */}
       <div className="relative border-l border-gray-200 pl-1 image-toolbar-more-button">

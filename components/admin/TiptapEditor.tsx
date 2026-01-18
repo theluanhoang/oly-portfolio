@@ -550,6 +550,86 @@ const ResizableImage = Image.extend({
           };
         },
       },
+      marginTop: {
+        default: null,
+        parseHTML: (element) => {
+          let wrapper: HTMLElement | null = element.parentElement;
+          if (wrapper && wrapper.tagName === 'A') {
+            wrapper = wrapper.parentElement;
+          }
+          while (wrapper && !wrapper.classList?.contains('resizable-image-wrapper')) {
+            wrapper = wrapper.parentElement;
+          }
+          if (wrapper) {
+            const marginTop = wrapper.style.marginTop || window.getComputedStyle(wrapper).marginTop;
+            if (marginTop && marginTop !== '0px') {
+              return marginTop.replace('px', '');
+            }
+          }
+          return null;
+        },
+        renderHTML: () => ({}),
+      },
+      marginRight: {
+        default: null,
+        parseHTML: (element) => {
+          let wrapper: HTMLElement | null = element.parentElement;
+          if (wrapper && wrapper.tagName === 'A') {
+            wrapper = wrapper.parentElement;
+          }
+          while (wrapper && !wrapper.classList?.contains('resizable-image-wrapper')) {
+            wrapper = wrapper.parentElement;
+          }
+          if (wrapper) {
+            const marginRight = wrapper.style.marginRight || window.getComputedStyle(wrapper).marginRight;
+            if (marginRight && marginRight !== '0px') {
+              return marginRight.replace('px', '');
+            }
+          }
+          return null;
+        },
+        renderHTML: () => ({}),
+      },
+      marginBottom: {
+        default: null,
+        parseHTML: (element) => {
+          let wrapper: HTMLElement | null = element.parentElement;
+          if (wrapper && wrapper.tagName === 'A') {
+            wrapper = wrapper.parentElement;
+          }
+          while (wrapper && !wrapper.classList?.contains('resizable-image-wrapper')) {
+            wrapper = wrapper.parentElement;
+          }
+          if (wrapper) {
+            const marginBottom = wrapper.style.marginBottom || window.getComputedStyle(wrapper).marginBottom;
+            if (marginBottom && marginBottom !== '0px') {
+              return marginBottom.replace('px', '');
+            }
+          }
+          return null;
+        },
+        renderHTML: () => ({}),
+      },
+      marginLeft: {
+        default: null,
+        parseHTML: (element) => {
+          let wrapper: HTMLElement | null = element.parentElement;
+          if (wrapper && wrapper.tagName === 'A') {
+            wrapper = wrapper.parentElement;
+          }
+          while (wrapper && !wrapper.classList?.contains('resizable-image-wrapper')) {
+            wrapper = wrapper.parentElement;
+          }
+          if (wrapper) {
+            const marginLeft = wrapper.style.marginLeft || window.getComputedStyle(wrapper).marginLeft;
+            if (marginLeft && marginLeft !== '0px') {
+              return marginLeft.replace('px', '');
+            }
+          }
+          return null;
+        },
+        renderHTML: () => ({}),
+      },
     };
   },
 
@@ -558,6 +638,10 @@ const ResizableImage = Image.extend({
     const caption = node.attrs.caption;
     const href = node.attrs.href;
     const imageId = node.attrs.id;
+    const marginTop = node.attrs.marginTop;
+    const marginRight = node.attrs.marginRight;
+    const marginBottom = node.attrs.marginBottom;
+    const marginLeft = node.attrs.marginLeft;
     
     let wrapperStyle = 'position: relative; display: inline-block; max-width: 100%;';
     let wrapperClass = 'resizable-image-wrapper';
@@ -576,11 +660,33 @@ const ResizableImage = Image.extend({
       wrapperStyle += ' display: block; text-align: right;';
       wrapperClass += ' image-align-right';
     } else if (align === 'float-left') {
-      wrapperStyle += ' float: left; margin-right: 1em;';
+      wrapperStyle += ' float: left;';
+      // Only add default margin-right if no custom margin is set
+      if (!marginRight) {
+        wrapperStyle += ' margin-right: 1em;';
+      }
       wrapperClass += ' image-align-float-left';
     } else if (align === 'float-right') {
-      wrapperStyle += ' float: right; margin-left: 1em;';
+      wrapperStyle += ' float: right;';
+      // Only add default margin-left if no custom margin is set
+      if (!marginLeft) {
+        wrapperStyle += ' margin-left: 1em;';
+      }
       wrapperClass += ' image-align-float-right';
+    }
+    
+    // Apply custom margins
+    if (marginTop) {
+      wrapperStyle += ` margin-top: ${marginTop}px;`;
+    }
+    if (marginRight) {
+      wrapperStyle += ` margin-right: ${marginRight}px;`;
+    }
+    if (marginBottom) {
+      wrapperStyle += ` margin-bottom: ${marginBottom}px;`;
+    }
+    if (marginLeft) {
+      wrapperStyle += ` margin-left: ${marginLeft}px;`;
     }
     
     // Build img attributes, ensuring id is included
@@ -783,13 +889,60 @@ const ResizableImage = Image.extend({
         dom.style.textAlign = align;
       } else if (align === 'float-left') {
         dom.style.float = 'left';
-        dom.style.marginRight = '1em';
+        // Only add default margin-right if no custom margin is set
+        if (!node.attrs.marginRight) {
+          dom.style.marginRight = '1em';
+        }
         dom.style.display = 'inline-block';
       } else if (align === 'float-right') {
         dom.style.float = 'right';
-        dom.style.marginLeft = '1em';
+        // Only add default margin-left if no custom margin is set
+        if (!node.attrs.marginLeft) {
+          dom.style.marginLeft = '1em';
+        }
         dom.style.display = 'inline-block';
       }
+      
+      // Check if image is inside image-gallery (grid layout)
+      // We need to check after DOM is added to parent, so we'll do this in a callback
+      const checkAndApplyMargins = () => {
+        const parent = dom.parentElement;
+        const isInGallery = parent && parent.classList.contains('image-gallery');
+        
+        // Apply custom margins
+        if (node.attrs.marginTop) {
+          dom.style.marginTop = `${node.attrs.marginTop}px`;
+        }
+        if (node.attrs.marginRight) {
+          dom.style.marginRight = `${node.attrs.marginRight}px`;
+        }
+        if (node.attrs.marginBottom) {
+          dom.style.marginBottom = `${node.attrs.marginBottom}px`;
+        }
+        if (node.attrs.marginLeft) {
+          dom.style.marginLeft = `${node.attrs.marginLeft}px`;
+        }
+        
+        // In grid layout, ensure display allows margin to work properly
+        // Grid items should use block or flex display for margin to work correctly
+        if (isInGallery) {
+          // In grid, margin on items creates spacing between items
+          // Make sure display is appropriate for grid items
+          if (dom.style.display === 'inline-block' && !node.attrs.align) {
+            dom.style.display = 'block';
+          }
+          // Ensure width is not 100% when in grid (unless it's full width alignment)
+          if (dom.style.width === '100%' && node.attrs.align !== 'full') {
+            dom.style.width = '';
+          }
+        }
+      };
+      
+      // Apply margins initially
+      checkAndApplyMargins();
+      
+      // Re-check after DOM is mounted
+      setTimeout(checkAndApplyMargins, 0);
 
       // Handle link wrapper
       let imageContainer: HTMLElement = imgWrapper;
@@ -2201,7 +2354,10 @@ const ResizableImage = Image.extend({
             }
           } else if (currentAlign === 'float-left') {
             dom.style.float = 'left';
-            dom.style.marginRight = '1em';
+            // Only add default margin-right if no custom margin is set
+            if (!node.attrs.marginRight) {
+              dom.style.marginRight = '1em';
+            }
             dom.style.display = 'inline-block';
             if (imageContainer) {
               imageContainer.style.display = 'inline-block';
@@ -2211,7 +2367,10 @@ const ResizableImage = Image.extend({
             }
           } else if (currentAlign === 'float-right') {
             dom.style.float = 'right';
-            dom.style.marginLeft = '1em';
+            // Only add default margin-left if no custom margin is set
+            if (!node.attrs.marginLeft) {
+              dom.style.marginLeft = '1em';
+            }
             dom.style.display = 'inline-block';
             if (imageContainer) {
               imageContainer.style.display = 'inline-block';
@@ -2229,6 +2388,47 @@ const ResizableImage = Image.extend({
             }
             if (imgWrapper) {
               imgWrapper.style.display = 'inline-block';
+            }
+          }
+          
+          // Check if image is inside image-gallery (grid layout)
+          const parent = dom.parentElement;
+          const isInGallery = parent && parent.classList.contains('image-gallery');
+          
+          // Apply custom margins after alignment styles
+          if (node.attrs.marginTop) {
+            dom.style.marginTop = `${node.attrs.marginTop}px`;
+          }
+          if (node.attrs.marginRight) {
+            dom.style.marginRight = `${node.attrs.marginRight}px`;
+          }
+          if (node.attrs.marginBottom) {
+            dom.style.marginBottom = `${node.attrs.marginBottom}px`;
+          }
+          if (node.attrs.marginLeft) {
+            dom.style.marginLeft = `${node.attrs.marginLeft}px`;
+          }
+          
+          // In grid layout, ensure display allows margin to work properly
+          // Grid items should use block display for margin to create spacing between items
+          if (isInGallery) {
+            // In grid, margin on items creates spacing between items
+            // Make sure display is appropriate for grid items - use block instead of inline-block
+            if (dom.style.display === 'inline-block' && !currentAlign) {
+              dom.style.display = 'block';
+            }
+            // Ensure width is not 100% when in grid (unless it's full width alignment)
+            // This allows margin to create spacing instead of making item wider
+            if (dom.style.width === '100%' && currentAlign !== 'full') {
+              dom.style.width = 'fit-content';
+            }
+            // Make sure width calculation respects content in grid
+            if (imgWrapper && imgWrapper.style.width && dom.style.width === '100%') {
+              // If image has explicit width, use fit-content instead of 100%
+              const imgWidth = imgWrapper.style.width;
+              if (imgWidth && imgWidth !== '100%') {
+                dom.style.width = 'fit-content';
+              }
             }
           }
         }
