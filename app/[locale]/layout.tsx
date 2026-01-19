@@ -7,6 +7,7 @@ import { routing } from '@/i18n/routing';
 import "../globals.css";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import SessionProvider from "@/components/providers/SessionProvider";
+import ServiceWorkerCleanup from "@/components/providers/ServiceWorkerCleanup";
 import MapPreconnect from "@/components/layout/MapPreconnect";
 import { initAdmin } from "@/lib/initAdmin";
 import { generateLocalizedMetadata } from "@/lib/seo/metadata";
@@ -170,6 +171,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
         <meta name="theme-color" content="#ffffff" />
       </head>
       <body className={`${montserrat.variable} antialiased`}>
+        <ServiceWorkerCleanup />
         <MapPreconnect />
         <SessionProvider>
           <NextIntlClientProvider messages={messages}>
