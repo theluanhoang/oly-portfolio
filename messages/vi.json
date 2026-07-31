@@ -429,6 +429,16 @@
                 "validationLowercase": "Mật khẩu phải chứa ít nhất một chữ thường",
                 "validationNumber": "Mật khẩu phải chứa ít nhất một số",
                 "validationSpecialChar": "Mật khẩu phải chứa ít nhất một ký tự đặc biệt"
+            },
+            "aboutPage": {
+                "title": "Cấu Hinh Trang Giới Thiệu",
+                "shaneImage": "Ảnh của Nhà sáng lập 1",
+                "eduardoImage": "Ảnh của Nhà sáng lập 2",
+                "save": "Lưu Cấu Hình",
+                "saving": "Đang lưu...",
+                "success": "Đã lưu cấu hình trang Giới thiệu thành công!",
+                "error": "Có lỗi xảy ra khi lưu cấu hình",
+                "validationRequired": "Vui lòng tải lên đầy đủ ảnh cho cả hai thành viên (Shane và Eduardo)"
             }
         },
         "imageUpload": {
@@ -497,12 +507,14 @@
         "constructionDescription": "Trải qua quá trình hoạt động nhiều năm trong dịch vụ tư vấn thiết kế, ÔLy Studio vẫn không ngừng học hỏi và sáng tạo, làm mới mình với đa dạng thể loại sản phẩm. Từ công trình dân dụng như biệt thự, nhà phố, resort, văn phòng, showroom, nhà hàng, cafe cho đến những trải nghiệm mới mẻ với các không gian sáng tạo, tinh tế và độc đáo, được thiết kế bởi đội ngũ kiến trúc sư đầy nhiệt huyết và quy trình làm việc chuyên nghiệp.",
         "furnitureDescription": "Trải qua quá trình hoạt động nhiều năm trong dịch vụ tư vấn thiết kế, ÔLy Studio vẫn không ngừng học hỏi và sáng tạo, làm mới mình với đa dạng thể loại sản phẩm. Từ công trình dân dụng như biệt thự, nhà phố, resort, văn phòng, showroom, nhà hàng, cafe cho đến những trải nghiệm mới mẻ với các không gian sáng tạo, tinh tế và độc đáo, được thiết kế bởi đội ngũ kiến trúc sư đầy nhiệt huyết và quy trình làm việc chuyên nghiệp.",
         "olyCreator": "ĐỘI NGŨ OLY",
-        "shane": "SHANE",
-        "shaneRole": "Người sáng lập",
-        "eduardo": "EDUARDO",
-        "eduardoRole": "Nhà thiết kế",
-        "founderRole": "Người sáng lập",
-        "designerRole": "Nhà thiết kế"
+        "shane": "KTS. NGUYỄN NHẬT MINH",
+        "shaneRole": "Kiến trúc sư trưởng",
+        "eduardo": "Trần Thị Hạnh",
+        "eduardoRole": "Đồng sáng lập",
+        "founderRole": "Kiến trúc sư trưởng",
+        "designerRole": "Đồng sáng lập",
+        "shaneImage": "/assets/creator-1.jpg",
+        "eduardoImage": "/assets/creator-2.jpg"
     },
     "ContactPage": {
         "heroAlt": "Hero Liên hệ",
