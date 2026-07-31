@@ -7,7 +7,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Input from '@/components/forms/Input';
 import Button from '@/components/ui/Button';
-import { User, Lock, Mail, Shield, Check, X } from 'lucide-react';
+import { User, Lock, Mail, Shield, Check, X, Image as ImageIcon } from 'lucide-react';
+import SingleImageUpload from '@/components/admin/SingleImageUpload';
 import { z } from 'zod';
 import { validatePassword } from '@/lib/validations/passwordValidation';
 import type { ChangePasswordInput } from '@/lib/validations/passwordSchema';
@@ -20,6 +21,67 @@ export default function AdminSettingsPage() {
   
   const [passwordValidation, setPasswordValidation] = useState<ReturnType<typeof validatePassword> | null>(null);
   const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
+
+  // About Page settings state
+  const [shaneImage, setShaneImage] = useState('/assets/creator-1.jpg');
+  const [eduardoImage, setEduardoImage] = useState('/assets/creator-2.jpg');
+  const [loadingAbout, setLoadingAbout] = useState(false);
+  const [savingAbout, setSavingAbout] = useState(false);
+  const [aboutSuccess, setAboutSuccess] = useState('');
+  const [aboutError, setAboutError] = useState('');
+
+  useEffect(() => {
+    const fetchAboutSettings = async () => {
+      try {
+        setLoadingAbout(true);
+        const res = await fetch('/api/admin/settings/about');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.shaneImage) setShaneImage(data.shaneImage);
+          if (data.eduardoImage) setEduardoImage(data.eduardoImage);
+        }
+      } catch (err) {
+        console.error('Failed to fetch about settings:', err);
+      } finally {
+        setLoadingAbout(false);
+      }
+    };
+
+    fetchAboutSettings();
+  }, []);
+
+  const handleSaveAboutSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAboutSuccess('');
+    setAboutError('');
+
+    if (!shaneImage?.trim() || !eduardoImage?.trim()) {
+      setAboutError(t('aboutPage.validationRequired'));
+      return;
+    }
+
+    setSavingAbout(true);
+
+    try {
+      const res = await fetch('/api/admin/settings/about', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shaneImage, eduardoImage }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || t('aboutPage.error'));
+      }
+
+      setAboutSuccess(t('aboutPage.success'));
+    } catch (err) {
+      console.error('Failed to save about settings:', err);
+      setAboutError(err instanceof Error ? err.message : t('aboutPage.error'));
+    } finally {
+      setSavingAbout(false);
+    }
+  };
 
   const schemaWithTranslation = useMemo(
     () => {
@@ -341,6 +403,69 @@ export default function AdminSettingsPage() {
               </Button>
             </div>
           </form>
+        </div>
+
+        {/* About Page Settings Section */}
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 sm:p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <ImageIcon size={20} className="text-gray-700" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              {t('aboutPage.title')}
+            </h2>
+          </div>
+
+          {loadingAbout ? (
+            <div className="flex justify-center py-6">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+            </div>
+          ) : (
+            <form onSubmit={handleSaveAboutSettings} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('aboutPage.shaneImage')}
+                  </label>
+                  <SingleImageUpload
+                    value={shaneImage}
+                    onChange={setShaneImage}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('aboutPage.eduardoImage')}
+                  </label>
+                  <SingleImageUpload
+                    value={eduardoImage}
+                    onChange={setEduardoImage}
+                  />
+                </div>
+              </div>
+
+              {aboutSuccess && (
+                <div className="px-4 py-3 bg-green-50 border-2 border-green-500 text-green-700 text-sm rounded-lg">
+                  {aboutSuccess}
+                </div>
+              )}
+
+              {aboutError && (
+                <div className="px-4 py-3 bg-red-50 border-2 border-red-500 text-red-700 text-sm rounded-lg">
+                  {aboutError}
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  type="submit"
+                  disabled={savingAbout}
+                  className="min-w-[160px]"
+                >
+                  {savingAbout ? t('aboutPage.saving') : t('aboutPage.save')}
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>

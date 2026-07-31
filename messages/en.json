@@ -429,6 +429,16 @@
                 "validationLowercase": "Password must contain at least one lowercase letter",
                 "validationNumber": "Password must contain at least one number",
                 "validationSpecialChar": "Password must contain at least one special character"
+            },
+            "aboutPage": {
+                "title": "About Page Settings",
+                "shaneImage": "Founder's Image 1",
+                "eduardoImage": "Founder's Image 2",
+                "save": "Save Settings",
+                "saving": "Saving...",
+                "success": "About page settings saved successfully!",
+                "error": "Failed to save settings",
+                "validationRequired": "Please upload images for both members (Shane and Eduardo)"
             }
         },
         "imageUpload": {
@@ -497,12 +507,14 @@
         "constructionDescription": "Through years of activity in design consulting services, Oly Studio continues to learn and create, renewing itself with diverse product types. From civil works such as villas, townhouses, resorts, offices, showrooms, restaurants, cafes to new experiences with creative, sophisticated and unique spaces, designed by a passionate team of architects and professional working processes.",
         "furnitureDescription": "Through years of activity in design consulting services, Oly Studio continues to learn and create, renewing itself with diverse product types. From civil works such as villas, townhouses, resorts, offices, showrooms, restaurants, cafes to new experiences with creative, sophisticated and unique spaces, designed by a passionate team of architects and professional working processes.",
         "olyCreator": "OLY CREATOR",
-        "shane": "SHANE",
+        "shane": "MINH NGUYEN",
         "shaneRole": "Founder",
-        "eduardo": "EDUARDO",
-        "eduardoRole": "Designer",
+        "eduardo": "Hanh Tran",
+        "eduardoRole": "Co-Founder",
         "founderRole": "Founder",
-        "designerRole": "Designer"
+        "designerRole": "Co-Founder",
+        "shaneImage": "/assets/creator-1.jpg",
+        "eduardoImage": "/assets/creator-2.jpg"
     },
     "ContactPage": {
         "heroAlt": "Contact Hero",

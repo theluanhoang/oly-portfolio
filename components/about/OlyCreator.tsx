@@ -13,12 +13,12 @@ export default function OlyCreator() {
       </h1>
       <div className="flex flex-col md:flex-row md:justify-between gap-8 md:gap-0 flex-1 min-[1122px]:mt-0 mt-[39px]">
         <TeamMember
-          imageSrc="/assets/creator-1.png"
+          imageSrc={t('shaneImage') || "/assets/creator-1.jpg"}
           nameKey="shane"
           roleKey="founder"
         />
         <TeamMember
-          imageSrc="/assets/creator-2.png"
+          imageSrc={t('eduardoImage') || "/assets/creator-2.jpg"}
           nameKey="eduardo"
           roleKey="designer"
         />
