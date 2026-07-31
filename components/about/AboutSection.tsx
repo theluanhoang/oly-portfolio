@@ -3,22 +3,40 @@
 import { Button } from '@/components/ui';
 import { useTranslations } from 'next-intl';
 
-const PROFILE_PDF_URL = 'https://cdn.prod.website-files.com/62e93d1913e5a06515d73fbf/64fd2a89bdf844b51d9ef50e_Oly%20Profile%203_opt.pdf';
-
 export default function AboutSection() {
   const t = useTranslations('AboutPage');
 
+  const profileLink = t('profileLink') || '';
+  const seeMoreLink = t('seeMoreLink') || 'https://cdn.prod.website-files.com/62e93d1913e5a06515d73fbf/64fd2a89bdf844b51d9ef50e_Oly%20Profile%203_opt.pdf';
+
+  const handleProfileClick = () => {
+    if (profileLink) {
+      const url = profileLink.startsWith('/uploads/')
+        ? `${profileLink}?t=${Date.now()}`
+        : profileLink;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   const handleSeeMoreClick = () => {
-    window.open(PROFILE_PDF_URL, '_blank', 'noopener,noreferrer');
+    if (seeMoreLink) {
+      const url = seeMoreLink.startsWith('/uploads/')
+        ? `${seeMoreLink}?t=${Date.now()}`
+        : seeMoreLink;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   return (
     <div className="grid max-[1122px]:grid-cols-1 min-[1123px]:grid-cols-[min(400px,100%)_1fr] min-[1392px]:grid-cols-[min(490px,100%)_1fr] min-[1392px]:gap-x-[152px] min-[1123px]:gap-x-[60px]">
       <div className="md:hidden flex gap-7 justify-end mb-[62px]">
-        <Button 
-          className="w-[113px] sm:mt-0 mt-[23px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px] hover:bg-white cursor-pointer">
-          {t('profile')}
-        </Button>
+        {profileLink && (
+          <Button 
+            onClick={handleProfileClick}
+            className="w-[113px] sm:mt-0 mt-[23px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px] hover:bg-white cursor-pointer">
+            {t('profile')}
+          </Button>
+        )}
         <Button 
           onClick={handleSeeMoreClick}
           className="w-[113px] h-6 sm:flex hidden p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px] hover:bg-white cursor-pointer">
@@ -43,10 +61,13 @@ export default function AboutSection() {
           </div>
         </div>
         <div className="md:flex hidden flex-col gap-7">
-          <Button 
-            className="w-[113px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px] hover:bg-white cursor-pointer">
-            {t('profile')}
-          </Button>
+          {profileLink && (
+            <Button 
+              onClick={handleProfileClick}
+              className="w-[113px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px] hover:bg-white cursor-pointer">
+              {t('profile')}
+            </Button>
+          )}
           <Button 
             onClick={handleSeeMoreClick}
             className="w-[113px] h-6 flex p-0! justify-center items-center gap-[10px] capitalize! bg-white text-black! border-black border-[0.5px] text-center text-[10px] font-normal leading-[20px] tracking-[1.4px] hover:bg-white cursor-pointer">

@@ -9,6 +9,7 @@ import Input from '@/components/forms/Input';
 import Button from '@/components/ui/Button';
 import { User, Lock, Mail, Shield, Check, X, Image as ImageIcon } from 'lucide-react';
 import SingleImageUpload from '@/components/admin/SingleImageUpload';
+import FileUpload from '@/components/admin/FileUpload';
 import { z } from 'zod';
 import { validatePassword } from '@/lib/validations/passwordValidation';
 import type { ChangePasswordInput } from '@/lib/validations/passwordSchema';
@@ -25,6 +26,8 @@ export default function AdminSettingsPage() {
   // About Page settings state
   const [shaneImage, setShaneImage] = useState('/assets/creator-1.jpg');
   const [eduardoImage, setEduardoImage] = useState('/assets/creator-2.jpg');
+  const [profileLink, setProfileLink] = useState('');
+  const [seeMoreLink, setSeeMoreLink] = useState('');
   const [loadingAbout, setLoadingAbout] = useState(false);
   const [savingAbout, setSavingAbout] = useState(false);
   const [aboutSuccess, setAboutSuccess] = useState('');
@@ -39,6 +42,8 @@ export default function AdminSettingsPage() {
           const data = await res.json();
           if (data.shaneImage) setShaneImage(data.shaneImage);
           if (data.eduardoImage) setEduardoImage(data.eduardoImage);
+          if (data.profileLink !== undefined) setProfileLink(data.profileLink);
+          if (data.seeMoreLink !== undefined) setSeeMoreLink(data.seeMoreLink);
         }
       } catch (err) {
         console.error('Failed to fetch about settings:', err);
@@ -66,7 +71,12 @@ export default function AdminSettingsPage() {
       const res = await fetch('/api/admin/settings/about', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shaneImage, eduardoImage }),
+        body: JSON.stringify({
+          shaneImage,
+          eduardoImage,
+          profileLink,
+          seeMoreLink,
+        }),
       });
 
       if (!res.ok) {
@@ -424,7 +434,7 @@ export default function AdminSettingsPage() {
             <form onSubmit={handleSaveAboutSettings} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-bold font-montserrat text-black text-base tracking-[0.16px]">
                     {t('aboutPage.shaneImage')}
                   </label>
                   <SingleImageUpload
@@ -433,7 +443,7 @@ export default function AdminSettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-bold font-montserrat text-black text-base tracking-[0.16px]">
                     {t('aboutPage.eduardoImage')}
                   </label>
                   <SingleImageUpload
@@ -441,6 +451,21 @@ export default function AdminSettingsPage() {
                     onChange={setEduardoImage}
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-100 pt-6">
+                <FileUpload
+                  label={t('aboutPage.profileLink')}
+                  value={profileLink}
+                  onChange={setProfileLink}
+                  targetName="profile.pdf"
+                />
+                <FileUpload
+                  label={t('aboutPage.seeMoreLink')}
+                  value={seeMoreLink}
+                  onChange={setSeeMoreLink}
+                  targetName="seemore.pdf"
+                />
               </div>
 
               {aboutSuccess && (

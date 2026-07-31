@@ -37,6 +37,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client', 'prisma', 'sharp'],
+    middlewareClientMaxBodySize: 157286400, // 150MB in bytes
   },
 };
 

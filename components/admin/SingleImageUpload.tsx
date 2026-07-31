@@ -133,7 +133,7 @@ export default function SingleImageUpload({
         });
 
         xhr.addEventListener('error', () => reject(new Error('Upload failed')));
-        xhr.open('POST', '/api/upload');
+        xhr.open('POST', `/api/upload?oldUrl=${encodeURIComponent(value || '')}`);
         xhr.send(formData);
       });
 
