@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useEffect } from 'react';
 import { useResponsive } from "@/hooks/useResponsive";
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
@@ -12,6 +13,23 @@ interface FooterProps {
 export default function Footer({ isFixed = false }: FooterProps) {
   const t = useTranslations('Footer');
   const router = useRouter();
+  const footerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const footer = footerRef.current;
+    if (!footer) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.target.getBoundingClientRect().height;
+        document.documentElement.style.setProperty('--footer-height', `${height}px`);
+      }
+    });
+
+    observer.observe(footer);
+    return () => observer.disconnect();
+  }, []);
+
   const positionClasses = isFixed
     ? "fixed bottom-0 left-0 right-0 z-10"
     : "relative z-10";
@@ -21,7 +39,7 @@ export default function Footer({ isFixed = false }: FooterProps) {
     router.push('/contact');
   };
   return (
-    <footer className={`${positionClasses} bg-background`}>
+    <footer ref={footerRef} className={`${positionClasses} bg-background`}>
       <div className="wrapper flex items-start justify-between py-10! min-[468px]:pr-10! pr-[6px]!">
         {isSm ? (
           <div className="flex items-start justify-between gap-[10px] w-full">

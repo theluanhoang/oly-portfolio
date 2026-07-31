@@ -23,10 +23,22 @@ export default function ProjectsClient() {
   const { galleryRef, spacerRef, scrollIndicatorRef } = useHorizontalScroll();
   const [sections, setSections] = useState<ProjectImage[][]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [viewportHeight, setViewportHeight] = useState<number>(0);
   const headerHeight = useHeaderHeight();
   const { isMobile } = useResponsive();
   const t = useTranslations('Common');
   const tProjects = useTranslations('Projects');
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportHeight(window.innerHeight || 0);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const topGap = viewportHeight > 0 && viewportHeight < 700 ? 15 : 55;
 
   useEffect(() => {
     async function loadProjects() {
@@ -136,16 +148,16 @@ export default function ProjectsClient() {
         <div 
           className="fixed w-full overflow-hidden z-0"
           style={{ 
-            top: `calc(55px + ${headerHeight}px)`,
-            height: `calc(100vh - ${headerHeight}px)`,
+            top: `calc(${topGap}px + ${headerHeight}px)`,
+            height: `calc(100vh - ${headerHeight}px - ${topGap}px - var(--footer-height, 190px))`,
             left: 0,
             right: 0
           }}
         >
           <div className="max-w-[1512px] mx-auto h-full px-4 sm:px-[42px] relative">
-            <div className="relative h-full overflow-x-hidden">
+            <div className="relative h-full overflow-hidden">
               <section
-                className="absolute top-0 left-0 flex gap-[10px]"
+                className="absolute top-0 left-0 h-full flex gap-[10px]"
                 style={{
                   width: 'max-content',
                   minWidth: '100%',
@@ -225,17 +237,17 @@ export default function ProjectsClient() {
         <div 
           className="fixed w-full overflow-hidden z-0"
           style={{ 
-            top: `calc(55px + ${headerHeight}px)`,
-            height: `calc(100vh - ${headerHeight}px)`,
+            top: `calc(${topGap}px + ${headerHeight}px)`,
+            height: `calc(100vh - ${headerHeight}px - ${topGap}px - var(--footer-height, 190px))`,
             left: 0,
             right: 0
           }}
         >
           <div className="max-w-[1512px] mx-auto h-full px-4 sm:px-[42px] relative">
-            <div className="relative h-full overflow-x-hidden">
+            <div className="relative h-full overflow-hidden">
               <section
                 ref={galleryRef}
-                className="absolute top-0 left-0 flex gap-[10px] transition-transform duration-100 ease-out will-change-transform"
+                className="absolute top-0 left-0 h-full flex gap-[10px] transition-transform duration-100 ease-out will-change-transform"
                 style={{
                   width: 'max-content',
                   minWidth: '100%',
