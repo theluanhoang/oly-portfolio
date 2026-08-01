@@ -1,7 +1,6 @@
 'use client';
 
 import dynamicImport from 'next/dynamic';
-import ContactInfo from './ContactInfo';
 import { DefaultLoading } from '@/lib/performance/dynamic-imports';
 
 const GoogleMap = dynamicImport(
@@ -18,7 +17,6 @@ export default function ContactMapSection() {
       <div className="h-[500px] lg:h-[663px] lg:mt-8 mb-[73px]">
         <GoogleMap className="w-full h-full rounded-sm" />
       </div>
-      <ContactInfo />
     </div>
   );
 }
