@@ -489,9 +489,9 @@
         "office": "Office",
         "hotline": "Hotline",
         "facebook": "Facebook",
-        "instagram": "Instagram",
+        "youtube": "Youtube",
         "officeAddress": "Address: 193/9P Dien Bien Phu, W 15, Binh Thanh, TP HCM",
-        "hotlineNumber": "Hotline: 0900 000 000"
+        "hotlineNumber": "Hotline: 0902 757 525"
     },
     "AboutPage": {
         "heroAlt": "About Hero",
@@ -536,7 +536,7 @@
             "placeholders": {
                 "customerName": "Enter your name",
                 "email": "example@email.com",
-                "phone": "0900 000 000",
+                "phone": "0902 757 525",
                 "category": "Select category",
                 "location": "Enter project address",
                 "area": "Example: 100 m²",
@@ -569,7 +569,7 @@
         },
         "contactInfo": {
             "email": "info@olystudio.vn",
-            "hotline": "Hotline: 0900 000 000",
+            "hotline": "Hotline: 0902 757 525",
             "address": "193/9P Dien Bien Phu, Ward 15, Binh Thanh District, Ho Chi Minh City"
         },
         "map": {

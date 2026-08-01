@@ -44,22 +44,24 @@ export default function Footer({ isFixed = false }: FooterProps) {
         {isSm ? (
           <div className="flex items-start justify-between gap-[10px] w-full">
             <div className="flex flex-col gap-[9px]">
-              <p className="text-black max-w-[743px] min-[843px]:text-[18px] text-[12px] font-bold leading-normal tracking-[2.52px]">
+              <p className="text-black max-w-[743px] min-[843px]:text-[16px] text-[10px] font-bold leading-normal tracking-[2.52px]">
                 {t('tagline')}
               </p>
               <div className="flex min-[747px]:flex-row flex-col min-[747px]:items-center items-start min-[747px]:gap-[77px] gap-[9px]">
-                <p
-                  className="text-black min-[843px]:text-[18px] text-[12px] font-bold leading-normal tracking-[2.52px] underline decoration-skip-ink-none"
+                <a
+                  href="mailto:info@olystudio.vn"
+                  className="text-black min-[843px]:text-[16px] text-[10px] font-bold leading-normal tracking-[2.52px] underline decoration-skip-ink-none hover:opacity-80 transition-opacity"
                   style={{ textUnderlinePosition: "from-font" }}
                 >
                   info@olystudio.vn
-                </p>
-                <p
-                  className="text-black min-[843px]:text-[18px] text-[12px] font-bold leading-normal tracking-[2.52px] underline decoration-skip-ink-none"
+                </a>
+                <a
+                  href="tel:0902757525"
+                  className="text-black min-[843px]:text-[16px] text-[10px] font-bold leading-normal tracking-[2.52px] underline decoration-skip-ink-none hover:opacity-80 transition-opacity"
                   style={{ textUnderlinePosition: "from-font" }}
                 >
                   {t('hotlineNumber')}
-                </p>
+                </a>
               </div>
             </div>
             <Button
@@ -71,24 +73,33 @@ export default function Footer({ isFixed = false }: FooterProps) {
             </Button>
             <div className="flex flex-col gap-[10px]">
               <div className="flex items-center justify-between">
-                <p
+                <a
+                  href="https://zalo.me/0902757525"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="cursor-pointer text-black text-[12px] font-bold leading-normal hover:underline active:underline decoration-skip-ink-none"
                   style={{ textUnderlinePosition: "from-font" }}
                 >
                   {t('zalo')}
-                </p>
-                <p
+                </a>
+                <a
+                  href="https://www.facebook.com/olystudio.18"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="cursor-pointer text-black text-[12px] font-bold leading-normal hover:underline active:underline decoration-skip-ink-none"
                   style={{ textUnderlinePosition: "from-font" }}
                 >
                   {t('facebook')}
-                </p>
-                <p
+                </a>
+                <a
+                  href="https://www.youtube.com/@olystudio4524?si=odaF8cXrnZojdo2O"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="cursor-pointer text-black text-[12px] font-bold leading-normal hover:underline active:underline decoration-skip-ink-none"
                   style={{ textUnderlinePosition: "from-font" }}
                 >
-                  {t('instagram')}
-                </p>
+                  {t('youtube')}
+                </a>
               </div>
               <p className="text-black text-[14px] font-normal leading-normal">
                 {t('officeAddress')}
@@ -106,32 +117,42 @@ export default function Footer({ isFixed = false }: FooterProps) {
           <div className="flex flex-col gap-[65px]">
             <div className="flex flex-col gap-[12px]">
               <div className="flex items-center justify-between min-[393px]:gap-6 gap-3">
-                <p
+                <a
+                  href="https://zalo.me/0902757525"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="cursor-pointer text-black text-[12px] font-bold leading-normal hover:underline active:underline decoration-skip-ink-none"
                   style={{ textUnderlinePosition: "from-font" }}
                 >
                   {t('zalo')}
-                </p>
-                <p
+                </a>
+                <a
+                  href="tel:0902757525"
                   className="cursor-pointer text-black text-[12px] font-bold leading-normal hover:underline active:underline decoration-skip-ink-none"
                   style={{ textUnderlinePosition: "from-font" }}
                 >
                   {t('hotline')}
-                </p>
-                <p
+                </a>
+                <a
+                  href="https://www.facebook.com/olystudio.18"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="cursor-pointer text-black text-[12px] font-bold leading-normal hover:underline active:underline decoration-skip-ink-none"
                   style={{ textUnderlinePosition: "from-font" }}
                 >
                   {t('facebook')}
-                </p>
-                <p
+                </a>
+                <a
+                  href="https://www.youtube.com/@olystudio4524?si=odaF8cXrnZojdo2O"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="cursor-pointer text-black text-[12px] font-bold leading-normal hover:underline active:underline decoration-skip-ink-none"
                   style={{ textUnderlinePosition: "from-font" }}
                 >
-                  {t('instagram')}
-                </p>
+                  {t('youtube')}
+                </a>
               </div>
-              <p className="text-black min-[843px]:text-[18px] text-[12px] font-bold leading-normal tracking-[2.52px]">
+              <p className="text-black min-[843px]:text-[16px] text-[10px] font-bold leading-normal tracking-[2.52px]">
                 {t('tagline')}
               </p>
             </div>
@@ -141,18 +162,20 @@ export default function Footer({ isFixed = false }: FooterProps) {
               </p>
               <div className="flex items-end justify-between">
                 <div className="flex flex-col gap-[12px]">
-                  <p
-                    className="text-black min-[843px]:text-[18px] text-[12px] font-bold leading-normal tracking-[2.52px] underline decoration-skip-ink-none"
+                  <a
+                    href="mailto:info@olystudio.vn"
+                    className="text-black min-[843px]:text-[16px] text-[10px] font-bold leading-normal tracking-[2.52px] underline decoration-skip-ink-none hover:opacity-80 transition-opacity"
                     style={{ textUnderlinePosition: "from-font" }}
                   >
                     info@olystudio.vn
-                  </p>
-                  <p
-                    className="text-black min-[843px]:text-[18px] text-[12px] font-bold leading-normal tracking-[2.52px] underline decoration-skip-ink-none"
+                  </a>
+                  <a
+                    href="tel:0902757525"
+                    className="text-black min-[843px]:text-[16px] text-[10px] font-bold leading-normal tracking-[2.52px] underline decoration-skip-ink-none hover:opacity-80 transition-opacity"
                     style={{ textUnderlinePosition: "from-font" }}
                   >
                     {t('hotlineNumber')}
-                  </p>
+                  </a>
                   <Button
                   onClick={handleContactClick}
                   className="min-[390px]:hidden block min-[464px]:w-[208px] w-auto min-[464px]:px-[10px]! py-[5px]! px-1! gap-[10px] border-[0.5px] border-black bg-white text-black! text-center text-[10px] font-normal leading-[20px] tracking-[0.5px]! uppercase hover:bg-white"
