@@ -489,9 +489,9 @@
         "office": "Văn phòng",
         "hotline": "Hotline",
         "facebook": "Facebook",
-        "instagram": "Instagram",
+        "youtube": "Youtube",
         "officeAddress": "Địa chỉ: 193/9P Điện Biên Phủ, P.15, Bình Thạnh, TP HCM",
-        "hotlineNumber": "Hotline: 0900 000 000"
+        "hotlineNumber": "Hotline: 0902 757 525"
     },
     "AboutPage": {
         "heroAlt": "Hero Giới thiệu",
@@ -536,7 +536,7 @@
             "placeholders": {
                 "customerName": "Nhập tên của bạn",
                 "email": "example@email.com",
-                "phone": "0900 000 000",
+                "phone": "0902 757 525",
                 "category": "Chọn thể loại",
                 "location": "Nhập địa chỉ dự án",
                 "area": "Ví dụ: 100 m²",
@@ -569,7 +569,7 @@
         },
         "contactInfo": {
             "email": "info@olystudio.vn",
-            "hotline": "Hotline: 0900 000 000",
+            "hotline": "Hotline: 0902 757 525",
             "address": "193/9P Điện Biên Phủ, Phường 15, Quận Bình Thạnh, TP.HCM"
         },
         "map": {
