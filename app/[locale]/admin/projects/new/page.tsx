@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import dynamicImport from 'next/dynamic';
 import GalleryUpload from '@/components/admin/GalleryUpload';
+import RelatedProjectsSelector from '@/components/admin/RelatedProjectsSelector';
 import { DefaultLoading } from '@/lib/performance/dynamic-imports';
 
 const TiptapEditor = dynamicImport(
@@ -89,6 +90,7 @@ export default function NewProjectPage() {
       gallery: [],
       categoryId: null,
       subCategoryId: null,
+      relatedProjectIds: [],
       translations: {
         vi: {
           title: '',
@@ -99,10 +101,10 @@ export default function NewProjectPage() {
         },
         en: {
           title: '',
-      location: '',
-      area: '',
-      year: '',
-      content: '',
+          location: '',
+          area: '',
+          year: '',
+          content: '',
         },
       },
     },
@@ -118,6 +120,7 @@ export default function NewProjectPage() {
   const enContent = translations?.en?.content || '';
   const selectedCategoryId = watch('categoryId');
   const selectedSubCategoryId = watch('subCategoryId');
+  const relatedProjectIds = watch('relatedProjectIds') || [];
   
   // Check which tabs have content
   const hasViContent = viContent.trim().length > 0;
@@ -904,6 +907,7 @@ export default function NewProjectPage() {
         gallery: galleryUrlStrings,
         categoryId: finalCategoryId,
         subCategoryId: finalSubCategoryId,
+        relatedProjectIds: data.relatedProjectIds || [],
         translations: data.translations,
       };
       
@@ -1321,6 +1325,20 @@ export default function NewProjectPage() {
                   onReorder={gallery.handleReorder}
                   error={errors.gallery?.message as string | undefined}
                 />
+
+                <div className="pt-8 border-t border-[#e0e0e0]">
+                  <RelatedProjectsSelector
+                    selectedIds={relatedProjectIds}
+                    onChange={(ids) => setValue('relatedProjectIds', ids, { shouldValidate: true })}
+                    label={t('fields.relatedProjects')}
+                    description={t('fields.relatedProjectsDesc')}
+                    loadingLabel={t('fields.relatedProjectsLoading')}
+                    emptyLabel={t('fields.relatedProjectsEmpty')}
+                    noResultsLabel={t('fields.relatedProjectsNoResults')}
+                    searchPlaceholder={t('fields.relatedProjectsSearch')}
+                    maxItems={6}
+                  />
+                </div>
 
                 <div className="flex justify-end pt-4 border-t border-[#e0e0e0]">
                   <Button type="button" onClick={handleNext}>

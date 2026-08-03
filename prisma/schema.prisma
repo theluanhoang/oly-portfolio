@@ -25,7 +25,27 @@ model Project {
   subCategory  SubCategory?  @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
   translations ProjectTranslation[]
 
+  relatedFrom ProjectRelation[] @relation("RelatedFrom")
+  relatedTo   ProjectRelation[] @relation("RelatedTo")
+
   @@map("projects")
+}
+
+model ProjectRelation {
+  id                    String   @id @default(cuid())
+  projectId             String
+  relatedProjectId      String
+  displayOrder          Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  project               Project  @relation("RelatedFrom", fields: [projectId], references: [id], onDelete: Cascade)
+  relatedProject        Project  @relation("RelatedTo", fields: [relatedProjectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, relatedProjectId])
+  @@index([projectId])
+  @@index([relatedProjectId])
+  @@map("project_relations")
 }
 
 model ProjectTranslation {

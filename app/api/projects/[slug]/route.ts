@@ -4,6 +4,7 @@ import { authOptions, checkAdminAuth } from '@/lib/auth';
 import type { ProjectTranslationSchema } from '@/lib/validations/projectSchema';
 import { unlink, rm } from 'fs/promises';
 import { join } from 'path';
+import { syncRelatedProjects } from '@/lib/projects/relatedProjects';
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -28,7 +29,10 @@ export async function GET(request: Request, { params }: RouteParams): Promise<Re
           include: {
             translations: true,
           }
-        }
+        },
+        relatedFrom: {
+          orderBy: { displayOrder: 'asc' },
+        },
       },
     });
 
@@ -45,7 +49,8 @@ export async function GET(request: Request, { params }: RouteParams): Promise<Re
         const subCategoryTranslation = project.subCategory?.translations.find(t => t.locale === locale)
           || project.subCategory?.translations.find(t => t.locale === 'vi')
           || project.subCategory?.translations[0];
-        
+        const relatedProjectIds = project.relatedFrom.map(r => r.relatedProjectId);
+
         return Response.json({
           ...project,
           title: translation.title,
@@ -57,11 +62,13 @@ export async function GET(request: Request, { params }: RouteParams): Promise<Re
           area: translation.area,
           year: translation.year,
           content: translation.content,
+          relatedProjectIds,
         });
       }
     }
 
-    return Response.json(project);
+    const relatedProjectIds = project.relatedFrom.map(r => r.relatedProjectId);
+    return Response.json({ ...project, relatedProjectIds });
   } catch (error) {
     console.error('Error fetching project:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -125,7 +132,7 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
 
     if (projectData.translations && typeof projectData.translations === 'object') {
       const translations = projectData.translations as Record<string, ProjectTranslationSchema>;
-      
+
       await prisma.projectTranslation.deleteMany({
         where: { projectId: updated.id },
       });
@@ -146,6 +153,17 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Re
           });
         }
       }
+    }
+
+    // Sync related projects
+    if (projectData.relatedProjectIds !== undefined) {
+      await syncRelatedProjects(
+        prisma,
+        prisma,
+        updated.id,
+        projectData.relatedProjectIds,
+        updated.slug,
+      );
     }
 
     const updatedWithTranslations = await prisma.project.findUnique({

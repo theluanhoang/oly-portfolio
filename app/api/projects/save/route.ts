@@ -3,6 +3,7 @@ import { projectSchema, type ProjectTranslationSchema } from '@/lib/validations/
 import type { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, checkAdminAuth } from '@/lib/auth';
+import { buildRelatedCreateData } from '@/lib/projects/relatedProjects';
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
@@ -73,6 +74,13 @@ export async function POST(request: NextRequest): Promise<Response> {
       nextDisplayOrder = 0;
     }
 
+    const relatedCreateData = await buildRelatedCreateData(
+      prisma,
+      null,
+      projectData.relatedProjectIds,
+      projectData.slug,
+    );
+
     const project = await prisma.project.create({
       data: {
         slug: projectData.slug,
@@ -94,6 +102,12 @@ export async function POST(request: NextRequest): Promise<Response> {
               year: translationData.year || '',
               content: translationData.content || '',
             })),
+        },
+        relatedFrom: {
+          create: relatedCreateData.map((item) => ({
+            relatedProjectId: item.relatedProjectId,
+            displayOrder: item.displayOrder,
+          })),
         },
       },
       include: {
