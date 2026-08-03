@@ -167,7 +167,15 @@
                 "noOption": "No options",
                 "creating": "Creating...",
                 "update": "Update",
-                "delete": "Delete"
+                "delete": "Delete",
+                "relatedProjects": "Related Projects",
+                "relatedProjectsDesc": "Select up to 6 projects to display in the detail page sidebar. Drag and drop to reorder.",
+                "relatedProjectsSearch": "Search by title, slug...",
+                "relatedProjectsEmpty": "No projects selected yet",
+                "relatedProjectsLoading": "Loading projects...",
+                "relatedProjectsNoResults": "No matching projects found",
+                "relatedProjectsClearAll": "Clear all",
+                "relatedProjectsSelected": "Selected"
             },
             "category": {
                 "addNew": "Add New Category",

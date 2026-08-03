@@ -167,7 +167,15 @@
                 "noOption": "Không có tùy chọn",
                 "creating": "Đang tạo...",
                 "update": "Cập nhật",
-                "delete": "Xóa"
+                "delete": "Xóa",
+                "relatedProjects": "Dự án liên quan",
+                "relatedProjectsDesc": "Chọn tối đa 6 dự án hiển thị ở sidebar trang chi tiết. Kéo thả để sắp xếp thứ tự.",
+                "relatedProjectsSearch": "Tìm theo tiêu đề, slug...",
+                "relatedProjectsEmpty": "Chưa có dự án nào được chọn",
+                "relatedProjectsLoading": "Đang tải danh sách dự án...",
+                "relatedProjectsNoResults": "Không tìm thấy dự án phù hợp",
+                "relatedProjectsClearAll": "Xóa tất cả",
+                "relatedProjectsSelected": "Đã chọn"
             },
             "category": {
                 "addNew": "Thêm thể loại mới",

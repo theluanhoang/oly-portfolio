@@ -4,7 +4,7 @@ import { Link } from "@/i18n/routing";
 import { useTranslations } from 'next-intl';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 
-interface Project {
+interface RelatedProjectItem {
   slug: string;
   title: string;
   heroImage: string | null;
@@ -14,7 +14,7 @@ interface Project {
 }
 
 interface MoreProjectsProps {
-  projects: Project[];
+  projects: RelatedProjectItem[];
   currentSlug: string;
 }
 

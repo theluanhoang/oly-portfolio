@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import dynamicImport from 'next/dynamic';
 import GalleryUpload from '@/components/admin/GalleryUpload';
+import RelatedProjectsSelector from '@/components/admin/RelatedProjectsSelector';
 
 const TiptapEditor = dynamicImport(
   () => import('@/components/admin/TiptapEditor'),
@@ -95,6 +96,7 @@ export default function EditProjectPage() {
       gallery: [],
       categoryId: null,
       subCategoryId: null,
+      relatedProjectIds: [],
       translations: {
         vi: {
           title: '',
@@ -105,10 +107,10 @@ export default function EditProjectPage() {
         },
         en: {
           title: '',
-      location: '',
-      area: '',
-      year: '',
-      content: '',
+          location: '',
+          area: '',
+          year: '',
+          content: '',
         },
       },
     },
@@ -121,6 +123,7 @@ export default function EditProjectPage() {
   const viContent = translations?.vi?.content || '';
   const enContent = translations?.en?.content || '';
   const selectedCategoryId = watch('categoryId');
+  const relatedProjectIds = watch('relatedProjectIds') || [];
   const selectedSubCategoryId = watch('subCategoryId');
   
   // Check which tabs have content
@@ -661,6 +664,7 @@ export default function EditProjectPage() {
           gallery: project.gallery || [],
           categoryId: project.categoryId || null,
           subCategoryId: project.subCategoryId || null,
+          relatedProjectIds: project.relatedProjectIds || [],
           translations: translationsData,
         });
 
@@ -871,6 +875,7 @@ export default function EditProjectPage() {
         gallery: galleryUrlStrings,
         categoryId: finalCategoryId,
         subCategoryId: finalSubCategoryId,
+        relatedProjectIds: data.relatedProjectIds || [],
         translations: data.translations,
       };
       
@@ -1292,6 +1297,21 @@ export default function EditProjectPage() {
                   onReorder={gallery.handleReorder}
                   error={errors.gallery?.message as string | undefined}
                 />
+
+                <div className="pt-8 border-t border-[#e0e0e0]">
+                  <RelatedProjectsSelector
+                    selectedIds={relatedProjectIds}
+                    onChange={(ids) => setValue('relatedProjectIds', ids, { shouldValidate: true })}
+                    excludeSlug={slug || watch('slug') || undefined}
+                    label={t('fields.relatedProjects')}
+                    description={t('fields.relatedProjectsDesc')}
+                    loadingLabel={t('fields.relatedProjectsLoading')}
+                    emptyLabel={t('fields.relatedProjectsEmpty')}
+                    noResultsLabel={t('fields.relatedProjectsNoResults')}
+                    searchPlaceholder={t('fields.relatedProjectsSearch')}
+                    maxItems={6}
+                  />
+                </div>
 
                 <div className="flex justify-end pt-4 border-t border-[#e0e0e0]">
                   <Button type="button" onClick={handleNext}>

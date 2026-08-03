@@ -45,6 +45,7 @@ export const projectSchema = z.object({
     .min(1, 'Vui lòng upload ít nhất một ảnh'),
   categoryId: z.string().optional().nullable(),
   subCategoryId: z.string().optional().nullable(),
+  relatedProjectIds: z.array(z.string()).min(0),
   translations: z.record(z.string(), projectTranslationSchema).refine(
     (translations) => Object.keys(translations).length > 0,
     'Phải có ít nhất một bản dịch'

@@ -130,8 +130,10 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     notFound();
   }
 
-  const allProjects = await getProjects(locale);
-  const hasMoreProjects = allProjects.length > 1;
+  const sidebarProjects = project.relatedProjects && project.relatedProjects.length > 0
+    ? project.relatedProjects
+    : null;
+  const hasMoreProjects = !!sidebarProjects || (await getProjects(locale)).length > 1;
   const galleryImages = project.gallery && project.gallery.length > 0 
     ? project.gallery 
     : project.heroImage 
@@ -255,17 +257,17 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
                 {/* Sidebar - Related Projects */}
                 <aside className="lg:col-span-1" aria-label="Related projects">
-                  <MoreProjects 
-                    projects={allProjects.map(p => ({
-                      slug: p.slug,
-                      title: p.title,
-                      heroImage: p.heroImage,
-                      category: p.category,
-                      location: p.location,
-                      year: p.year,
-                    }))}
-                    currentSlug={slug}
-                  />
+                  {sidebarProjects ? (
+                    <MoreProjects
+                      projects={sidebarProjects}
+                      currentSlug={slug}
+                    />
+                  ) : (
+                    <MoreProjects
+                      projects={[]}
+                      currentSlug={slug}
+                    />
+                  )}
                 </aside>
               </div>
             ) : (

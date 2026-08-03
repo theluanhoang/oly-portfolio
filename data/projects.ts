@@ -74,6 +74,26 @@ export async function getProjectBySlug(slug: string, locale: string = 'vi') {
             translations: true,
           },
         },
+        relatedFrom: {
+          include: {
+            relatedProject: {
+              include: {
+                translations: true,
+                category: {
+                  include: {
+                    translations: true,
+                  },
+                },
+                subCategory: {
+                  include: {
+                    translations: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { displayOrder: 'asc' },
+        },
       },
     });
     
@@ -105,6 +125,24 @@ export async function getProjectBySlug(slug: string, locale: string = 'vi') {
       area: translation?.area || '',
       year: translation?.year || '',
       content: translation?.content || '',
+      relatedProjects: project.relatedFrom.map((rel) => {
+        const relProject = rel.relatedProject;
+        const relTranslation = relProject.translations.find(t => t.locale === locale)
+          || relProject.translations.find(t => t.locale === 'vi')
+          || relProject.translations.find(t => t.locale === 'en')
+          || relProject.translations[0];
+        const relCatTrans = relProject.category?.translations.find(t => t.locale === locale)
+          || relProject.category?.translations.find(t => t.locale === 'vi')
+          || relProject.category?.translations[0];
+        return {
+          slug: relProject.slug,
+          title: relTranslation?.title || '',
+          heroImage: relProject.heroImage,
+          category: relCatTrans?.name || '',
+          location: relTranslation?.location || '',
+          year: relTranslation?.year || '',
+        };
+      }),
     };
   } catch (error) {
     console.error('Error fetching project by slug:', error);
