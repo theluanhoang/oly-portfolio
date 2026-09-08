@@ -23,7 +23,8 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-montserrat), sans-serif;
-  overflow-x: hidden;
+  /* Use 'clip' instead of 'hidden' — 'hidden' breaks position:sticky by creating a new scroll container */
+  overflow-x: clip;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -54,7 +55,8 @@ body {
 }
 
 html {
-  overflow-x: hidden;
+  /* Use 'clip' instead of 'hidden' — 'hidden' breaks position:sticky by creating a new scroll container */
+  overflow-x: clip;
 }
 
 .breakout-full-width {
@@ -78,6 +80,11 @@ html {
 
 .product-card-border {
   border: 0.5px solid var(--color-product-border);
+}
+
+/* Hide scrollbar for More Projects sidebar while keeping scroll functionality */
+.more-projects-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 /* Tiptap Editor Styles */
