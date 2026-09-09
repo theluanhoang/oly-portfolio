@@ -104,6 +104,8 @@ export function FloatingToolbar({
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [hasSelection, setHasSelection] = useState(false);
   const [inlineActive, setInlineActive] = useState<Record<string, boolean>>({});
+  const [localFontFamily, setLocalFontFamily] = useState(selectedElements[0]?.style?.fontFamily || 'inherit');
+  const [localFontSize, setLocalFontSize] = useState<number>(selectedElements[0]?.style?.fontSize as number || 16);
 
   // --- Debounced colors ---
   const commitTextColor = useCallback((color: string) => {
@@ -130,6 +132,14 @@ export function FloatingToolbar({
   const style0 = el0?.style ?? {};
   const textColorDebounce = useDebouncedColor(style0.color || '#000000', commitTextColor);
   const bgColorDebounce = useDebouncedColor(style0.backgroundColor || '#ffff00', commitBgColor);
+
+  // Sync local font state when selected element changes (only in block-select mode, not inline editing)
+  useEffect(() => {
+    if (isEditing) return;  // In inline mode, preserve user's dropdown selection
+    setLocalFontFamily(selectedElements[0]?.style?.fontFamily || 'inherit');
+    setLocalFontSize(selectedElements[0]?.style?.fontSize as number || 16);
+  }, [selectedElements, isEditing]);
+
 
   // Track text selection inside editingRef
   useEffect(() => {
@@ -387,10 +397,11 @@ export function FloatingToolbar({
 
           {/* â”€â”€ Font family picker â€” native <select> so the option list is never clipped by overflow:auto â”€â”€ */}
           <select
-            value={style.fontFamily || 'inherit'}
+            value={localFontFamily}
             onMouseDown={() => { if (isEditing) saveSelection(); }}
             onChange={(e) => {
               const f = e.target.value;
+              setLocalFontFamily(f);
               if (isEditing) {
                 wrapSelectionWithStyle(
                   'fontFamily',
@@ -425,10 +436,11 @@ export function FloatingToolbar({
 
           {/* â”€â”€ Font size â”€â”€ */}
           <select
-            value={style.fontSize || 16}
+            value={localFontSize}
             onMouseDown={() => { if (isEditing) saveSelection(); }}
             onChange={(e) => {
               const px = Number(e.target.value);
+              setLocalFontSize(px);
               if (isEditing) {
                 wrapSelectionWithStyle('fontSize', `${px}px`, () => apply({ fontSize: px }));
               } else {
