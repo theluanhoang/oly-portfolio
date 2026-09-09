@@ -78,6 +78,77 @@
         "vietnamese": "VIE"
     },
     "Admin": {
+        "VisualEditor": {
+            "toolbar": {
+                "add": "Add",
+                "text": "Text",
+                "heading": "Heading",
+                "image": "Image",
+                "divider": "Divider",
+                "video": "Video",
+                "undo": "Undo (Ctrl+Z)",
+                "redo": "Redo (Ctrl+Y)",
+                "duplicate": "Duplicate (Ctrl+D)",
+                "delete": "Delete (Delete)",
+                "background": "Background",
+                "format": {
+                    "bold": "Bold (Ctrl+B)",
+                    "italic": "Italic (Ctrl+I)",
+                    "underline": "Underline (Ctrl+U)",
+                    "strikethrough": "Strikethrough",
+                    "superscript": "Superscript",
+                    "subscript": "Subscript",
+                    "removeFormat": "Remove formatting",
+                    "alignLeft": "Align left",
+                    "alignCenter": "Align center",
+                    "alignRight": "Align right",
+                    "alignJustify": "Justify"
+                }
+            },
+            "inspector": {
+                "title": "Inspector",
+                "expand": "Expand",
+                "collapse": "Collapse",
+                "selectPrompt": "Select a block to edit",
+                "blocks": "{count} blocks",
+                "sections": {
+                    "position": "Position & Size",
+                    "heading": "Heading",
+                    "text": "Text",
+                    "background": "Background & Border",
+                    "image": "Image",
+                    "divider": "Divider",
+                    "layer": "Layer",
+                    "manage": "Manage"
+                },
+                "fields": {
+                    "level": "Level",
+                    "fit": "Fit",
+                    "thickness": "Thickness",
+                    "opacity": "Opacity",
+                    "radius": "Radius",
+                    "color": "Color",
+                    "size": "Size",
+                    "lineHeight": "H",
+                    "letterSpacing": "LS",
+                    "background": "BG",
+                    "style": "Style"
+                },
+                "layer": {
+                    "top": "↑ Top",
+                    "up": "▲ Up",
+                    "down": "▼ Down",
+                    "bottom": "↓ Bot"
+                },
+                "lock": "Lock element",
+                "locked": "Locked — Unlock",
+                "deleteElement": "Delete element"
+            },
+            "defaultContent": {
+                "text": "Enter text...",
+                "heading": "Heading"
+            }
+        },
         "login": {
             "title": "Admin Login",
             "subtitle": "Please login to continue",

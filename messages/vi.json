@@ -78,6 +78,77 @@
         "vietnamese": "VIE"
     },
     "Admin": {
+        "VisualEditor": {
+            "toolbar": {
+                "add": "Thêm",
+                "text": "Text",
+                "heading": "Tiêu đề",
+                "image": "Ảnh",
+                "divider": "Divider",
+                "video": "Video",
+                "undo": "Hoàn tác (Ctrl+Z)",
+                "redo": "Làm lại (Ctrl+Y)",
+                "duplicate": "Nhân đôi (Ctrl+D)",
+                "delete": "Xóa (Delete)",
+                "background": "Nền",
+                "format": {
+                    "bold": "In đậm (Ctrl+B)",
+                    "italic": "In nghiêng (Ctrl+I)",
+                    "underline": "Gạch dưới (Ctrl+U)",
+                    "strikethrough": "Gạch ngang",
+                    "superscript": "Số mũ",
+                    "subscript": "Chỉ số dưới",
+                    "removeFormat": "Xóa định dạng",
+                    "alignLeft": "Căn trái",
+                    "alignCenter": "Căn giữa",
+                    "alignRight": "Căn phải",
+                    "alignJustify": "Căn đều"
+                }
+            },
+            "inspector": {
+                "title": "Inspector",
+                "expand": "Mở rộng",
+                "collapse": "Thu nhỏ",
+                "selectPrompt": "Chọn một block để chỉnh sửa",
+                "blocks": "{count} blocks",
+                "sections": {
+                    "position": "Vị trí & Kích thước",
+                    "heading": "Tiêu đề",
+                    "text": "Chữ",
+                    "background": "Nền & Viền",
+                    "image": "Ảnh",
+                    "divider": "Divider",
+                    "layer": "Layer",
+                    "manage": "Quản lý"
+                },
+                "fields": {
+                    "level": "Cấp",
+                    "fit": "Fit",
+                    "thickness": "Dày",
+                    "opacity": "Opacity",
+                    "radius": "Radius",
+                    "color": "Color",
+                    "size": "Size",
+                    "lineHeight": "H",
+                    "letterSpacing": "LS",
+                    "background": "BG",
+                    "style": "Style"
+                },
+                "layer": {
+                    "top": "↑ Top",
+                    "up": "▲ Lên",
+                    "down": "▼ Xuống",
+                    "bottom": "↓ Bot"
+                },
+                "lock": "Khóa element",
+                "locked": "Đang khóa — Mở khóa",
+                "deleteElement": "Xóa element"
+            },
+            "defaultContent": {
+                "text": "Nhap van ban...",
+                "heading": "Tieu de"
+            }
+        },
         "login": {
             "title": "Đăng Nhập Admin",
             "subtitle": "Vui lòng đăng nhập để tiếp tục",

@@ -5,18 +5,10 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
-import dynamicImport from 'next/dynamic';
 import GalleryUpload from '@/components/admin/GalleryUpload';
 import RelatedProjectsSelector from '@/components/admin/RelatedProjectsSelector';
-import { DefaultLoading } from '@/lib/performance/dynamic-imports';
+import { VisualEditorV3 } from '@/components/admin/VisualEditorV3';
 
-const TiptapEditor = dynamicImport(
-  () => import('@/components/admin/TiptapEditor'),
-  {
-    loading: DefaultLoading,
-    ssr: false,
-  }
-);
 import { LocaleTabs } from '@/components/admin/LocaleTabs';
 import FormField from '@/components/forms/FormField';
 import { Header, StepIndicator } from '@/components/layout';
@@ -1354,17 +1346,17 @@ export default function NewProjectPage() {
                   <h2 className="text-lg font-normal tracking-[2px] uppercase text-[#333] mb-6 border-b border-[#e0e0e0] pb-2">
                     {t('new.content')}
                   </h2>
-                  <label className="block text-base font-bold text-black tracking-[0.16px] leading-normal mb-2 font-montserrat">
-                    {t('new.content')} ({LOCALE_LABELS[currentLocale].label})
-                  </label>
-                  <TiptapEditor
-                    key={`content-${currentLocale}`}
-                    content={currentTranslation?.content || ''}
-                    onChange={(newContent) => {
-                      updateTranslation(currentLocale, 'content', newContent);
-                    }}
-                    projectSlug={watch('slug') || null}
-                  />
+
+                  <div style={{ minHeight: '600px', height: 'calc(100vh - 320px)' }}>
+                    <VisualEditorV3
+                      key={`visual-${currentLocale}`}
+                      value={currentTranslation?.content || ''}
+                      onChange={(newContent) => {
+                        updateTranslation(currentLocale, 'content', newContent);
+                      }}
+                      locale={currentLocale}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex gap-4 pt-4 border-t border-[#e0e0e0]">
