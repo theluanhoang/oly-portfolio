@@ -30,6 +30,9 @@ function parseVisualContent(value: string): CanvasState | null {
 // Desktop: absolute-positioned element (inside scaled canvas)
 // -------------------------------------------------------
 function RenderElementAbsolute({ el }: { el: CanvasElement }) {
+  // Text/heading elements: allow overflow visible so text isn't clipped when
+  // browser font rendering yields slightly different metrics than the editor.
+  const isTextEl = el.type === 'text' || el.type === 'heading';
   const baseStyle: React.CSSProperties = {
     position: 'absolute',
     left: el.x,
@@ -40,7 +43,7 @@ function RenderElementAbsolute({ el }: { el: CanvasElement }) {
     opacity: el.style.opacity ?? 1,
     borderRadius: el.style.borderRadius ? `${el.style.borderRadius}px` : undefined,
     backgroundColor: el.style.backgroundColor || undefined,
-    overflow: 'hidden',
+    overflow: isTextEl ? 'visible' : 'hidden',
   };
 
   return <RenderElementContent el={el} style={baseStyle} />;
