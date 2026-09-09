@@ -61,6 +61,7 @@ export default function EditProjectPage() {
     type: 'category' | 'subcategory';
     initialName: string;
     itemId?: string;
+    originalSlug?: string;
   } | null>(null);
   const [modalTranslations, setModalTranslations] = useState({ vi: '', en: '' });
   const [categoryInput, setCategoryInput] = useState('');
@@ -436,12 +437,14 @@ export default function EditProjectPage() {
     }
     try {
       setIsUpdatingSubCategory(true);
+      const newSlug = generateSlug(modalTranslations.vi.trim());
+      const slugChanged = newSlug !== translationModal.originalSlug;
       const res = await fetch(`/api/admin/subcategories/${translationModal.itemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           categoryId: catId,
-          slug: generateSlug(modalTranslations.vi.trim()),
+          ...(slugChanged ? { slug: newSlug } : {}),
           translations: {
             vi: { name: modalTranslations.vi.trim() },
             en: { name: modalTranslations.en.trim() },
@@ -566,7 +569,7 @@ export default function EditProjectPage() {
     const viTrans = subCat.translations?.find(t => t.locale === 'vi')?.name || subCat.name;
     const enTrans = subCat.translations?.find(t => t.locale === 'en')?.name || subCat.name;
     setModalTranslations({ vi: viTrans, en: enTrans });
-    setTranslationModal({ isOpen: true, type: 'subcategory', initialName: getSubCategoryName(subCat, currentLocale), itemId: subCat.id });
+    setTranslationModal({ isOpen: true, type: 'subcategory', initialName: getSubCategoryName(subCat, currentLocale), itemId: subCat.id, originalSlug: subCat.slug });
   }, [currentLocale, getSubCategoryName]);
 
   const handleDeleteConfirm = useCallback(() => {
