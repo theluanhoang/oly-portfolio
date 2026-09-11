@@ -66,6 +66,13 @@ export function CanvasElementWrapper({
         onSelect(element.id, false);
         return;
       }
+
+      // If another element is currently being edited, exit its edit mode first.
+      // Without this, editingId stays pointing at the old element, so clicking
+      // back on that element later incorrectly falls into the `isEditing` branch
+      // and fails to re-select it properly.
+      onStopEdit();
+
       e.stopPropagation();
 
       // Locked elements can be selected (to show Inspector / unlock), but cannot be moved
@@ -75,7 +82,7 @@ export function CanvasElementWrapper({
       const idsToMove = selectedIds.includes(element.id) ? selectedIds : [element.id];
       onMoveStart(e, idsToMove);
     },
-    [element.id, element.locked, isEditing, onSelect, onMoveStart, selectedIds]
+    [element.id, element.locked, isEditing, onSelect, onMoveStart, onStopEdit, selectedIds]
   );
 
   /**
