@@ -30,8 +30,6 @@ function parseVisualContent(value: string): CanvasState | null {
 // Desktop: absolute-positioned element (inside scaled canvas)
 // -------------------------------------------------------
 function RenderElementAbsolute({ el }: { el: CanvasElement }) {
-  // Text/heading elements: allow overflow visible so text isn't clipped when
-  // browser font rendering yields slightly different metrics than the editor.
   const isTextEl = el.type === 'text' || el.type === 'heading';
   const baseStyle: React.CSSProperties = {
     position: 'absolute',
@@ -42,8 +40,12 @@ function RenderElementAbsolute({ el }: { el: CanvasElement }) {
     zIndex: el.zIndex,
     opacity: el.style.opacity ?? 1,
     borderRadius: el.style.borderRadius ? `${el.style.borderRadius}px` : undefined,
-    backgroundColor: el.style.backgroundColor || undefined,
-    overflow: isTextEl ? 'visible' : 'hidden',
+    // For text elements, do NOT set backgroundColor here — it is applied on the
+    // inner content div instead. This prevents the wrapper from painting a
+    // background rectangle that bleeds over adjacent elements when overflow is
+    // not 'hidden'. For non-text elements keep backgroundColor on the wrapper.
+    backgroundColor: isTextEl ? undefined : (el.style.backgroundColor || undefined),
+    overflow: 'hidden',
   };
 
   return <RenderElementContent el={el} style={baseStyle} />;
@@ -102,9 +104,14 @@ function RenderElementContent({ el, style }: { el: CanvasElement; style: React.C
             lineHeight: el.style.lineHeight || 1.6,
             letterSpacing: el.style.letterSpacing ? `${el.style.letterSpacing}em` : 'normal',
             color: el.style.color || '#1e293b',
+            // backgroundColor lives here (not on the wrapper) so it never paints
+            // outside the element's clipped bounds and overlaps other elements.
+            backgroundColor: el.style.backgroundColor || undefined,
             padding: el.style.padding ? `${el.style.padding}px` : '8px',
             width: '100%',
-            height: '100%',
+            // Use minHeight so text that wraps slightly longer than the editor
+            // height still shows fully, but the box never bleeds over siblings.
+            minHeight: '100%',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
           }}
@@ -126,9 +133,12 @@ function RenderElementContent({ el, style }: { el: CanvasElement; style: React.C
       lineHeight: el.style.lineHeight || 1.2,
       letterSpacing: el.style.letterSpacing ? `${el.style.letterSpacing}em` : 'normal',
       color: el.style.color || '#000000',
+      // backgroundColor lives on the inner tag, not on the wrapper (same reasoning as text)
+      backgroundColor: el.style.backgroundColor || undefined,
       padding: el.style.padding ? `${el.style.padding}px` : undefined,
       margin: 0,
       width: '100%',
+      minHeight: '100%',
       whiteSpace: 'pre-wrap',
       wordBreak: 'break-word',
     };
