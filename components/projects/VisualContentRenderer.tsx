@@ -104,14 +104,14 @@ function RenderElementContent({ el, style }: { el: CanvasElement; style: React.C
             lineHeight: el.style.lineHeight || 1.6,
             letterSpacing: el.style.letterSpacing ? `${el.style.letterSpacing}em` : 'normal',
             color: el.style.color || '#1e293b',
-            // backgroundColor lives here (not on the wrapper) so it never paints
-            // outside the element's clipped bounds and overlaps other elements.
+            // backgroundColor lives here (not on the wrapper) — see RenderElementAbsolute.
+            // Do NOT set a fixed height: the inner div must size to its actual text
+            // content (height: auto), exactly like TextElement.tsx in the editor.
+            // minHeight:'100%' would force the background to fill the full el.height
+            // even when text is shorter, causing it to bleed over elements below.
             backgroundColor: el.style.backgroundColor || undefined,
             padding: el.style.padding ? `${el.style.padding}px` : '8px',
             width: '100%',
-            // Use minHeight so text that wraps slightly longer than the editor
-            // height still shows fully, but the box never bleeds over siblings.
-            minHeight: '100%',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
           }}
@@ -133,12 +133,12 @@ function RenderElementContent({ el, style }: { el: CanvasElement; style: React.C
       lineHeight: el.style.lineHeight || 1.2,
       letterSpacing: el.style.letterSpacing ? `${el.style.letterSpacing}em` : 'normal',
       color: el.style.color || '#000000',
-      // backgroundColor lives on the inner tag, not on the wrapper (same reasoning as text)
+      // backgroundColor on inner tag, not wrapper — same reason as text elements.
+      // No minHeight/height: let heading size to content like the editor does.
       backgroundColor: el.style.backgroundColor || undefined,
       padding: el.style.padding ? `${el.style.padding}px` : undefined,
       margin: 0,
       width: '100%',
-      minHeight: '100%',
       whiteSpace: 'pre-wrap',
       wordBreak: 'break-word',
     };
