@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import type { CanvasElement, CanvasState } from '../admin/VisualEditorV3/types';
 import { VISUAL_EDITOR_PREFIX } from '../admin/VisualEditorV3/types';
 import { toEmbedUrl } from '../admin/VisualEditorV3/Elements/VideoElement';
@@ -29,25 +29,21 @@ function parseVisualContent(value: string): CanvasState | null {
 // -------------------------------------------------------
 // Desktop: absolute-positioned element (inside scaled canvas)
 // -------------------------------------------------------
-function RenderElementAbsolute({ el }: { el: CanvasElement }) {
+function RenderElementAbsolute({ el, yOffset = 0 }: { el: CanvasElement; yOffset?: number }) {
   const isTextEl = el.type === 'text' || el.type === 'heading';
   const baseStyle: React.CSSProperties = {
     position: 'absolute',
     left: el.x,
-    top: el.y,
+    top: el.y + yOffset,
     width: el.width,
-    // Text elements: use height:'auto' so the wrapper fits actual rendered
-    // content. If text needs more height than saved (due to font loading or
-    // line-wrapping differences) it expands downward instead of clipping/bleeding.
-    // minHeight preserves spacing when text is shorter than the saved height.
-    // Images/dividers/embeds: use fixed height (needed for aspect ratio / sizing).
+    // Text elements: height:'auto' so the wrapper always fits content.
+    // yOffset pushes elements below a taller-than-saved text element down,
+    // so nothing overlaps after measurement (see useLayoutEffect below).
     height: isTextEl ? 'auto' : el.height,
     minHeight: isTextEl ? el.height : undefined,
     zIndex: el.zIndex,
     opacity: el.style.opacity ?? 1,
     borderRadius: el.style.borderRadius ? `${el.style.borderRadius}px` : undefined,
-    // backgroundColor on inner div for text (auto-height prevents bg bleed).
-    // For non-text elements keep backgroundColor on the wrapper.
     backgroundColor: isTextEl ? undefined : (el.style.backgroundColor || undefined),
     overflow: 'visible',
   };
@@ -98,6 +94,9 @@ function RenderElementContent({ el, style }: { el: CanvasElement; style: React.C
     return (
       <div style={style}>
         <div
+          // data-vis-element lets the viewer's useLayoutEffect find this node
+          // after first render to measure the actual scrollHeight.
+          data-vis-element={el.id}
           style={{
             fontFamily: el.style.fontFamily || 'inherit',
             fontSize: el.style.fontSize ? `${el.style.fontSize}px` : '16px',
@@ -108,11 +107,6 @@ function RenderElementContent({ el, style }: { el: CanvasElement; style: React.C
             lineHeight: el.style.lineHeight || 1.6,
             letterSpacing: el.style.letterSpacing ? `${el.style.letterSpacing}em` : 'normal',
             color: el.style.color || '#1e293b',
-            // backgroundColor lives here (not on the wrapper) — see RenderElementAbsolute.
-            // Do NOT set a fixed height: the inner div must size to its actual text
-            // content (height: auto), exactly like TextElement.tsx in the editor.
-            // minHeight:'100%' would force the background to fill the full el.height
-            // even when text is shorter, causing it to bleed over elements below.
             backgroundColor: el.style.backgroundColor || undefined,
             padding: el.style.padding ? `${el.style.padding}px` : '8px',
             width: '100%',
@@ -148,7 +142,7 @@ function RenderElementContent({ el, style }: { el: CanvasElement; style: React.C
     };
     const sharedProps = { style: { margin: 0 }, dangerouslySetInnerHTML: { __html: el.content } };
     return (
-      <div style={style}>
+      <div style={style} data-vis-element={el.id}>
         {level === 1 && <h1 {...sharedProps} style={{ ...textStyle, margin: 0 }} />}
         {level === 2 && <h2 {...sharedProps} style={{ ...textStyle, margin: 0 }} />}
         {level === 3 && <h3 {...sharedProps} style={{ ...textStyle, margin: 0 }} />}
@@ -237,10 +231,54 @@ export function VisualContentRenderer({
   // Track whether we're in mobile reflow mode
   const [isMobile, setIsMobile] = useState(false);
 
-  const minHeight = state
+  // -------------------------------------------------------------------
+  // y-correction: after first render, measure actual heights of text
+  // elements and push all elements below them down by the overflow delta.
+  // useLayoutEffect fires before browser paint so the user never sees
+  // the intermediate layout without corrections.
+  // -------------------------------------------------------------------
+  const [yCorrections, setYCorrections] = useState<Record<string, number>>({});
+
+  useLayoutEffect(() => {
+    if (!state || !innerRef.current || isMobile) return;
+
+    // Sort elements top-to-bottom
+    const sorted = [...state.elements].sort((a, b) => a.y - b.y);
+    const corrections: Record<string, number> = {};
+    let cumulativeDelta = 0;
+
+    for (const el of sorted) {
+      // Every element at or after this y gets shifted by accumulated delta
+      if (cumulativeDelta > 0) {
+        corrections[el.id] = cumulativeDelta;
+      }
+      // Measure text elements
+      if (el.type === 'text' || el.type === 'heading') {
+        const domEl = innerRef.current.querySelector<HTMLElement>(`[data-vis-element="${el.id}"]`);
+        if (domEl) {
+          const actualH = domEl.scrollHeight;
+          const delta = Math.max(0, actualH - el.height);
+          if (delta > 0) cumulativeDelta += delta;
+        }
+      }
+    }
+
+    // Avoid redundant state updates (prevents infinite loops)
+    const changed = Object.keys(corrections).some(
+      (id) => (yCorrections[id] ?? 0) !== corrections[id]
+    ) || Object.keys(yCorrections).some((id) => !(id in corrections));
+
+    if (changed) setYCorrections(corrections);
+  // We intentionally run after every render so that font-load-triggered
+  // reflows are also caught. state.elements identity is stable (parsed once).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, isMobile]);
+
+  // Corrected canvas height accounts for text elements that rendered taller
+  const correctedMinHeight = state
     ? Math.max(
         state.canvasHeight,
-        ...state.elements.map((el) => el.y + el.height + 40)
+        ...state.elements.map((el) => el.y + (yCorrections[el.id] ?? 0) + el.height + 40)
       )
     : 0;
 
@@ -262,7 +300,7 @@ export function VisualContentRenderer({
         const scale = containerWidth / state.canvasWidth;
         inner.style.transform = `scale(${scale})`;
         outer.style.paddingBottom = '0';
-        outer.style.height = `${minHeight * scale}px`;
+        outer.style.height = `${correctedMinHeight * scale}px`;
       } else {
         // Mobile: reset desktop scale styles
         outer.style.height = '';
@@ -275,7 +313,7 @@ export function VisualContentRenderer({
     ro.observe(outer);
     return () => ro.disconnect();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fluid, state?.canvasWidth, minHeight, mobileBreakpoint]);
+  }, [fluid, state?.canvasWidth, correctedMinHeight, mobileBreakpoint]);
 
   if (!state || state.elements.length === 0) return null;
 
@@ -294,7 +332,7 @@ export function VisualContentRenderer({
           // Desktop: paddingBottom aspect ratio (ResizeObserver overrides with exact px height)
           // Mobile: auto height — reflow content determines height
           ...(!isMobile ? {
-            paddingBottom: `${(minHeight / state.canvasWidth) * 100}%`,
+            paddingBottom: `${(correctedMinHeight / state.canvasWidth) * 100}%`,
             position: 'relative' as const,
             overflow: 'hidden',
           } : {
@@ -326,12 +364,12 @@ export function VisualContentRenderer({
               top: 0,
               left: 0,
               width: state.canvasWidth,
-              height: minHeight,
+              height: correctedMinHeight,
               transformOrigin: 'top left',
             }}
           >
             {sortedDesktop.map((el) => (
-              <RenderElementAbsolute key={el.id} el={el} />
+              <RenderElementAbsolute key={el.id} el={el} yOffset={yCorrections[el.id] ?? 0} />
             ))}
           </div>
         )}
@@ -346,7 +384,7 @@ export function VisualContentRenderer({
       style={{
         position: 'relative',
         width: state.canvasWidth,
-        height: minHeight,
+        height: correctedMinHeight,
         background: state.background,
         overflow: 'hidden',
       }}
