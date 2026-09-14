@@ -36,16 +36,20 @@ function RenderElementAbsolute({ el }: { el: CanvasElement }) {
     left: el.x,
     top: el.y,
     width: el.width,
-    height: el.height,
+    // Text elements: use height:'auto' so the wrapper fits actual rendered
+    // content. If text needs more height than saved (due to font loading or
+    // line-wrapping differences) it expands downward instead of clipping/bleeding.
+    // minHeight preserves spacing when text is shorter than the saved height.
+    // Images/dividers/embeds: use fixed height (needed for aspect ratio / sizing).
+    height: isTextEl ? 'auto' : el.height,
+    minHeight: isTextEl ? el.height : undefined,
     zIndex: el.zIndex,
     opacity: el.style.opacity ?? 1,
     borderRadius: el.style.borderRadius ? `${el.style.borderRadius}px` : undefined,
-    // For text elements, do NOT set backgroundColor here — it is applied on the
-    // inner content div instead. This prevents the wrapper from painting a
-    // background rectangle that bleeds over adjacent elements when overflow is
-    // not 'hidden'. For non-text elements keep backgroundColor on the wrapper.
+    // backgroundColor on inner div for text (auto-height prevents bg bleed).
+    // For non-text elements keep backgroundColor on the wrapper.
     backgroundColor: isTextEl ? undefined : (el.style.backgroundColor || undefined),
-    overflow: 'hidden',
+    overflow: 'visible',
   };
 
   return <RenderElementContent el={el} style={baseStyle} />;

@@ -303,6 +303,18 @@ export function Canvas({
     },
   });
 
+  // Auto-height: called by text/heading elements when rendered scrollHeight > saved height.
+  // Finds the element in state (so we use the committed x/y/width) and updates only height.
+  const handleAutoHeightChange = useCallback(
+    (id: string, newHeight: number) => {
+      const el = state.elements.find((e) => e.id === id);
+      if (el && newHeight !== el.height) {
+        onResizeElement(id, el.x, el.y, el.width, newHeight);
+      }
+    },
+    [state.elements, onResizeElement]
+  );
+
 
   const handleResizeStart = useCallback(
     (
@@ -424,6 +436,7 @@ export function Canvas({
               onStartEdit={onStartEdit}
               onStopEdit={onStopEdit}
               selectedIds={state.selectedIds}
+              onHeightChange={handleAutoHeightChange}
             />
           ))}
 

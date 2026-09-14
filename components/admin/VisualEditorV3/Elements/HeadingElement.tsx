@@ -8,6 +8,8 @@ interface HeadingElementProps {
   isEditing: boolean;
   onContentChange: (id: string, content: string) => void;
   onStartEdit: (id: string) => void;
+  /** Called when the rendered heading height exceeds the saved element height. */
+  onHeightChange?: (id: string, height: number) => void;
 }
 
 const defaultFontSizes: Record<HeadingLevel, number> = {
@@ -22,17 +24,29 @@ export function HeadingElement({
   isEditing,
   onContentChange,
   onStartEdit,
+  onHeightChange,
 }: HeadingElementProps) {
   const editRef = useRef<HTMLHeadingElement>(null);
   const level = (element.headingLevel ?? 1) as HeadingLevel;
+
+  // Auto-grow: same as TextElement — only grows, never shrinks.
+  const reportHeight = useCallback(() => {
+    if (editRef.current && onHeightChange) {
+      const rendered = editRef.current.scrollHeight;
+      if (rendered > element.height) {
+        onHeightChange(element.id, rendered);
+      }
+    }
+  }, [element.id, element.height, onHeightChange]);
 
   useEffect(() => {
     if (!isEditing && editRef.current) {
       if (editRef.current.innerHTML !== element.content) {
         editRef.current.innerHTML = element.content;
       }
+      reportHeight();
     }
-  }, [element.content, isEditing]);
+  }, [element.content, isEditing, reportHeight]);
 
   useEffect(() => {
     if (isEditing && editRef.current) {
@@ -49,8 +63,9 @@ export function HeadingElement({
   const syncContent = useCallback(() => {
     if (editRef.current) {
       onContentChange(element.id, editRef.current.innerHTML);
+      reportHeight();
     }
-  }, [element.id, onContentChange]);
+  }, [element.id, onContentChange, reportHeight]);
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
