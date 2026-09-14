@@ -36,6 +36,8 @@ interface CanvasElementProps {
   onStartEdit: (id: string) => void;
   onStopEdit: () => void;
   selectedIds: string[];
+  /** Propagated from TextElement/HeadingElement when rendered height exceeds saved height. */
+  onHeightChange?: (id: string, height: number) => void;
 }
 
 export function CanvasElementWrapper({
@@ -51,6 +53,7 @@ export function CanvasElementWrapper({
   onStartEdit,
   onStopEdit,
   selectedIds,
+  onHeightChange,
 }: CanvasElementProps) {
   // Track mousedown position to distinguish drag from click
   const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
@@ -147,6 +150,7 @@ export function CanvasElementWrapper({
             isEditing={isEditing}
             onContentChange={onContentChange}
             onStartEdit={onStartEdit}
+            onHeightChange={onHeightChange}
           />
         );
       case 'heading':
@@ -156,6 +160,7 @@ export function CanvasElementWrapper({
             isEditing={isEditing}
             onContentChange={onContentChange}
             onStartEdit={onStartEdit}
+            onHeightChange={onHeightChange}
           />
         );
       case 'image':

@@ -9,6 +9,8 @@ interface TextElementProps {
   isEditing: boolean;
   onContentChange: (id: string, content: string) => void;
   onStartEdit: (id: string) => void;
+  /** Called when the rendered text height exceeds the saved element height. */
+  onHeightChange?: (id: string, height: number) => void;
 }
 
 export function TextElement({
@@ -17,17 +19,33 @@ export function TextElement({
   isEditing,
   onContentChange,
   onStartEdit,
+  onHeightChange,
 }: TextElementProps) {
   const editRef = useRef<HTMLDivElement>(null);
 
-  // Sync content from props into the DOM only when not editing
+  // Auto-grow: measure actual rendered height and notify parent if text needs more space.
+  // Only grows — never shrinks — so manually-cropped elements stay as-is.
+  // We depend on element.height to stop re-firing once the state has caught up.
+  const reportHeight = useCallback(() => {
+    if (editRef.current && onHeightChange) {
+      const rendered = editRef.current.scrollHeight;
+      if (rendered > element.height) {
+        onHeightChange(element.id, rendered);
+      }
+    }
+  }, [element.id, element.height, onHeightChange]);
+
+  // Sync content from props into the DOM only when not editing,
+  // then immediately measure height so the element auto-grows if needed.
   useEffect(() => {
     if (!isEditing && editRef.current) {
       if (editRef.current.innerHTML !== element.content) {
         editRef.current.innerHTML = element.content;
       }
+      // Measure after DOM update
+      reportHeight();
     }
-  }, [element.content, isEditing]);
+  }, [element.content, isEditing, reportHeight]);
 
   // Focus when entering edit mode
   useEffect(() => {
@@ -46,8 +64,10 @@ export function TextElement({
   const syncContent = useCallback(() => {
     if (editRef.current) {
       onContentChange(element.id, editRef.current.innerHTML);
+      // Also auto-grow while user is typing
+      reportHeight();
     }
-  }, [element.id, onContentChange]);
+  }, [element.id, onContentChange, reportHeight]);
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
